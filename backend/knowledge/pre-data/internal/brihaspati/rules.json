@@ -1,0 +1,8 @@
+{
+  "department_config": {
+    "name": "BRIHASPATI",
+    "scope": "INTERNAL",
+    "priority": "MEDIUM",
+    "automation_rate_target": 0.75
+  }
+}

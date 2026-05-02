@@ -1,0 +1,14 @@
+{
+  "department_config": {
+    "name": "VAYU",
+    "scope": "INTERNAL",
+    "priority": "HIGH",
+    "automation_rate_target": 0.90
+  },
+  "performance_targets": {
+    "api_response_p95_ms": 200,
+    "database_query_p95_ms": 50,
+    "page_load_p95_ms": 2000,
+    "cache_hit_ratio_min": 0.80
+  }
+}

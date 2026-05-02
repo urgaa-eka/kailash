@@ -1,0 +1,113 @@
+/* Tasks Page Styles */
+
+.tasks-page {
+    padding: var(--spacing-xl);
+    max-width: 1400px;
+}
+
+/* Filters */
+.tasks-filters {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--theme-border);
+    background: var(--theme-surface);
+    color: var(--theme-text-light);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.filter-btn:hover {
+    background: var(--theme-hover);
+    color: var(--theme-text);
+}
+
+.filter-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+/* Tasks Table */
+.tasks-table-wrapper {
+    overflow-x: auto;
+}
+
+.tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tasks-table thead {
+    background: var(--theme-hover);
+    border-bottom: 2px solid var(--theme-border);
+}
+
+.tasks-table th {
+    padding: var(--spacing-md);
+    text-align: left;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--theme-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tasks-table td {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--theme-border);
+    color: var(--theme-text);
+    font-size: var(--font-size-sm);
+}
+
+.tasks-table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.tasks-table tbody tr:hover {
+    background: var(--theme-hover);
+}
+
+.task-title {
+    font-weight: 500;
+    color: var(--theme-text);
+}
+
+.assignee {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.assignee i {
+    color: var(--theme-text-light);
+}
+
+.table-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tasks-page {
+        padding: var(--spacing-lg);
+    }
+    
+    .tasks-table {
+        font-size: var(--font-size-sm);
+    }
+    
+    .tasks-table th,
+    .tasks-table td {
+        padding: var(--spacing-sm);
+    }
+}

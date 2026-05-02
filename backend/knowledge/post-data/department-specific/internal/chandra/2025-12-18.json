@@ -1,0 +1,10 @@
+{
+  "department": "chandra",
+  "scope": "internal",
+  "timestamp": "2025-12-18T06:03:17.591930+00:00",
+  "query": "Latest developments relevant to chandra operations",
+  "raw_intelligence": "Error fetching intelligence: ",
+  "processed_intelligence": "Error fetching intelligence: ",
+  "citations": [],
+  "model_used": "error"
+}

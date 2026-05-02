@@ -1,0 +1,89 @@
+# KAILASH-AI platform — local stack.
+# Build context is repo root so services can pull in `platform/` (shared lib).
+
+x-svc-defaults: &svc_defaults
+  restart: unless-stopped
+  environment:
+    PLATFORM_INTERNAL_TOKEN: ${PLATFORM_INTERNAL_TOKEN:-dev-token}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    LOG_JSON: ${LOG_JSON:-true}
+    OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+  networks: [kailash]
+
+services:
+  gateway:
+    <<: *svc_defaults
+    build:
+      context: ../..
+      dockerfile: platform/gateway/Dockerfile
+    ports: ["8100:8100"]
+    depends_on:
+      - document-ai
+      - forecasting
+      - anomaly
+      - rag
+      - vision-gateway
+      - speech
+      - model-registry
+      - knowledge-graph
+      - automobile-llm
+
+  document-ai:
+    <<: *svc_defaults
+    build: { context: ../.., dockerfile: services/document-ai/Dockerfile }
+    ports: ["8101:8101"]
+
+  forecasting:
+    <<: *svc_defaults
+    build: { context: ../.., dockerfile: services/forecasting/Dockerfile }
+    ports: ["8102:8102"]
+
+  anomaly:
+    <<: *svc_defaults
+    build: { context: ../.., dockerfile: services/anomaly/Dockerfile }
+    ports: ["8103:8103"]
+
+  rag:
+    <<: *svc_defaults
+    build: { context: ../.., dockerfile: services/rag/Dockerfile }
+    ports: ["8104:8104"]
+
+  vision-gateway:
+    <<: *svc_defaults
+    build: { context: ../.., dockerfile: services/vision-gateway/Dockerfile }
+    ports: ["8105:8105"]
+
+  speech:
+    <<: *svc_defaults
+    build: { context: ../.., dockerfile: services/speech/Dockerfile }
+    ports: ["8106:8106"]
+
+  model-registry:
+    <<: *svc_defaults
+    build: { context: ../.., dockerfile: services/model-registry/Dockerfile }
+    ports: ["8107:8107"]
+    volumes:
+      - model_registry_db:/var/lib/kailash
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${PLATFORM_INTERNAL_TOKEN:-dev-token}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_JSON: ${LOG_JSON:-true}
+      MODEL_REGISTRY_DB: /var/lib/kailash/registry.db
+
+  knowledge-graph:
+    <<: *svc_defaults
+    build: { context: ../.., dockerfile: services/knowledge-graph/Dockerfile }
+    ports: ["8108:8108"]
+
+  automobile-llm:
+    <<: *svc_defaults
+    build: { context: ../.., dockerfile: services/automobile-llm/Dockerfile }
+    ports: ["8109:8109"]
+
+networks:
+  kailash:
+    driver: bridge
+
+volumes:
+  model_registry_db:

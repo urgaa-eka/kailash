@@ -1,0 +1,43 @@
+{
+  "department_config": {
+    "name": "LAKSHMI",
+    "scope": "INTERNAL",
+    "priority": "HIGH",
+    "automation_rate_target": 0.90
+  },
+  "transaction_rules": {
+    "minimum_amount": 0.01,
+    "maximum_single_transaction": 1000000,
+    "currency_default": "INR",
+    "supported_currencies": ["INR", "USD", "EUR", "GBP"],
+    "payment_retry_attempts": 3,
+    "payment_retry_interval_hours": 24
+  },
+  "billing_rules": {
+    "invoice_generation_day": 1,
+    "payment_due_days": 7,
+    "late_payment_grace_period_days": 3,
+    "subscription_renewal_reminder_days": 7,
+    "failed_payment_retry_count": 3
+  },
+  "fraud_detection": {
+    "velocity_check_enabled": true,
+    "max_transactions_per_hour": 10,
+    "suspicious_amount_threshold": 50000,
+    "geo_location_check": true,
+    "device_fingerprinting": true
+  },
+  "reporting_rules": {
+    "daily_report_time": "09:00 UTC",
+    "weekly_report_day": "Monday",
+    "monthly_report_day": 1,
+    "report_recipients": ["ceo", "cfo", "finance_team"],
+    "alert_threshold_variance": 0.15
+  },
+  "cost_optimization": {
+    "review_frequency": "weekly",
+    "alert_cost_spike_percentage": 20,
+    "budget_alert_threshold": 0.85,
+    "unused_resource_detection": true
+  }
+}

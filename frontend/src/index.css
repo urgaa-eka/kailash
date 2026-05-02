@@ -1,0 +1,451 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    margin: 0;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+    font-family:
+        source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+@layer base {
+    :root {
+        /* Kailash Official Brand Colors - Exact HSL */
+        --g4g-purple: 282 95% 27%;        /* #570683 - Primary ~50% */
+        --g4g-purple-light: 271 36% 57%;  /* #8172AD - Light variant */
+        --g4g-green: 126 34% 37%;         /* #417E46 - Secondary ~30% */
+        --g4g-bright-green: 147 90% 44%;  /* #0DA34E - Active Energy ~10% */
+        --g4g-orange: 24 64% 59%;         /* #DF8C4D - Made In Bharat ~10% */
+        --g4g-green-light: 102 34% 60%;   /* #83B56F - Support */
+        --g4g-gray: 250 20% 82%;          /* #D0CFD8 - UI borders */
+        --g4g-light-gray: 240 6% 98%;     /* #FAFAFA - Subtle bg */
+        --g4g-text-gray: 0 0% 35%;        /* #5A5A5A - Body text */
+        --g4g-white: 0 0% 100%;           /* #FFFFFF */
+        --g4g-black: 0 0% 6%;             /* #0F0F0F */
+        
+        /* Semantic tokens */
+        --background: 0 0% 100%;
+        --foreground: 0 0% 6%;
+        --card: 0 0% 100%;
+        --card-foreground: 0 0% 6%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 6%;
+        --primary: 282 95% 27%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 126 34% 37%;
+        --secondary-foreground: 0 0% 100%;
+        --accent: 147 90% 44%;
+        --accent-foreground: 0 0% 100%;
+        --muted: 250 20% 96%;
+        --muted-foreground: 0 0% 45%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 250 20% 82%;
+        --input: 250 20% 82%;
+        --ring: 282 95% 27%;
+        
+        --radius: 0.5rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+/* Tech grid animation */
+@keyframes gridPulse {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Underline cycling animation */
+@keyframes underlineCycle {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Modal entrance */
+@keyframes modalEnter {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Slide down */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -10px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+/* Slide up */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scale in */
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Mascot bounce */
+@keyframes mascot-bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Globe rotation animation */
+@keyframes rotate-globe {
+    from {
+        transform: rotateY(0deg);
+    }
+    to {
+        transform: rotateY(360deg);
+    }
+}
+
+/* Sparkle travel animation */
+@keyframes sparkle-travel {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    10% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    90% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+}
+
+/* Label pulse/glow animation */
+@keyframes label-pulse {
+    0%, 100% {
+        transform: translateY(-50%) translateX(0) scale(1);
+    }
+    50% {
+        transform: translateY(-50%) translateX(0) scale(1.05);
+    }
+}
+
+/* Globe pulse glow */
+@keyframes globe-pulse {
+    0%, 100% {
+        box-shadow: 
+            inset -40px -40px 100px rgba(0, 0, 0, 0.95),
+            inset 40px 40px 80px rgba(120, 120, 120, 0.15),
+            0 0 80px rgba(0, 0, 0, 0.6),
+            0 30px 60px rgba(0, 0, 0, 0.5);
+    }
+    50% {
+        box-shadow: 
+            inset -40px -40px 100px rgba(0, 0, 0, 0.95),
+            inset 40px 40px 80px rgba(120, 120, 120, 0.2),
+            0 0 100px rgba(255, 255, 255, 0.1),
+            0 30px 60px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* Cyan glow pulse for holographic effect */
+@keyframes cyan-pulse {
+    0%, 100% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(1.05);
+    }
+}
+
+/* Shimmer effect */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+/* Outer ring pulse */
+@keyframes outerGlow {
+    0%, 100% {
+        filter: drop-shadow(0 2px 8px rgba(65, 126, 70, 0.1));
+    }
+    50% {
+        filter: drop-shadow(0 4px 16px rgba(13, 163, 78, 0.3));
+    }
+}
+
+.animate-grid-pulse {
+    animation: gridPulse 4s ease-in-out infinite;
+}
+
+.animate-underline-cycle {
+    animation: underlineCycle 3s ease-in-out infinite;
+    background-size: 200% 200%;
+}
+
+.animate-modal-enter {
+    animation: modalEnter 0.3s ease-out forwards;
+}
+
+.animate-slide-down {
+    animation: slideDown 0.3s ease-out forwards;
+}
+
+.animate-slide-up {
+    animation: slideUp 0.4s ease-out forwards;
+}
+
+.animate-scale-in {
+    animation: scaleIn 1.2s ease-out forwards;
+}
+
+.animate-mascot-bounce {
+    animation: mascot-bounce 2s ease-in-out infinite;
+}
+
+.animate-outer-glow {
+    animation: outerGlow 3s ease-in-out infinite;
+}
+
+/* Glassmorphism */
+.glass {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.glass-dark {
+    background: rgba(15, 15, 15, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* Tech grid background */
+.tech-grid {
+    background-image: 
+        linear-gradient(rgba(87, 6, 131, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(87, 6, 131, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+/* Input glow effect */
+.input-glow:focus {
+    border-color: hsl(var(--g4g-purple));
+    box-shadow: 0 0 0 3px hsl(var(--g4g-purple) / 0.1);
+    outline: 2px solid hsl(var(--g4g-bright-green));
+    outline-offset: 3px;
+}
+
+/* Button lift */
+.btn-lift:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px hsl(var(--g4g-purple) / 0.3);
+}
+
+/* Shimmer on hover */
+.shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.shimmer:hover:not(:disabled)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* GPU acceleration for animated elements */
+.wheel-ring {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.dust-canvas {
+    will-change: contents;
+}
+
+/* Enhanced focus indicators */
+*:focus-visible {
+    outline: 3px solid hsl(var(--g4g-bright-green));
+    outline-offset: 4px;
+    box-shadow: 0 0 0 6px hsla(var(--g4g-bright-green), 0.2);
+    transition: all 0.2s ease-out;
+}
+
+/* Skip to main content */
+.skip-link {
+    position: absolute;
+    top: -100px;
+    left: 0;
+    z-index: 9999;
+    background: hsl(var(--g4g-purple));
+    color: white;
+    padding: 1rem 2rem;
+    text-decoration: none;
+    border-radius: 0 0 0.5rem 0;
+    font-weight: 600;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* Screen reader only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+@layer base {
+    [data-debug-wrapper="true"] {
+        display: contents !important;
+    }
+
+    [data-debug-wrapper="true"] > * {
+        margin-left: inherit;
+        margin-right: inherit;
+        margin-top: inherit;
+        margin-bottom: inherit;
+        padding-left: inherit;
+        padding-right: inherit;
+        padding-top: inherit;
+        padding-bottom: inherit;
+        column-gap: inherit;
+        row-gap: inherit;
+        gap: inherit;
+        border-left-width: inherit;
+        border-right-width: inherit;
+        border-top-width: inherit;
+        border-bottom-width: inherit;
+        border-left-style: inherit;
+        border-right-style: inherit;
+        border-top-style: inherit;
+        border-bottom-style: inherit;
+        border-left-color: inherit;
+        border-right-color: inherit;
+        border-top-color: inherit;
+        border-bottom-color: inherit;
+    }
+}
+
+/* White globe rotation animation */
+@keyframes rotate-white-globe {
+    from {
+        transform: rotateY(0deg);
+    }
+    to {
+        transform: rotateY(360deg);
+    }
+}
+
+/* Sparkle pulse animation */
+@keyframes sparkle-pulse {
+    0%, 100% {
+        opacity: 0;
+        transform: scale(0) translate(-50%, -50%);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.5) translate(-50%, -50%);
+    }
+}
+
+.animate-sparkle {
+    animation: sparkle-pulse 2s ease-in-out infinite;
+    transform-origin: center center;
+}
+
+/* Hide Emergent badge */
+#emergent-badge {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

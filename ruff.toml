@@ -1,0 +1,10 @@
+# Top-level ruff config — applies to platform/ + services/
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501", "B008"]  # FastAPI heavily uses Depends() as default arg (B008).
+
+[lint.per-file-ignores]
+"**/tests/**" = ["B", "SIM", "E402"]

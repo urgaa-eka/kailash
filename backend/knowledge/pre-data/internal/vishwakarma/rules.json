@@ -1,0 +1,60 @@
+{
+  "department_config": {
+    "name": "VISHWAKARMA",
+    "scope": "INTERNAL",
+    "priority": "CRITICAL",
+    "automation_rate_target": 0.95
+  },
+  "code_quality_rules": {
+    "test_coverage_minimum": 80,
+    "linting_required": true,
+    "type_hints_required": true,
+    "code_review_required": true,
+    "max_function_length": 50,
+    "max_file_length": 500,
+    "naming_convention": "snake_case"
+  },
+  "api_design_rules": {
+    "versioning": "url_path",
+    "response_format": "json",
+    "pagination_default_limit": 50,
+    "pagination_max_limit": 1000,
+    "rate_limit_per_minute": 100,
+    "timeout_seconds": 30,
+    "cors_allowed_origins": ["*"]
+  },
+  "database_rules": {
+    "use_indexes": true,
+    "avoid_n_plus_one": true,
+    "use_connection_pooling": true,
+    "max_connection_pool_size": 100,
+    "query_timeout_seconds": 10,
+    "use_projections": true,
+    "avoid_large_documents": true
+  },
+  "deployment_rules": {
+    "environment_stages": ["development", "staging", "production"],
+    "rollback_plan_required": true,
+    "blue_green_deployment": true,
+    "canary_deployment_percentage": 10,
+    "health_check_required": true,
+    "zero_downtime_deployment": true
+  },
+  "security_rules": {
+    "https_only": true,
+    "jwt_expiry_hours": 24,
+    "password_min_length": 8,
+    "api_key_rotation_days": 90,
+    "secrets_in_env_only": true,
+    "input_validation_required": true,
+    "output_sanitization_required": true
+  },
+  "monitoring_rules": {
+    "log_all_errors": true,
+    "alert_on_error_rate_threshold": 0.05,
+    "alert_on_latency_p95_ms": 500,
+    "alert_on_memory_usage_percentage": 85,
+    "alert_on_cpu_usage_percentage": 80,
+    "daily_performance_report": true
+  }
+}

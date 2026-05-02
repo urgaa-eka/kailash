@@ -1,0 +1,164 @@
+{
+  "internal": {
+    "lakshmi": {
+      "name": "LAKSHMI - Financial Management",
+      "api_sources": [
+        {
+          "name": "RBI Policy Updates",
+          "url": "https://api.rbi.org.in/policies",
+          "type": "government",
+          "update_frequency": "daily",
+          "auth_required": false,
+          "description": "Reserve Bank of India monetary policy and financial regulations"
+        },
+        {
+          "name": "GST Updates",
+          "url": "https://api.gst.gov.in/updates",
+          "type": "government",
+          "update_frequency": "daily",
+          "auth_required": true,
+          "description": "GST rates, compliance, and regulatory changes"
+        },
+        {
+          "name": "Stripe API",
+          "url": "https://api.stripe.com/v1",
+          "type": "payment",
+          "update_frequency": "realtime",
+          "auth_required": true,
+          "description": "Payment processing, transactions, and billing"
+        },
+        {
+          "name": "Financial Data API",
+          "url": "https://api.worldbank.org/v2",
+          "type": "market_data",
+          "update_frequency": "daily",
+          "auth_required": false,
+          "description": "Global financial indicators and economic data"
+        }
+      ]
+    },
+    "vishwakarma": {
+      "name": "VISHWAKARMA - Technical Innovation",
+      "api_sources": [
+        {
+          "name": "GitHub API",
+          "url": "https://api.github.com",
+          "type": "development",
+          "update_frequency": "realtime",
+          "auth_required": true,
+          "description": "Code repository, issues, pull requests"
+        },
+        {
+          "name": "Stack Overflow Trends",
+          "url": "https://api.stackexchange.com/2.3",
+          "type": "community",
+          "update_frequency": "daily",
+          "auth_required": false,
+          "description": "Developer trends, popular technologies"
+        },
+        {
+          "name": "AWS Service Health",
+          "url": "https://status.aws.amazon.com/data.json",
+          "type": "infrastructure",
+          "update_frequency": "hourly",
+          "auth_required": false,
+          "description": "AWS service status and incidents"
+        }
+      ]
+    },
+    "indra": {
+      "name": "INDRA - Security & Protection",
+      "api_sources": [
+        {
+          "name": "CVE Database",
+          "url": "https://cve.circl.lu/api",
+          "type": "security",
+          "update_frequency": "hourly",
+          "auth_required": false,
+          "description": "Common Vulnerabilities and Exposures"
+        },
+        {
+          "name": "NIST Security",
+          "url": "https://nvd.nist.gov/feeds/json/cve/1.1",
+          "type": "security",
+          "update_frequency": "daily",
+          "auth_required": false,
+          "description": "National Vulnerability Database"
+        }
+      ]
+    },
+    "yama": {
+      "name": "YAMA - Compliance & Governance",
+      "api_sources": [
+        {
+          "name": "GDPR Updates",
+          "url": "https://api.gdpr.eu/updates",
+          "type": "compliance",
+          "update_frequency": "weekly",
+          "auth_required": false,
+          "description": "GDPR compliance requirements and updates"
+        },
+        {
+          "name": "MCA Portal",
+          "url": "https://api.mca.gov.in",
+          "type": "government",
+          "update_frequency": "daily",
+          "auth_required": true,
+          "description": "Ministry of Corporate Affairs compliance"
+        }
+      ]
+    }
+  },
+  "external": {
+    "surya": {
+      "name": "SURYA - Energy & EV Charging",
+      "api_sources": [
+        {
+          "name": "DISCOM Tariff API",
+          "url": "https://api.discom.gov.in/tariffs",
+          "type": "energy",
+          "update_frequency": "daily",
+          "auth_required": true,
+          "description": "Real-time electricity tariffs and grid status"
+        },
+        {
+          "name": "OCPP Standards",
+          "url": "https://www.openchargealliance.org/api/protocols",
+          "type": "standards",
+          "update_frequency": "monthly",
+          "auth_required": false,
+          "description": "Open Charge Point Protocol updates"
+        },
+        {
+          "name": "Weather API",
+          "url": "https://api.openweathermap.org/data/2.5",
+          "type": "weather",
+          "update_frequency": "hourly",
+          "auth_required": true,
+          "description": "Weather data for demand forecasting"
+        }
+      ]
+    },
+    "varuna": {
+      "name": "VARUNA - Communication & Customer Relations",
+      "api_sources": [
+        {
+          "name": "Twilio API",
+          "url": "https://api.twilio.com",
+          "type": "communication",
+          "update_frequency": "realtime",
+          "auth_required": true,
+          "description": "SMS and voice communication"
+        },
+        {
+          "name": "SendGrid API",
+          "url": "https://api.sendgrid.com/v3",
+          "type": "communication",
+          "update_frequency": "realtime",
+          "auth_required": true,
+          "description": "Email delivery and analytics"
+        }
+      ]
+    }
+  }
+}

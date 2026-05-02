@@ -1,0 +1,22 @@
+{
+  "department_config": {
+    "name": "AGNI",
+    "scope": "INTERNAL",
+    "priority": "HIGH",
+    "automation_rate_target": 0.88
+  },
+  "monitoring_rules": {
+    "cpu_alert_threshold": 80,
+    "memory_alert_threshold": 85,
+    "disk_alert_threshold": 90,
+    "network_latency_alert_ms": 100,
+    "check_interval_seconds": 60
+  },
+  "optimization_rules": {
+    "auto_scaling_enabled": true,
+    "scale_up_threshold": 75,
+    "scale_down_threshold": 30,
+    "min_instances": 2,
+    "max_instances": 20
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "timestamp": "2025-12-18T06:05:42.225121+00:00",
+  "total_departments": 20,
+  "successful": 20,
+  "failed": 0,
+  "results": [
+    {
+      "department": "lakshmi",
+      "status": "success"
+    },
+    {
+      "department": "vishwakarma",
+      "status": "success"
+    },
+    {
+      "department": "agni",
+      "status": "success"
+    },
+    {
+      "department": "indra",
+      "status": "success"
+    },
+    {
+      "department": "vayu",
+      "status": "success"
+    },
+    {
+      "department": "yama",
+      "status": "success"
+    },
+    {
+      "department": "kubera",
+      "status": "success"
+    },
+    {
+      "department": "ashwini",
+      "status": "success"
+    },
+    {
+      "department": "brihaspati",
+      "status": "success"
+    },
+    {
+      "department": "chandra",
+      "status": "success"
+    },
+    {
+      "department": "kartikeya",
+      "status": "success"
+    },
+    {
+      "department": "marut",
+      "status": "success"
+    },
+    {
+      "department": "narada",
+      "status": "success"
+    },
+    {
+      "department": "rudra",
+      "status": "success"
+    },
+    {
+      "department": "tvashta",
+      "status": "success"
+    },
+    {
+      "department": "surya",
+      "status": "success"
+    },
+    {
+      "department": "brahma",
+      "status": "success"
+    },
+    {
+      "department": "saraswati",
+      "status": "success"
+    },
+    {
+      "department": "varuna",
+      "status": "success"
+    },
+    {
+      "department": "pragya",
+      "status": "success"
+    }
+  ]
+}

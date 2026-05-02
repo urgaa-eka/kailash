@@ -1,0 +1,14 @@
+{
+  "department_config": {
+    "name": "VARUNA",
+    "scope": "EXTERNAL",
+    "priority": "HIGH",
+    "automation_rate_target": 0.80
+  },
+  "support_rules": {
+    "first_response_time_minutes": 15,
+    "resolution_time_hours": 24,
+    "customer_satisfaction_target": 4.5,
+    "automate_common_queries": true
+  }
+}

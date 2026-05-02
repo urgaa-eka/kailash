@@ -1,0 +1,56 @@
+name: Deploy Frontend → Firebase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deploy environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to Firebase
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile || yarn install
+
+      - name: Build for production
+        run: yarn build
+        env:
+          REACT_APP_BACKEND_URL: ${{ vars.BACKEND_URL || 'https://api.kailash-ai.in' }}
+          REACT_APP_ENV: production
+          REACT_APP_DOMAIN: kailash-ai.in
+          REACT_APP_APP_NAME: Kailash
+          GENERATE_SOURCEMAP: 'false'
+          CI: false
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: kailash-38268
+          entryPoint: frontend

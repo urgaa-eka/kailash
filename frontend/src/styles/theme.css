@@ -1,0 +1,148 @@
+/* ================================================= */
+/* Kailash - Modern SaaS Theme System              */
+/* Go4Garage Brand Design Tokens & CSS Variables    */
+/* ================================================= */
+
+:root {
+    /* Go4Garage Primary Brand Colors */
+    --color-primary: #0A3D62;
+    --color-primary-hover: #083050;
+    --color-primary-light: rgba(10, 61, 98, 0.1);
+    
+    /* Go4Garage Secondary Brand Color */
+    --color-accent: #FFC312;
+    --color-accent-hover: #E5AF10;
+    --color-accent-light: rgba(255, 195, 18, 0.1);
+    
+    /* Semantic Colors */
+    --color-success: #10b981;
+    --color-success-light: rgba(16, 185, 129, 0.1);
+    --color-warning: #FFC312;
+    --color-warning-light: rgba(255, 195, 18, 0.1);
+    --color-danger: #ef4444;
+    --color-danger-light: rgba(239, 68, 68, 0.1);
+    --color-info: #0A3D62;
+    --color-info-light: rgba(10, 61, 98, 0.1);
+
+    /* Typography */
+    --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-family-code: 'JetBrains Mono', monospace;
+    --font-size-base: 14px;
+    --font-size-sm: 12px;
+    --font-size-lg: 16px;
+    --font-size-xl: 20px;
+    --font-size-2xl: 24px;
+    
+    /* Layout */
+    --border-radius: 8px;
+    --border-radius-sm: 4px;
+    --border-radius-lg: 12px;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --sidebar-width: 250px;
+    --header-height: 60px;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+}
+
+/* Light Mode Theme Variables */
+body {
+    --theme-background: #f8fafc;
+    --theme-surface: #ffffff;
+    --theme-text: #1e293b;
+    --theme-text-light: #64748b;
+    --theme-text-muted: #94a3b8;
+    --theme-border: #e2e8f0;
+    --theme-hover: #f1f5f9;
+    --theme-sidebar-bg: #0f172a;
+    --theme-sidebar-text: #cbd5e1;
+    --theme-sidebar-active: var(--color-primary);
+}
+
+/* Dark Mode Theme Variables */
+body.dark-mode {
+    --theme-background: #0f172a;
+    --theme-surface: #1e293b;
+    --theme-text: #f8fafc;
+    --theme-text-light: #cbd5e1;
+    --theme-text-muted: #94a3b8;
+    --theme-border: #334155;
+    --theme-hover: #334155;
+    --theme-sidebar-bg: #020617;
+    --theme-sidebar-text: #cbd5e1;
+    --theme-sidebar-active: var(--color-primary);
+}
+
+/* Base Reset & Typography */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--theme-background);
+    color: var(--theme-text);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* Utility Classes */
+.text-muted {
+    color: var(--theme-text-muted);
+}
+
+.text-primary {
+    color: var(--color-primary);
+}
+
+.text-success {
+    color: var(--color-success);
+}
+
+.text-danger {
+    color: var(--color-danger);
+}
+
+.text-warning {
+    color: var(--color-warning);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--theme-background);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--theme-border);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-text-light);
+}

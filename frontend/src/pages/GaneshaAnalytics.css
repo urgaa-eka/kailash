@@ -1,0 +1,170 @@
+.analytics-container {
+  padding: 2rem;
+  background: #0a0a1a;
+  min-height: 100vh;
+  color: white;
+}
+
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.analytics-header h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #FFD700;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #4F46E5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.refresh-btn:hover {
+  background: #4338CA;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: #1a1a2e;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #2a2a3e;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #FFD700;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tier-distribution {
+  background: #1a1a2e;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #2a2a3e;
+  margin-bottom: 2rem;
+}
+
+.tier-distribution h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #FFD700;
+}
+
+.tier-bar {
+  display: flex;
+  height: 50px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tier-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.tier-segment.sonnet {
+  background: #4F46E5;
+}
+
+.tier-segment.haiku {
+  background: #10B981;
+}
+
+.agents-table {
+  background: #1a1a2e;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #2a2a3e;
+}
+
+.agents-table h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #FFD700;
+}
+
+.agents-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.agents-table th {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 2px solid #2a2a3e;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.agents-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+.tier-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tier-badge.sonnet {
+  background: #4F46E5;
+  color: white;
+}
+
+.tier-badge.haiku {
+  background: #10B981;
+  color: white;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-badge.active {
+  background: #10B981;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

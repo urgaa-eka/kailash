@@ -1,0 +1,20 @@
+{
+  "department_config": {
+    "name": "YAMA",
+    "scope": "INTERNAL",
+    "priority": "HIGH",
+    "automation_rate_target": 0.85
+  },
+  "audit_rules": {
+    "log_all_access": true,
+    "log_retention_days": 365,
+    "pii_access_logging": true,
+    "admin_action_logging": true
+  },
+  "compliance_rules": {
+    "gdpr_enabled": true,
+    "data_retention_days": 90,
+    "user_consent_required": true,
+    "right_to_be_forgotten": true
+  }
+}

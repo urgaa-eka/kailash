@@ -1,0 +1,233 @@
+/* Settings Page Styles */
+
+.settings-page {
+    padding: var(--spacing-xl);
+    max-width: 1400px;
+}
+
+/* Settings Layout */
+.settings-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: var(--spacing-lg);
+}
+
+/* Settings Sidebar */
+.settings-sidebar {
+    position: sticky;
+    top: var(--spacing-lg);
+    align-self: start;
+}
+
+.settings-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.settings-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border: none;
+    background: transparent;
+    color: var(--theme-text-light);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+}
+
+.settings-tab:hover {
+    background: var(--theme-hover);
+    color: var(--theme-text);
+}
+
+.settings-tab.active {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.settings-tab i {
+    font-size: 20px;
+}
+
+/* Settings Content */
+.settings-content {
+    min-height: 400px;
+}
+
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* Form Elements */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.form-label {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--theme-text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-control {
+    padding: var(--spacing-md);
+    border: 1px solid var(--theme-border);
+    background: var(--theme-surface);
+    color: var(--theme-text);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-base);
+    transition: all 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    padding-top: var(--spacing-md);
+}
+
+/* Setting Items */
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    background: var(--theme-hover);
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+}
+
+.setting-item:hover {
+    background: var(--theme-border);
+}
+
+.setting-info {
+    flex: 1;
+}
+
+.setting-title {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--theme-text);
+    margin-bottom: 4px;
+}
+
+.setting-description {
+    font-size: var(--font-size-sm);
+    color: var(--theme-text-light);
+}
+
+/* Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--theme-border);
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--color-primary);
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+/* Color Picker */
+.color-picker {
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) 0;
+}
+
+.color-option {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 3px solid transparent;
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+}
+
+.color-option.active {
+    border-color: var(--theme-text);
+    box-shadow: var(--shadow-md);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .settings-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .settings-sidebar {
+        position: static;
+    }
+    
+    .settings-tabs {
+        flex-direction: row;
+        overflow-x: auto;
+    }
+    
+    .settings-tab {
+        flex-shrink: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .settings-page {
+        padding: var(--spacing-lg);
+    }
+}

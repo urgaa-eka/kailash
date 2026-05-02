@@ -1,0 +1,460 @@
+/* ================================================= */
+/* KAILASH SPIRITUAL THEME ENHANCEMENT              */
+/* Premium Corporate with Spiritual Essence          */
+/* ================================================= */
+
+:root {
+    /* Sacred Color Palette */
+    --sacred-saffron: #FF9933;
+    --sacred-saffron-light: rgba(255, 153, 51, 0.1);
+    --sacred-gold: #FFD700;
+    --sacred-gold-light: rgba(255, 215, 0, 0.1);
+    --divine-blue: #0A3D62;
+    --divine-blue-light: rgba(10, 61, 98, 0.1);
+    --lotus-pink: #FFB6C1;
+    --meditation-purple: #8B5CF6;
+    --spiritual-white: #FFFEF7;
+    --om-orange: #FF6B35;
+    
+    /* Spiritual Gradients */
+    --gradient-divine: linear-gradient(135deg, var(--divine-blue) 0%, var(--meditation-purple) 100%);
+    --gradient-sacred: linear-gradient(135deg, var(--sacred-saffron) 0%, var(--sacred-gold) 100%);
+    --gradient-lotus: linear-gradient(135deg, var(--lotus-pink) 0%, var(--meditation-purple) 100%);
+    --gradient-enlightenment: linear-gradient(135deg, var(--divine-blue) 0%, var(--sacred-gold) 50%, var(--om-orange) 100%);
+    
+    /* Sacred Geometry */
+    --yantra-pattern: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 L45 25 L30 50 L15 25 Z' fill='none' stroke='rgba(255,215,0,0.03)' stroke-width='1'/%3E%3C/svg%3E");
+    
+    /* Meditation & Mindfulness */
+    --breath-duration: 4s;
+    --mantra-glow: 0 0 20px rgba(255, 215, 0, 0.5);
+    
+    /* Spiritual Shadows */
+    --shadow-divine: 0 4px 20px rgba(10, 61, 98, 0.08);
+    --shadow-sacred: 0 4px 20px rgba(255, 153, 51, 0.12);
+    --shadow-lotus: 0 4px 16px rgba(255, 182, 193, 0.2);
+    --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.06);
+    
+    /* Border Radius */
+    --border-radius-sm: 8px;
+    --border-radius-md: 12px;
+    --border-radius-lg: 16px;
+    --border-radius-xl: 20px;
+}
+
+/* Enhanced Light Mode with Spiritual Elements */
+body {
+    --theme-background: var(--spiritual-white);
+    --theme-surface: #ffffff;
+    --theme-accent: var(--sacred-gold);
+    --theme-accent-hover: var(--sacred-saffron);
+    background-image: var(--yantra-pattern);
+    background-size: 60px 60px;
+    background-attachment: fixed;
+}
+
+/* Sacred Animation - Breathing Effect for Meditation */
+@keyframes sacred-breath {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.05); opacity: 1; }
+}
+
+@keyframes divine-glow {
+    0%, 100% { box-shadow: 0 0 8px rgba(139, 92, 246, 0.2); }
+    50% { box-shadow: 0 0 16px rgba(139, 92, 246, 0.4), 0 0 24px rgba(139, 92, 246, 0.2); }
+}
+
+@keyframes lotus-bloom {
+    0% { transform: rotate(0deg) scale(0.95); }
+    50% { transform: rotate(180deg) scale(1.05); }
+    100% { transform: rotate(360deg) scale(0.95); }
+}
+
+@keyframes om-pulse {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.1); filter: brightness(1.2); }
+}
+
+/* ============================================ */
+/* SPIRITUAL CARD COMPONENT                     */
+/* ============================================ */
+.spiritual-card {
+    background: var(--theme-surface);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-card);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.spiritual-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-sacred);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.spiritual-card:hover {
+    box-shadow: var(--shadow-divine);
+    transform: translateY(-2px);
+}
+
+.spiritual-card:hover::before {
+    opacity: 1;
+}
+
+/* ============================================ */
+/* DEITY AVATAR - SQUARE TRANSPARENT HD DESIGN  */
+/* ============================================ */
+.deity-avatar-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background: transparent;
+    padding: 0;
+    overflow: visible;
+    transition: all 0.3s ease;
+}
+
+.deity-avatar-wrapper:hover {
+    transform: scale(1.05);
+}
+
+.deity-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: none;
+    border-radius: 4px;
+}
+
+.divine-glow {
+    animation: divine-glow 3s ease-in-out infinite;
+}
+
+/* Legacy support */
+.deity-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background: transparent;
+    padding: 0;
+    overflow: visible;
+}
+
+.deity-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+/* ============================================ */
+/* BADGES & TAGS                                */
+/* ============================================ */
+.sacred-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #166534;
+    letter-spacing: 0.3px;
+}
+
+.blessing-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    color: #6b21a8;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.position-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--divine-blue-light);
+    color: var(--divine-blue);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.department-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--sacred-gold-light);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--divine-blue);
+}
+
+/* ============================================ */
+/* MEDITATION INDICATOR                         */
+/* ============================================ */
+.meditation-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    animation: sacred-breath var(--breath-duration) ease-in-out infinite;
+}
+
+/* ============================================ */
+/* OM SYMBOL                                    */
+/* ============================================ */
+.om-symbol {
+    font-size: 20px;
+    color: var(--sacred-saffron);
+    display: inline-block;
+}
+
+/* ============================================ */
+/* LOTUS BACKGROUND - WHITE WITH SAFFRON ACCENT */
+/* ============================================ */
+.lotus-bg {
+    position: relative;
+    min-height: 100vh;
+    background: #ffffff;
+}
+
+.lotus-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 0% 0%, rgba(255, 153, 51, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(255, 153, 51, 0.03) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+/* ============================================ */
+/* SPIRITUAL QUOTE                              */
+/* ============================================ */
+.spiritual-quote {
+    padding: 16px 24px;
+    background: linear-gradient(135deg, var(--divine-blue) 0%, #1e3a5f 100%);
+    border-radius: var(--border-radius-md);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.spiritual-quote::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--gradient-sacred);
+}
+
+/* ============================================ */
+/* DEITY HEADER / GUARDIAN PANELS               */
+/* ============================================ */
+.deity-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 24px;
+    background: linear-gradient(135deg, var(--divine-blue) 0%, #1e3a5f 100%);
+    border-radius: var(--border-radius-lg);
+    color: white;
+    box-shadow: var(--shadow-divine);
+}
+
+.deity-header-image {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.deity-info h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.deity-role {
+    font-size: 13px;
+    opacity: 0.85;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* ============================================ */
+/* MANTRA TEXT                                  */
+/* ============================================ */
+.mantra-text {
+    font-family: 'Georgia', serif;
+    font-size: 14px;
+    color: var(--divine-blue);
+    text-align: center;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #fef9c3 0%, #fef3c7 100%);
+    border-radius: var(--border-radius-sm);
+    border: 1px dashed rgba(255, 193, 7, 0.4);
+}
+
+/* ============================================ */
+/* SACRED DIVIDER                               */
+/* ============================================ */
+.sacred-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.3) 50%, transparent 100%);
+    margin: 24px 0;
+    position: relative;
+}
+
+.sacred-divider::before {
+    content: '✦';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--theme-surface);
+    padding: 0 12px;
+    font-size: 12px;
+    color: var(--meditation-purple);
+}
+
+/* ============================================ */
+/* SPIRITUAL STATS                              */
+/* ============================================ */
+.spiritual-stat {
+    text-align: center;
+    padding: 16px;
+    background: var(--spiritual-white);
+    border-radius: var(--border-radius-md);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.spiritual-stat:hover {
+    box-shadow: var(--shadow-card);
+    transform: translateY(-2px);
+}
+
+.spiritual-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    background: var(--gradient-sacred);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.spiritual-stat-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================ */
+/* GRADIENT TEXT                                */
+/* ============================================ */
+.bg-gradient-sacred {
+    background: var(--gradient-sacred);
+}
+
+.bg-clip-text {
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+/* ============================================ */
+/* COLOR UTILITIES                              */
+/* ============================================ */
+.text-sacred-saffron { color: var(--sacred-saffron); }
+.text-sacred-gold { color: var(--sacred-gold); }
+.text-divine-blue { color: var(--divine-blue); }
+.bg-sacred-gold-light { background: var(--sacred-gold-light); }
+.bg-divine-blue-light { background: var(--divine-blue-light); }
+.bg-lotus-pink { background: var(--lotus-pink); }
+
+/* ============================================ */
+/* RESPONSIVE ADJUSTMENTS                       */
+/* ============================================ */
+@media (max-width: 1280px) {
+    .spiritual-stat-value {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .deity-header {
+        flex-direction: column;
+        text-align: center;
+        padding: 16px;
+    }
+    
+    .deity-avatar-wrapper {
+        width: 40px !important;
+        height: 40px !important;
+    }
+}
+
+/* ============================================ */
+/* ACCESSIBILITY                                */
+/* ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    .meditation-indicator,
+    .divine-glow,
+    .om-symbol {
+        animation: none;
+    }
+    
+    .spiritual-card:hover,
+    .spiritual-stat:hover,
+    .deity-avatar-wrapper:hover {
+        transform: none;
+    }
+}
+
+/* ============================================ */
+/* SCROLLBAR STYLING                            */
+/* ============================================ */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}

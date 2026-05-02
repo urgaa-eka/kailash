@@ -1,0 +1,573 @@
+/* ============================================================================
+   EXECUTIVE DASHBOARD - MODERN GLASSMORPHISM UI/UX
+   Features: Blur effects, gradients, animations, data visualizations
+   ============================================================================ */
+
+/* Root Variables */
+.executive-dashboard {
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-success: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --gradient-warning: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+  --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --gradient-danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  --gradient-purple: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  --gradient-teal: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+  --gradient-orange: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);
+  --gradient-blue: linear-gradient(135deg, #2af598 0%, #009efd 100%);
+}
+
+.dark .executive-dashboard {
+  --glass-bg: rgba(17, 24, 39, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Executive Dashboard Container */
+.executive-dashboard {
+  position: relative;
+  min-height: 100vh;
+  padding: 1.5rem;
+  background: #000000;
+  background-attachment: fixed;
+  font-family: 'Times New Roman', Times, serif;
+  color: #ffffff;
+}
+
+.dark .executive-dashboard {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+/* Glassmorphism Header */
+.glass-header {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  animation: slideDown 0.6s ease-out;
+}
+
+/* Modern KPI Card */
+.kpi-card-modern {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 1.25rem;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  padding: 1.5rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.kpi-card-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--gradient-primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+
+.kpi-card-modern:hover::before {
+  transform: scaleX(1);
+}
+
+.kpi-card-modern:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 48px 0 rgba(31, 38, 135, 0.25);
+}
+
+.dark .kpi-card-modern:hover {
+  box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* KPI Card Variants */
+.kpi-card-modern.purple { --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.kpi-card-modern.blue { --gradient-primary: linear-gradient(135deg, #2af598 0%, #009efd 100%); }
+.kpi-card-modern.orange { --gradient-primary: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%); }
+.kpi-card-modern.green { --gradient-primary: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+.kpi-card-modern.teal { --gradient-primary: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
+.kpi-card-modern.indigo { --gradient-primary: linear-gradient(135deg, #5f72bd 0%, #9b23ea 100%); }
+.kpi-card-modern.red { --gradient-primary: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+.kpi-card-modern.cyan { --gradient-primary: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.kpi-card-modern.amber { --gradient-primary: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+
+/* KPI Icon Container */
+.kpi-icon-container {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* KPI Value */
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0.5rem 0;
+  animation: fadeInUp 0.6s ease-out;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+/* KPI Delta Badge */
+.kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.kpi-delta.positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.kpi-delta.negative {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* Mini Sparkline Chart */
+.mini-sparkline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.kpi-card-modern:hover .mini-sparkline {
+  opacity: 0.6;
+}
+
+.sparkline-path {
+  fill: none;
+  stroke-width: 2;
+  stroke: url(#sparklineGradient);
+  vector-effect: non-scaling-stroke;
+}
+
+.sparkline-area {
+  fill: url(#sparklineGradient);
+  opacity: 0.2;
+}
+
+/* Grid Layout - Compact & Dense */
+.kpi-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .kpi-grid-compact {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .kpi-grid-compact {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* Section Container */
+.section-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Data Visualization - Progress Ring */
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mini Bar Chart */
+.mini-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  height: 40px;
+  margin-top: 0.5rem;
+}
+
+.mini-bar {
+  flex: 1;
+  background: var(--gradient-primary);
+  border-radius: 0.25rem 0.25rem 0 0;
+  transition: all 0.3s ease;
+  opacity: 0.6;
+}
+
+.mini-bar:hover {
+  opacity: 1;
+  transform: scaleY(1.1);
+}
+
+/* Metric Tile - Compact */
+.metric-tile {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.dark .metric-tile {
+  background: rgba(31, 41, 55, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.metric-tile:hover {
+  background: rgba(255, 255, 255, 0.7);
+  transform: translateY(-2px);
+}
+
+.dark .metric-tile:hover {
+  background: rgba(31, 41, 55, 0.7);
+}
+
+/* Stat Label */
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(107, 114, 128, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.dark .stat-label {
+  color: rgba(156, 163, 175, 1);
+}
+
+/* Stat Value */
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.dark .stat-value {
+  color: #ffffff;
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Stat Grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Chart Container */
+.chart-container {
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.dark .chart-container {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Trend Indicator */
+.trend-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.trend-indicator.up {
+  color: #10b981;
+}
+
+.trend-indicator.down {
+  color: #ef4444;
+}
+
+/* Loading Skeleton - Glassmorphism */
+.skeleton-glass {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 25%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 75%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 0.5rem;
+}
+
+/* Alert Card */
+.alert-card-modern {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  border-left: 4px solid;
+  transition: all 0.3s ease;
+}
+
+.alert-card-modern.critical {
+  border-left-color: #ef4444;
+  background: rgba(254, 226, 226, 0.6);
+}
+
+.alert-card-modern.warning {
+  border-left-color: #f59e0b;
+  background: rgba(254, 243, 199, 0.6);
+}
+
+.alert-card-modern.info {
+  border-left-color: #3b82f6;
+  background: rgba(219, 234, 254, 0.6);
+}
+
+.dark .alert-card-modern {
+  background: rgba(31, 41, 55, 0.6);
+}
+
+.alert-card-modern:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Phase Progress */
+.phase-progress {
+  position: relative;
+  height: 8px;
+  background: rgba(229, 231, 235, 0.5);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.phase-progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 1rem;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.phase-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+/* Circular Progress */
+.circular-progress {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.circular-progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Tooltip */
+.tooltip-glass {
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(12px);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Action Button - Glass */
+.btn-glass {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.btn-glass:active {
+  transform: translateY(0);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .executive-dashboard {
+    padding: 1rem;
+  }
+
+  .glass-header {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
+  .kpi-card-modern {
+    padding: 1rem;
+  }
+
+  .kpi-value {
+    font-size: 1.5rem;
+  }
+
+  .kpi-icon-container {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .kpi-card-modern {
+    border: 2px solid currentColor;
+  }
+
+  .glass-header {
+    border: 2px solid currentColor;
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "department_config": {
+    "name": "INDRA",
+    "scope": "INTERNAL",
+    "priority": "CRITICAL",
+    "automation_rate_target": 0.92
+  },
+  "authentication_rules": {
+    "password_min_length": 8,
+    "password_require_special_char": true,
+    "password_require_number": true,
+    "max_login_attempts": 5,
+    "account_lockout_duration_minutes": 30,
+    "jwt_expiry_hours": 24,
+    "refresh_token_expiry_days": 30
+  },
+  "rate_limiting": {
+    "default_requests_per_minute": 100,
+    "auth_requests_per_minute": 10,
+    "expensive_operation_per_hour": 50
+  },
+  "security_headers": {
+    "x_frame_options": "DENY",
+    "x_content_type_options": "nosniff",
+    "strict_transport_security": "max-age=31536000",
+    "content_security_policy": "default-src 'self'"
+  },
+  "monitoring_rules": {
+    "log_all_auth_attempts": true,
+    "alert_on_failed_auth_threshold": 10,
+    "alert_on_privilege_escalation": true,
+    "scan_for_vulnerabilities_daily": true
+  }
+}

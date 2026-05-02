@@ -1,0 +1,13 @@
+{
+  "department_config": {
+    "name": "KUBERA",
+    "scope": "INTERNAL",
+    "priority": "MEDIUM",
+    "automation_rate_target": 0.80
+  },
+  "resource_rules": {
+    "utilization_target": 0.75,
+    "alert_low_utilization": 0.30,
+    "alert_high_utilization": 0.90
+  }
+}

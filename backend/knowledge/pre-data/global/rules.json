@@ -1,0 +1,28 @@
+{
+  "system_rules": {
+    "response_time": "All API responses must return within 30 seconds",
+    "data_privacy": "All PII data must be encrypted at rest and in transit",
+    "authentication": "JWT-based authentication required for all protected endpoints",
+    "rate_limiting": "Max 100 requests per minute per user",
+    "audit_logging": "All critical operations must be logged with timestamps"
+  },
+  "ai_orchestration_rules": {
+    "routing_priority": ["domain_expertise", "query_complexity", "model_availability"],
+    "fallback_strategy": "Always have 2 backup models available",
+    "context_window": "Maintain last 10 conversation turns for context",
+    "confidence_threshold": 0.85
+  },
+  "department_rules": {
+    "internal_departments": 15,
+    "external_departments": 5,
+    "max_concurrent_tasks": 50,
+    "task_timeout": "300 seconds",
+    "escalation_threshold": "3 failed attempts"
+  },
+  "knowledge_management": {
+    "pre_data_update_frequency": "quarterly",
+    "post_data_update_frequency": "daily at 06:00 UTC",
+    "knowledge_retention_period": "90 days",
+    "vector_db_indexing": "immediate after ingestion"
+  }
+}

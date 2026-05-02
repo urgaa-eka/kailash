@@ -1,0 +1,29 @@
+{
+  "department_config": {
+    "name": "SURYA",
+    "scope": "EXTERNAL",
+    "source_product": "URGAA",
+    "priority": "HIGH",
+    "automation_rate_target": 0.75
+  },
+  "charger_rules": {
+    "max_downtime_minutes": 30,
+    "health_check_interval_minutes": 5,
+    "auto_restart_enabled": true,
+    "firmware_auto_update": true,
+    "alert_on_consecutive_failures": 3
+  },
+  "energy_rules": {
+    "peak_hours": ["18:00-23:00"],
+    "off_peak_hours": ["00:00-06:00"],
+    "dynamic_pricing_enabled": true,
+    "renewable_energy_preferred": true,
+    "load_balancing_threshold": 0.80
+  },
+  "maintenance_rules": {
+    "predictive_maintenance_enabled": true,
+    "maintenance_window": "02:00-05:00 UTC",
+    "preventive_maintenance_interval_days": 30,
+    "critical_alert_response_time_minutes": 15
+  }
+}

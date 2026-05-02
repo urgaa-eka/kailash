@@ -1,0 +1,13 @@
+{
+  "department_config": {
+    "name": "MARUT",
+    "scope": "INTERNAL",
+    "priority": "MEDIUM",
+    "automation_rate_target": 0.88
+  },
+  "messaging_rules": {
+    "max_retries": 3,
+    "retry_interval_minutes": 15,
+    "delivery_timeout_minutes": 60
+  }
+}

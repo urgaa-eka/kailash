@@ -1,0 +1,14 @@
+{
+  "department_config": {
+    "name": "BRAHMA",
+    "scope": "EXTERNAL",
+    "priority": "HIGH",
+    "automation_rate_target": 0.70
+  },
+  "product_rules": {
+    "feature_validation_required": true,
+    "user_research_for_major_features": true,
+    "beta_testing_duration_days": 14,
+    "success_metrics_defined_before_launch": true
+  }
+}

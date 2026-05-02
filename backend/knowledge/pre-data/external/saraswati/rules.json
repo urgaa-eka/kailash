@@ -1,0 +1,14 @@
+{
+  "department_config": {
+    "name": "SARASWATI",
+    "scope": "EXTERNAL",
+    "priority": "MEDIUM",
+    "automation_rate_target": 0.75
+  },
+  "content_rules": {
+    "documentation_update_with_release": true,
+    "multiple_learning_formats": true,
+    "accessibility_compliant": true,
+    "regular_content_review_days": 90
+  }
+}

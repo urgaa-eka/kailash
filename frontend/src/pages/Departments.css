@@ -1,0 +1,201 @@
+/* Departments Page Styles */
+
+.departments-page {
+    padding: var(--spacing-xl);
+    max-width: 1400px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-xl);
+}
+
+.page-title {
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    color: var(--theme-text);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+.page-title i {
+    font-size: 28px;
+    color: var(--color-primary);
+}
+
+.page-subtitle {
+    color: var(--theme-text-light);
+    font-size: var(--font-size-base);
+}
+
+/* Stats Section */
+.departments-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.stat-card {
+    padding: var(--spacing-lg) !important;
+}
+
+.stat-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.stat-icon.blue {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.stat-icon.green {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
+
+.stat-icon.yellow {
+    background: var(--color-warning-light);
+    color: var(--color-warning);
+}
+
+.stat-label {
+    font-size: var(--font-size-sm);
+    color: var(--theme-text-light);
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-value {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--theme-text);
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    gap: var(--spacing-md);
+    color: var(--theme-text-light);
+}
+
+.loading-state i {
+    font-size: 32px;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Departments Grid */
+.departments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.department-card {
+    padding: var(--spacing-lg) !important;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.department-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.department-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--theme-border);
+}
+
+.department-name {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--theme-text);
+    margin-bottom: var(--spacing-xs);
+}
+
+.department-lead {
+    font-size: var(--font-size-sm);
+    color: var(--theme-text-light);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.department-stats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.dept-stat {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--theme-text-light);
+}
+
+.dept-stat i {
+    color: var(--color-primary);
+}
+
+.department-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--theme-border);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .departments-page {
+        padding: var(--spacing-lg);
+    }
+    
+    .page-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .departments-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .departments-grid {
+        grid-template-columns: 1fr;
+    }
+}

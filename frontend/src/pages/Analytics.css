@@ -1,0 +1,214 @@
+/* Analytics Page Styles */
+
+.analytics-page {
+    padding: var(--spacing-xl);
+    max-width: 1400px;
+}
+
+.time-range {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+/* KPI Grid */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.kpi-card {
+    padding: var(--spacing-lg) !important;
+}
+
+.kpi-content {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.kpi-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.kpi-icon.blue {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.kpi-icon.green {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
+
+.kpi-icon.yellow {
+    background: var(--color-warning-light);
+    color: var(--color-warning);
+}
+
+.kpi-details {
+    flex: 1;
+}
+
+.kpi-label {
+    font-size: var(--font-size-sm);
+    color: var(--theme-text-light);
+    margin-bottom: var(--spacing-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--theme-text);
+    margin-bottom: 4px;
+}
+
+.kpi-change {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.kpi-change.up {
+    color: var(--color-success);
+}
+
+.kpi-change.down {
+    color: var(--color-danger);
+}
+
+/* Charts Grid */
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.chart-card {
+    min-height: 300px;
+}
+
+.chart-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 240px;
+    background: var(--theme-hover);
+    border-radius: var(--border-radius);
+    color: var(--theme-text-light);
+}
+
+.chart-placeholder i {
+    font-size: 48px;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+}
+
+.chart-placeholder p {
+    font-size: var(--font-size-sm);
+}
+
+/* Performance List */
+.performance-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.performance-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--theme-hover);
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+}
+
+.performance-item:hover {
+    transform: translateX(4px);
+    background: var(--theme-border);
+}
+
+.performance-rank {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+    flex-shrink: 0;
+}
+
+.performance-details {
+    flex: 1;
+}
+
+.performance-name {
+    font-weight: 600;
+    color: var(--theme-text);
+    margin-bottom: 4px;
+}
+
+.performance-tasks {
+    font-size: var(--font-size-sm);
+    color: var(--theme-text-light);
+}
+
+.performance-score {
+    min-width: 120px;
+}
+
+.score-value {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--theme-text);
+    margin-bottom: var(--spacing-xs);
+}
+
+.score-bar {
+    height: 6px;
+    background: var(--theme-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-success), var(--color-primary));
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .analytics-page {
+        padding: var(--spacing-lg);
+    }
+    
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+}
