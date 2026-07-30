@@ -74,7 +74,7 @@
 - ailed attempts tracked (3 recorded in tests)
 - Authentication logging confirmed in logs
 
-### . ackup Automation (`/app/backend/scripts/backup_mongodb.py`)
+### 5. Backup Automation (`/app/database/backup_mongodb.py`)
 
 **eatures Implemented**:
 - [OK] MongoD backup script
@@ -147,7 +147,7 @@
 /app/backend/app/middleware/__init__.py
 /app/backend/app/middleware/security.py (38 lines)
 /app/backend/app/middleware/error_handler.py (3 lines)
-/app/backend/scripts/backup_mongodb.py (3 lines)
+/app/database/backup_mongodb.py (3 lines)
 /app/docs/PRODUCTION_DEPLOYMENT.md
 /app/docs/API_REERENCE.md
 /app/docs/PHASE3_SUMMARY.md

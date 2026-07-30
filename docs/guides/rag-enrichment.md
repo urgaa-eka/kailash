@@ -74,7 +74,7 @@ For each document, collect:
 
 ## UPLOAD QUEUE CONFIGURATION
 
-Edit `backend/scripts/rag_upload_script.py`:
+Edit `database/rag_upload_script.py`:
 
 ```python
 UPLOAD_QUEUE = [
@@ -110,5 +110,5 @@ UPLOAD_QUEUE = [
 
 1. Place documents in `/app/backend/knowledge/documents/`
 2. Update `UPLOAD_QUEUE` in `rag_upload_script.py`
-3. Run: `python backend/scripts/rag_upload_script.py`
+3. Run: `python database/rag_upload_script.py`
 4. Verify: Check vector count in analytics dashboard

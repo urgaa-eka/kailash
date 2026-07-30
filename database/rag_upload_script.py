@@ -6,8 +6,9 @@ import os
 import sys
 from pathlib import Path
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add backend/ to path so `app.*` imports resolve (this script now lives
+# under database/, a sibling of backend/, not backend/scripts/ anymore)
+sys.path.insert(0, str(Path(__file__).parent.parent / 'backend'))
 
 UPLOAD_QUEUE = [
     # Add documents here

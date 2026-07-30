@@ -120,6 +120,13 @@ Each service module follows `routes.py` → `service.py` pattern, wired through
 │   │   ├── pages/              # Application pages
 │   │   └── services/           # API service layer
 │   └── package.json
+├── database/                    # MongoDB init, seed data, backups, RAG upload
+│   ├── mongodb_init.js          # Collections, indexes, initial setup
+│   ├── mongodb_backup.sh / mongodb_health_check.sh
+│   ├── seed_data.py             # Seeds users, departments, activities
+│   ├── backup_mongodb.py        # Daily backup automation (in-container)
+│   ├── populate_department_data.py
+│   └── rag_upload_script.py
 ├── deploy/
 │   ├── docker/                 # Docker Compose variants
 │   └── vultr/                  # VPS setup & deploy scripts
@@ -132,7 +139,7 @@ Each service module follows `routes.py` → `service.py` pattern, wired through
 │   ├── platform/               # Shared library tests
 │   ├── backend/                # Backend integration tests
 │   └── integration/            # End-to-end tests
-├── scripts/                    # MongoDB init, health checks, backups
+├── scripts/                    # General dev tooling (service scaffolding, app health check)
 ├── .github/workflows/          # CI/CD (lint, test, deploy)
 ├── Dockerfile                  # Single-container production build
 ├── docker-compose.yml          # Local & production stack
