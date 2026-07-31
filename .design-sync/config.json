@@ -1,0 +1,827 @@
+{
+  "projectId": "cacafaa4-4139-4b7d-8d58-c5294c73c60c",
+  "shape": "package",
+  "pkg": "frontend",
+  "globalName": "KailashDS",
+  "srcDir": "src/components",
+  "buildCmd": "node .design-sync/build-ds.mjs",
+  "cssEntry": ".ds-lib/ds.css",
+  "docsDir": "../.design-sync/docs",
+  "provider": {
+    "component": "DesignSystemProvider"
+  },
+  "libOverrides": {
+    "source-kit.mjs": "group comes from .design-sync/docs frontmatter, not the source dir (Layout/ and InvestorDashboard/ would otherwise win)"
+  },
+  "overrides": {
+    "Dialog": {
+      "cardMode": "single",
+      "viewport": "720x460"
+    },
+    "AlertDialog": {
+      "cardMode": "single",
+      "viewport": "720x460"
+    },
+    "Drawer": {
+      "cardMode": "single",
+      "viewport": "600x440"
+    },
+    "DrawerHeader": {
+      "cardMode": "single",
+      "viewport": "600x440"
+    },
+    "DrawerFooter": {
+      "cardMode": "single",
+      "viewport": "600x440"
+    },
+    "Sheet": {
+      "cardMode": "single",
+      "viewport": "680x480"
+    },
+    "Popover": {
+      "cardMode": "single",
+      "viewport": "520x380"
+    },
+    "DropdownMenu": {
+      "cardMode": "single",
+      "viewport": "520x380"
+    },
+    "DropdownMenuLabel": {
+      "cardMode": "single",
+      "viewport": "520x380"
+    },
+    "Menubar": {
+      "cardMode": "single",
+      "viewport": "520x380"
+    },
+    "MenubarLabel": {
+      "cardMode": "single",
+      "viewport": "520x380"
+    },
+    "ContextMenu": {
+      "cardMode": "single",
+      "viewport": "520x380"
+    },
+    "ContextMenuLabel": {
+      "cardMode": "single",
+      "viewport": "520x380"
+    },
+    "HoverCard": {
+      "cardMode": "single",
+      "viewport": "520x380"
+    },
+    "Tooltip": {
+      "cardMode": "single",
+      "viewport": "380x220"
+    },
+    "Toast": {
+      "cardMode": "single",
+      "viewport": "620x420"
+    },
+    "LoadingState": {
+      "cardMode": "single",
+      "viewport": "620x420"
+    },
+    "NavigationMenu": {
+      "cardMode": "single",
+      "viewport": "900x520"
+    },
+    "NavigationMenuItem": {
+      "cardMode": "single",
+      "viewport": "900x520"
+    },
+    "AppLayout": {
+      "cardMode": "single",
+      "viewport": "920x600"
+    },
+    "MainLayout": {
+      "cardMode": "single",
+      "viewport": "920x600"
+    },
+    "Sidebar": {
+      "cardMode": "single",
+      "viewport": "380x600"
+    },
+    "Header": {
+      "cardMode": "single",
+      "viewport": "920x260"
+    },
+    "LayoutHeader": {
+      "cardMode": "single",
+      "viewport": "920x260"
+    },
+    "MinimalHeader": {
+      "cardMode": "single",
+      "viewport": "920x260"
+    },
+    "MinimalFooter": {
+      "cardMode": "single",
+      "viewport": "920x260"
+    },
+    "LegalFooter": {
+      "cardMode": "single",
+      "viewport": "920x260"
+    },
+    "LoginFooter": {
+      "cardMode": "single",
+      "viewport": "920x260"
+    },
+    "LoginHeader": {
+      "cardMode": "single",
+      "viewport": "920x260"
+    },
+    "SpiritualDashboardHeader": {
+      "cardMode": "single",
+      "viewport": "920x260"
+    },
+    "LeftPanel": {
+      "cardMode": "single",
+      "viewport": "660x580"
+    },
+    "LoginBox": {
+      "cardMode": "single",
+      "viewport": "660x760"
+    },
+    "LoginCard": {
+      "cardMode": "single",
+      "viewport": "660x580"
+    },
+    "LoginCardOverlay": {
+      "cardMode": "single",
+      "viewport": "660x580"
+    },
+    "LoginForm": {
+      "cardMode": "single",
+      "viewport": "660x840"
+    },
+    "TwoFactorModal": {
+      "cardMode": "single",
+      "viewport": "680x960"
+    },
+    "DualRingWheel": {
+      "cardMode": "single",
+      "viewport": "1200x760"
+    },
+    "FloatingOrbs": {
+      "cardMode": "single",
+      "viewport": "1200x760"
+    },
+    "MascotWheel": {
+      "cardMode": "single",
+      "viewport": "1200x760"
+    },
+    "NeuralNetworkMap": {
+      "cardMode": "single",
+      "viewport": "1200x760"
+    },
+    "SimpleGlobeAnimation": {
+      "cardMode": "single",
+      "viewport": "1200x760"
+    },
+    "VideoBackground": {
+      "cardMode": "single",
+      "viewport": "1200x760"
+    },
+    "DepartmentDetailsPanel": {
+      "cardMode": "single",
+      "viewport": "620x540"
+    },
+    "SpiritualQuote": {
+      "cardMode": "column"
+    },
+    "AIImpactSummary": {
+      "cardMode": "column"
+    },
+    "CompactStatCard": {
+      "cardMode": "column"
+    },
+    "DepartmentCard": {
+      "cardMode": "column"
+    },
+    "FeatureKPICard": {
+      "cardMode": "column"
+    },
+    "KPIGrid": {
+      "cardMode": "column",
+      "viewport": "1180x560"
+    },
+    "ProductCard": {
+      "cardMode": "column"
+    },
+    "ProgramTile": {
+      "cardMode": "column"
+    },
+    "ServiceRow": {
+      "cardMode": "column"
+    },
+    "SquareKPICard": {
+      "cardMode": "column"
+    },
+    "Accordion": {
+      "cardMode": "column"
+    },
+    "AspectRatio": {
+      "cardMode": "column"
+    },
+    "Card": {
+      "cardMode": "column"
+    },
+    "CardContent": {
+      "cardMode": "column"
+    },
+    "CardFooter": {
+      "cardMode": "column"
+    },
+    "CardHeader": {
+      "cardMode": "column"
+    },
+    "Carousel": {
+      "cardMode": "column"
+    },
+    "Collapsible": {
+      "cardMode": "column"
+    },
+    "ScrollArea": {
+      "cardMode": "column"
+    },
+    "Separator": {
+      "cardMode": "column"
+    },
+    "Alert": {
+      "cardMode": "column"
+    },
+    "ErrorBoundary": {
+      "cardMode": "column"
+    },
+    "Progress": {
+      "cardMode": "column"
+    },
+    "Skeleton": {
+      "cardMode": "column"
+    },
+    "Checkbox": {
+      "cardMode": "column"
+    },
+    "Form": {
+      "cardMode": "column"
+    },
+    "Input": {
+      "cardMode": "column"
+    },
+    "Label": {
+      "cardMode": "column"
+    },
+    "RadioGroup": {
+      "cardMode": "column"
+    },
+    "Slider": {
+      "cardMode": "column"
+    },
+    "Switch": {
+      "cardMode": "column"
+    },
+    "Textarea": {
+      "cardMode": "column"
+    },
+    "Pagination": {
+      "cardMode": "column"
+    },
+    "Tabs": {
+      "cardMode": "column"
+    },
+    "Command": {
+      "cardMode": "column"
+    },
+    "AlertDialogTitle": {
+      "cardMode": "single",
+      "viewport": "720x460"
+    },
+    "ResizablePanel": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md",
+  "extraEntries": [
+    "../.design-sync/ds-icons.js"
+  ],
+  "componentSrcMap": {
+    "AIImpactSummary": "src/components/InvestorDashboard/AIImpactSummary.jsx",
+    "Accordion": "src/components/UI/accordion.jsx",
+    "AccordionContent": "src/components/UI/accordion.jsx",
+    "AccordionItem": "src/components/UI/accordion.jsx",
+    "AccordionTrigger": "src/components/UI/accordion.jsx",
+    "Alert": "src/components/UI/alert.jsx",
+    "AlertDescription": "src/components/UI/alert.jsx",
+    "AlertDialog": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogAction": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogCancel": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogContent": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogDescription": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogFooter": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogHeader": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogOverlay": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogPortal": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogTitle": "src/components/UI/alert-dialog.jsx",
+    "AlertDialogTrigger": "src/components/UI/alert-dialog.jsx",
+    "AlertTitle": "src/components/UI/alert.jsx",
+    "AppLayout": "src/components/AppLayout.js",
+    "AspectRatio": "src/components/UI/aspect-ratio.jsx",
+    "AutomationBadge": "src/components/InvestorDashboard/AutomationBadge.jsx",
+    "Avatar": "src/components/UI/avatar.jsx",
+    "AvatarFallback": "src/components/UI/avatar.jsx",
+    "AvatarImage": "src/components/UI/avatar.jsx",
+    "Badge": "src/components/UI/badge.jsx",
+    "Breadcrumb": "src/components/UI/breadcrumb.jsx",
+    "BreadcrumbEllipsis": "src/components/UI/breadcrumb.jsx",
+    "BreadcrumbItem": "src/components/UI/breadcrumb.jsx",
+    "BreadcrumbLink": "src/components/UI/breadcrumb.jsx",
+    "BreadcrumbList": "src/components/UI/breadcrumb.jsx",
+    "BreadcrumbPage": "src/components/UI/breadcrumb.jsx",
+    "BreadcrumbSeparator": "src/components/UI/breadcrumb.jsx",
+    "Button": "src/components/UI/button.jsx",
+    "Calendar": "src/components/UI/calendar.jsx",
+    "Card": "src/components/UI/card.jsx",
+    "CardContent": "src/components/UI/card.jsx",
+    "CardDescription": "src/components/UI/card.jsx",
+    "CardFooter": "src/components/UI/card.jsx",
+    "CardHeader": "src/components/UI/card.jsx",
+    "CardTitle": "src/components/UI/card.jsx",
+    "Carousel": "src/components/UI/carousel.jsx",
+    "CarouselContent": "src/components/UI/carousel.jsx",
+    "CarouselItem": "src/components/UI/carousel.jsx",
+    "CarouselNext": "src/components/UI/carousel.jsx",
+    "CarouselPrevious": "src/components/UI/carousel.jsx",
+    "Checkbox": "src/components/UI/checkbox.jsx",
+    "Collapsible": "src/components/UI/collapsible.jsx",
+    "CollapsibleContent": "src/components/UI/collapsible.jsx",
+    "CollapsibleTrigger": "src/components/UI/collapsible.jsx",
+    "Command": "src/components/UI/command.jsx",
+    "CommandDialog": "src/components/UI/command.jsx",
+    "CommandEmpty": "src/components/UI/command.jsx",
+    "CommandGroup": "src/components/UI/command.jsx",
+    "CommandInput": "src/components/UI/command.jsx",
+    "CommandItem": "src/components/UI/command.jsx",
+    "CommandList": "src/components/UI/command.jsx",
+    "CommandSeparator": "src/components/UI/command.jsx",
+    "CommandShortcut": "src/components/UI/command.jsx",
+    "CompactStatCard": "src/components/KPICards.js",
+    "ContextMenu": "src/components/UI/context-menu.jsx",
+    "ContextMenuCheckboxItem": "src/components/UI/context-menu.jsx",
+    "ContextMenuContent": "src/components/UI/context-menu.jsx",
+    "ContextMenuGroup": "src/components/UI/context-menu.jsx",
+    "ContextMenuItem": "src/components/UI/context-menu.jsx",
+    "ContextMenuLabel": "src/components/UI/context-menu.jsx",
+    "ContextMenuPortal": "src/components/UI/context-menu.jsx",
+    "ContextMenuRadioGroup": "src/components/UI/context-menu.jsx",
+    "ContextMenuRadioItem": "src/components/UI/context-menu.jsx",
+    "ContextMenuSeparator": "src/components/UI/context-menu.jsx",
+    "ContextMenuShortcut": "src/components/UI/context-menu.jsx",
+    "ContextMenuSub": "src/components/UI/context-menu.jsx",
+    "ContextMenuSubContent": "src/components/UI/context-menu.jsx",
+    "ContextMenuSubTrigger": "src/components/UI/context-menu.jsx",
+    "ContextMenuTrigger": "src/components/UI/context-menu.jsx",
+    "CookieConsent": "src/components/CookieConsent.js",
+    "DataSourceBadge": "src/components/InvestorDashboard/DataSourceBadge.jsx",
+    "DeityAvatar": "src/components/DeityAvatar.js",
+    "DepartmentCard": "src/components/DepartmentCard.js",
+    "DepartmentDetailsPanel": "src/components/DepartmentDetailsPanel.jsx",
+    "DepartmentTag": "src/components/DepartmentTag.js",
+    "Dialog": "src/components/UI/dialog.jsx",
+    "DialogClose": "src/components/UI/dialog.jsx",
+    "DialogContent": "src/components/UI/dialog.jsx",
+    "DialogDescription": "src/components/UI/dialog.jsx",
+    "DialogFooter": "src/components/UI/dialog.jsx",
+    "DialogHeader": "src/components/UI/dialog.jsx",
+    "DialogOverlay": "src/components/UI/dialog.jsx",
+    "DialogPortal": "src/components/UI/dialog.jsx",
+    "DialogTitle": "src/components/UI/dialog.jsx",
+    "DialogTrigger": "src/components/UI/dialog.jsx",
+    "Drawer": "src/components/UI/drawer.jsx",
+    "DrawerClose": "src/components/UI/drawer.jsx",
+    "DrawerContent": "src/components/UI/drawer.jsx",
+    "DrawerDescription": "src/components/UI/drawer.jsx",
+    "DrawerFooter": "src/components/UI/drawer.jsx",
+    "DrawerHeader": "src/components/UI/drawer.jsx",
+    "DrawerOverlay": "src/components/UI/drawer.jsx",
+    "DrawerPortal": "src/components/UI/drawer.jsx",
+    "DrawerTitle": "src/components/UI/drawer.jsx",
+    "DrawerTrigger": "src/components/UI/drawer.jsx",
+    "DropdownMenu": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuCheckboxItem": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuContent": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuGroup": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuItem": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuLabel": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuPortal": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuRadioGroup": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuRadioItem": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuSeparator": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuShortcut": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuSub": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuSubContent": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuSubTrigger": "src/components/UI/dropdown-menu.jsx",
+    "DropdownMenuTrigger": "src/components/UI/dropdown-menu.jsx",
+    "DualRingWheel": "src/components/DualRingWheel.js",
+    "EnhancedKPICard": "src/components/InvestorDashboard/EnhancedKPICard.jsx",
+    "EnhancedUserProfile": "src/components/EnhancedUserProfile.js",
+    "ErrorBoundary": "src/components/ErrorBoundary.js",
+    "FeatureKPICard": "src/components/KPICards.js",
+    "FloatingOrbs": "src/components/FloatingOrbs.js",
+    "Form": "src/components/UI/form.jsx",
+    "FormControl": "src/components/UI/form.jsx",
+    "FormDescription": "src/components/UI/form.jsx",
+    "FormField": "src/components/UI/form.jsx",
+    "FormItem": "src/components/UI/form.jsx",
+    "FormLabel": "src/components/UI/form.jsx",
+    "FormMessage": "src/components/UI/form.jsx",
+    "GlobeVisualization": "src/components/GlobeVisualization.js",
+    "Header": "src/components/Header.js",
+    "HoverCard": "src/components/UI/hover-card.jsx",
+    "HoverCardContent": "src/components/UI/hover-card.jsx",
+    "HoverCardTrigger": "src/components/UI/hover-card.jsx",
+    "Input": "src/components/UI/input.jsx",
+    "InputOTP": "src/components/UI/input-otp.jsx",
+    "InputOTPGroup": "src/components/UI/input-otp.jsx",
+    "InputOTPSeparator": "src/components/UI/input-otp.jsx",
+    "InputOTPSlot": "src/components/UI/input-otp.jsx",
+    "KPIGrid": "src/components/KPICards.js",
+    "Label": "src/components/UI/label.jsx",
+    "LayoutHeader": "src/components/Layout/Header.js",
+    "LeftPanel": "src/components/LeftPanel.js",
+    "LegalFooter": "src/components/LegalFooter.js",
+    "LoadingState": "src/components/LoadingState.js",
+    "LoginBox": "src/components/LoginBox.js",
+    "LoginCard": "src/components/LoginCard.js",
+    "LoginCardOverlay": "src/components/LoginCardOverlay.js",
+    "LoginFooter": "src/components/LoginFooter.js",
+    "LoginForm": "src/components/LoginForm.js",
+    "LoginHeader": "src/components/LoginHeader.js",
+    "MadeInBharatBadge": "src/components/MadeInBharatBadge.js",
+    "MainLayout": "src/components/Layout/MainLayout.js",
+    "MascotWheel": "src/components/MascotWheel.js",
+    "MeditationIndicator": "src/components/MeditationIndicator.js",
+    "Menubar": "src/components/UI/menubar.jsx",
+    "MenubarCheckboxItem": "src/components/UI/menubar.jsx",
+    "MenubarContent": "src/components/UI/menubar.jsx",
+    "MenubarGroup": "src/components/UI/menubar.jsx",
+    "MenubarItem": "src/components/UI/menubar.jsx",
+    "MenubarLabel": "src/components/UI/menubar.jsx",
+    "MenubarMenu": "src/components/UI/menubar.jsx",
+    "MenubarPortal": "src/components/UI/menubar.jsx",
+    "MenubarRadioGroup": "src/components/UI/menubar.jsx",
+    "MenubarRadioItem": "src/components/UI/menubar.jsx",
+    "MenubarSeparator": "src/components/UI/menubar.jsx",
+    "MenubarShortcut": "src/components/UI/menubar.jsx",
+    "MenubarSub": "src/components/UI/menubar.jsx",
+    "MenubarSubContent": "src/components/UI/menubar.jsx",
+    "MenubarSubTrigger": "src/components/UI/menubar.jsx",
+    "MenubarTrigger": "src/components/UI/menubar.jsx",
+    "MinimalFooter": "src/components/MinimalFooter.js",
+    "MinimalHeader": "src/components/MinimalHeader.js",
+    "NavigationMenu": "src/components/UI/navigation-menu.jsx",
+    "NavigationMenuContent": "src/components/UI/navigation-menu.jsx",
+    "NavigationMenuIndicator": "src/components/UI/navigation-menu.jsx",
+    "NavigationMenuItem": "src/components/UI/navigation-menu.jsx",
+    "NavigationMenuLink": "src/components/UI/navigation-menu.jsx",
+    "NavigationMenuList": "src/components/UI/navigation-menu.jsx",
+    "NavigationMenuTrigger": "src/components/UI/navigation-menu.jsx",
+    "NavigationMenuViewport": "src/components/UI/navigation-menu.jsx",
+    "NeuralNetworkMap": "src/components/NeuralNetworkMap.js",
+    "OnboardingOverlay": "src/components/OnboardingOverlay.js",
+    "Pagination": "src/components/UI/pagination.jsx",
+    "PaginationContent": "src/components/UI/pagination.jsx",
+    "PaginationEllipsis": "src/components/UI/pagination.jsx",
+    "PaginationItem": "src/components/UI/pagination.jsx",
+    "PaginationLink": "src/components/UI/pagination.jsx",
+    "PaginationNext": "src/components/UI/pagination.jsx",
+    "PaginationPrevious": "src/components/UI/pagination.jsx",
+    "Popover": "src/components/UI/popover.jsx",
+    "PopoverAnchor": "src/components/UI/popover.jsx",
+    "PopoverContent": "src/components/UI/popover.jsx",
+    "PopoverTrigger": "src/components/UI/popover.jsx",
+    "ProblemResolutionCard": "src/components/InvestorDashboard/ProblemResolutionCard.jsx",
+    "ProductCard": "src/components/ProductCard.js",
+    "ProgramTile": "src/components/ProgramTile.js",
+    "Progress": "src/components/UI/progress.jsx",
+    "ProtectedRoute": "src/components/ProtectedRoute.js",
+    "RadioGroup": "src/components/UI/radio-group.jsx",
+    "RadioGroupItem": "src/components/UI/radio-group.jsx",
+    "ResizableHandle": "src/components/UI/resizable.jsx",
+    "ResizablePanel": "src/components/UI/resizable.jsx",
+    "ResizablePanelGroup": "src/components/UI/resizable.jsx",
+    "RightPanel": "src/components/RightPanel.js",
+    "ScrollArea": "src/components/UI/scroll-area.jsx",
+    "ScrollBar": "src/components/UI/scroll-area.jsx",
+    "Select": "src/components/UI/select.jsx",
+    "SelectContent": "src/components/UI/select.jsx",
+    "SelectGroup": "src/components/UI/select.jsx",
+    "SelectItem": "src/components/UI/select.jsx",
+    "SelectLabel": "src/components/UI/select.jsx",
+    "SelectScrollDownButton": "src/components/UI/select.jsx",
+    "SelectScrollUpButton": "src/components/UI/select.jsx",
+    "SelectSeparator": "src/components/UI/select.jsx",
+    "SelectTrigger": "src/components/UI/select.jsx",
+    "SelectValue": "src/components/UI/select.jsx",
+    "Separator": "src/components/UI/separator.jsx",
+    "ServiceRow": "src/components/ServiceRow.js",
+    "SessionTimeout": "src/components/SessionTimeout.js",
+    "Sheet": "src/components/UI/sheet.jsx",
+    "SheetClose": "src/components/UI/sheet.jsx",
+    "SheetContent": "src/components/UI/sheet.jsx",
+    "SheetDescription": "src/components/UI/sheet.jsx",
+    "SheetFooter": "src/components/UI/sheet.jsx",
+    "SheetHeader": "src/components/UI/sheet.jsx",
+    "SheetOverlay": "src/components/UI/sheet.jsx",
+    "SheetPortal": "src/components/UI/sheet.jsx",
+    "SheetTitle": "src/components/UI/sheet.jsx",
+    "SheetTrigger": "src/components/UI/sheet.jsx",
+    "Sidebar": "src/components/Layout/Sidebar.js",
+    "SimpleGlobeAnimation": "src/components/SimpleGlobeAnimation.js",
+    "SimpleToast": "src/components/UI/Toast.js",
+    "Skeleton": "src/components/UI/skeleton.jsx",
+    "Slider": "src/components/UI/slider.jsx",
+    "SonnerToaster": "src/components/UI/sonner.jsx",
+    "SpiritualDashboardHeader": "src/components/SpiritualDashboardHeader.js",
+    "SpiritualQuote": "src/components/SpiritualQuote.js",
+    "SquareKPICard": "src/components/KPICards.js",
+    "Switch": "src/components/UI/switch.jsx",
+    "Table": "src/components/UI/table.jsx",
+    "TableBody": "src/components/UI/table.jsx",
+    "TableCaption": "src/components/UI/table.jsx",
+    "TableCell": "src/components/UI/table.jsx",
+    "TableFooter": "src/components/UI/table.jsx",
+    "TableHead": "src/components/UI/table.jsx",
+    "TableHeader": "src/components/UI/table.jsx",
+    "TableRow": "src/components/UI/table.jsx",
+    "Tabs": "src/components/UI/tabs.jsx",
+    "TabsContent": "src/components/UI/tabs.jsx",
+    "TabsList": "src/components/UI/tabs.jsx",
+    "TabsTrigger": "src/components/UI/tabs.jsx",
+    "Textarea": "src/components/UI/textarea.jsx",
+    "Toast": "src/components/UI/toast.jsx",
+    "ToastAction": "src/components/UI/toast.jsx",
+    "ToastClose": "src/components/UI/toast.jsx",
+    "ToastDescription": "src/components/UI/toast.jsx",
+    "ToastProvider": "src/components/UI/toast.jsx",
+    "ToastTitle": "src/components/UI/toast.jsx",
+    "ToastViewport": "src/components/UI/toast.jsx",
+    "Toaster": "src/components/UI/toaster.jsx",
+    "Toggle": "src/components/UI/toggle.jsx",
+    "ToggleGroup": "src/components/UI/toggle-group.jsx",
+    "ToggleGroupItem": "src/components/UI/toggle-group.jsx",
+    "Tooltip": "src/components/UI/tooltip.jsx",
+    "TooltipContent": "src/components/UI/tooltip.jsx",
+    "TooltipProvider": "src/components/UI/tooltip.jsx",
+    "TooltipTrigger": "src/components/UI/tooltip.jsx",
+    "TwoFactorModal": "src/components/TwoFactorModal.js",
+    "VideoBackground": "src/components/VideoBackground.js"
+  },
+  "dtsPropsFor": {
+    "AppLayout": "\n  children?: React.ReactNode;\n  showBackButton?: boolean;  // default: false\n  showMenuButton?: boolean;  // default: true\n  title?: string;  // default: \"Kailash\"\n",
+    "DeityAvatar": "\n  deityId?: string;\n  size?: number;  // default: 48\n  className?: string;  // default: ''\n  showGlow?: boolean;  // default: false\n",
+    "DepartmentCard": "\n  department?: unknown;\n  onClick?: (...args: unknown[]) => void;\n  isActive?: boolean;  // default: false\n",
+    "DepartmentDetailsPanel": "\n  department?: unknown;\n  onClose?: (...args: unknown[]) => void;\n",
+    "DepartmentTag": "\n  departmentName?: string;\n  position?: unknown;\n  className?: string;  // default: ''\n",
+    "EnhancedUserProfile": "\n  name?: string;  // default: 'Vivek Gupta'\n  role?: string;  // default: 'Chief Executive Officer'\n  department?: string;  // default: 'KAILASH'\n  deityId?: string;  // default: 'ganesha'\n  showMeditation?: boolean;  // default: true\n",
+    "AIImpactSummary": "\n  metrics?: unknown;\n",
+    "AutomationBadge": "\n  automated?: unknown;\n  showLabel?: boolean;  // default: true\n",
+    "DataSourceBadge": "\n  source?: unknown;\n  type?: string;\n  timestamp?: unknown;\n",
+    "EnhancedKPICard": "\n  title?: string;\n  value?: unknown;\n  source?: unknown;\n  type?: string;\n  timestamp?: unknown;\n  trend?: unknown;\n  trendDirection?: string;  // default: 'up'\n  aiCalculated?: unknown;\n  description?: string;\n  icon?: React.ReactNode;\n",
+    "ProblemResolutionCard": "\n  problem?: unknown;\n  solution?: unknown;\n  source?: unknown;\n  type?: string;\n  automated?: unknown;\n  timestamp?: unknown;\n  savings?: unknown;\n  compact?: boolean;  // default: false\n",
+    "SquareKPICard": "\n  label?: string;\n  value?: unknown;\n  change?: unknown;\n  isPositive?: boolean;  // default: true\n  icon?: React.ElementType;\n  color?: string;  // default: 'blue'\n  className?: string;  // default: ''\n",
+    "KPIGrid": "\n  children?: React.ReactNode;\n  columns?: number;  // default: 4\n  className?: string;  // default: ''\n",
+    "CompactStatCard": "\n  label?: string;\n  value?: unknown;\n  icon?: React.ElementType;\n  color?: string;  // default: 'blue'\n",
+    "FeatureKPICard": "\n  label?: string;\n  value?: unknown;\n  subtitle?: string;\n  icon?: React.ElementType;\n  color?: string;  // default: 'blue'\n  className?: string;  // default: ''\n",
+    "LayoutHeader": "\n  onMenuToggle?: (...args: unknown[]) => void;\n",
+    "MainLayout": "\n  children?: React.ReactNode;\n",
+    "Sidebar": "\n  isOpen?: boolean;\n  onClose?: (...args: unknown[]) => void;\n",
+    "LoginBox": "\n  onLogin?: (...args: unknown[]) => void;\n  isLoading?: boolean;\n",
+    "LoginCard": "\n  onLogin?: (...args: unknown[]) => void;\n  isLoading?: boolean;\n",
+    "LoginCardOverlay": "\n  onLogin?: (...args: unknown[]) => void;\n  isLoading?: boolean;\n",
+    "LoginForm": "\n  onLogin?: (...args: unknown[]) => void;\n  isLoading?: boolean;\n",
+    "MeditationIndicator": "\n  active?: boolean;  // default: true\n  className?: string;  // default: ''\n",
+    "OnboardingOverlay": "\n  onComplete?: (...args: unknown[]) => void;\n",
+    "ProductCard": "\n  icon?: React.ElementType;\n  name?: string;\n  description?: string;\n  gradient?: unknown;\n",
+    "ProgramTile": "\n  icon?: React.ElementType;\n  name?: string;\n  badge?: unknown;\n  description?: string;\n",
+    "ProtectedRoute": "\n  children?: React.ReactNode;\n  noLayout?: boolean;  // default: false\n",
+    "RightPanel": "\n  onLogin?: (...args: unknown[]) => void;\n  isLoading?: boolean;\n",
+    "ServiceRow": "\n  icon?: React.ElementType;\n  name?: string;\n  description?: string;\n",
+    "SessionTimeout": "\n  isAuthenticated?: boolean;\n",
+    "SpiritualDashboardHeader": "\n  onGaneshaClick?: (...args: unknown[]) => void;\n",
+    "SpiritualQuote": "\n  deityId?: string;  // default: null\n  className?: string;  // default: ''\n",
+    "TwoFactorModal": "\n  isOpen?: boolean;\n  onClose?: (...args: unknown[]) => void;\n  onVerify?: (...args: unknown[]) => void;\n",
+    "Accordion": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AccordionItem": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AccordionTrigger": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AccordionContent": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialog": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogPortal": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogOverlay": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogTrigger": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogHeader": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogFooter": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogTitle": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogDescription": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogAction": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDialogCancel": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Alert": "\n  className?: string;\n  variant?: 'default' | 'destructive';\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertTitle": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AlertDescription": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Avatar": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AvatarImage": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "AvatarFallback": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Badge": "\n  className?: string;\n  variant?: 'default' | 'secondary' | 'destructive' | 'outline';\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Breadcrumb": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "BreadcrumbList": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "BreadcrumbItem": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "BreadcrumbLink": "\n  asChild?: boolean;\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "BreadcrumbPage": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "BreadcrumbSeparator": "\n  children?: React.ReactNode;\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "BreadcrumbEllipsis": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Button": "\n  className?: string;\n  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';\n  size?: 'default' | 'sm' | 'lg' | 'icon';\n  asChild?: boolean;  // default: false\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Calendar": "\n  className?: string;\n  classNames?: unknown;\n  showOutsideDays?: boolean;  // default: true\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Card": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CardHeader": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CardFooter": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CardTitle": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CardDescription": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CardContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Carousel": "\n  orientation?: string;  // default: \"horizontal\"\n  opts?: unknown;\n  setApi?: unknown;\n  plugins?: unknown;\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CarouselContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CarouselItem": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CarouselPrevious": "\n  className?: string;\n  variant?: string;  // default: \"outline\"\n  size?: string;  // default: \"icon\"\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CarouselNext": "\n  className?: string;\n  variant?: string;  // default: \"outline\"\n  size?: string;  // default: \"icon\"\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Checkbox": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Command": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CommandDialog": "\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CommandInput": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CommandList": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CommandEmpty": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CommandGroup": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CommandItem": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CommandShortcut": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "CommandSeparator": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenu": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuTrigger": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuItem": "\n  className?: string;\n  inset?: boolean;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuCheckboxItem": "\n  className?: string;\n  children?: React.ReactNode;\n  checked?: boolean;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuRadioItem": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuLabel": "\n  className?: string;\n  inset?: boolean;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuSeparator": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuShortcut": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuGroup": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuPortal": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuSub": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuSubContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuSubTrigger": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ContextMenuRadioGroup": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Dialog": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DialogPortal": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DialogOverlay": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DialogTrigger": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DialogClose": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DialogContent": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DialogHeader": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DialogFooter": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DialogTitle": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DialogDescription": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Drawer": "\n  shouldScaleBackground?: boolean;  // default: true\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DrawerPortal": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DrawerOverlay": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DrawerTrigger": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DrawerClose": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DrawerContent": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DrawerHeader": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DrawerFooter": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DrawerTitle": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DrawerDescription": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenu": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuTrigger": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuContent": "\n  className?: string;\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuItem": "\n  className?: string;\n  inset?: boolean;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuCheckboxItem": "\n  className?: string;\n  children?: React.ReactNode;\n  checked?: boolean;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuRadioItem": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuLabel": "\n  className?: string;\n  inset?: boolean;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuSeparator": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuShortcut": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuGroup": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuPortal": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuSub": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuSubContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuSubTrigger": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "DropdownMenuRadioGroup": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "FormItem": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "FormLabel": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "FormControl": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "FormDescription": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "FormMessage": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "FormField": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "HoverCard": "\n  className?: string;\n  align?: string;  // default: \"center\"\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "HoverCardTrigger": "\n  className?: string;\n  align?: string;  // default: \"center\"\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "HoverCardContent": "\n  className?: string;\n  align?: string;  // default: \"center\"\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "InputOTP": "\n  className?: string;\n  containerClassName?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "InputOTPGroup": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "InputOTPSlot": "\n  index?: unknown;\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "InputOTPSeparator": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Input": "\n  className?: string;\n  type?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Label": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Menubar": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarMenu": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarTrigger": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarContent": "\n  className?: string;\n  align?: string;  // default: \"start\"\n  alignOffset?: number;  // default: -4\n  sideOffset?: number;  // default: 8\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarItem": "\n  className?: string;\n  inset?: boolean;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarSeparator": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarLabel": "\n  className?: string;\n  inset?: boolean;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarCheckboxItem": "\n  className?: string;\n  children?: React.ReactNode;\n  checked?: boolean;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarRadioGroup": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarRadioItem": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarPortal": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarSubContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarSubTrigger": "\n  className?: string;\n  inset?: boolean;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarGroup": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarSub": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "MenubarShortcut": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "NavigationMenu": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "NavigationMenuList": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "NavigationMenuContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "NavigationMenuTrigger": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "NavigationMenuLink": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "NavigationMenuIndicator": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "NavigationMenuViewport": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Pagination": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "PaginationContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "PaginationLink": "\n  className?: string;\n  isActive?: boolean;\n  size?: string;  // default: \"icon\"\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "PaginationItem": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "PaginationPrevious": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "PaginationNext": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "PaginationEllipsis": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Popover": "\n  className?: string;\n  align?: string;  // default: \"center\"\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "PopoverTrigger": "\n  className?: string;\n  align?: string;  // default: \"center\"\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "PopoverContent": "\n  className?: string;\n  align?: string;  // default: \"center\"\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "PopoverAnchor": "\n  className?: string;\n  align?: string;  // default: \"center\"\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Progress": "\n  className?: string;\n  value?: unknown;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "RadioGroup": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "RadioGroupItem": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ResizablePanelGroup": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ResizablePanel": "\n  withHandle?: unknown;\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ResizableHandle": "\n  withHandle?: unknown;\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ScrollArea": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ScrollBar": "\n  className?: string;\n  orientation?: string;  // default: \"vertical\"\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Select": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SelectGroup": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SelectValue": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SelectTrigger": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SelectContent": "\n  className?: string;\n  children?: React.ReactNode;\n  position?: string;  // default: \"popper\"\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SelectLabel": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SelectItem": "\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SelectSeparator": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SelectScrollUpButton": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SelectScrollDownButton": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Separator": "\n  className?: string;\n  orientation?: string;  // default: \"horizontal\"\n  decorative?: boolean;  // default: true\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Sheet": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SheetPortal": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SheetOverlay": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SheetTrigger": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SheetClose": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SheetContent": "\n  side?: 'top' | 'bottom' | 'left' | 'right';  // default: \"right\"\n  className?: string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SheetHeader": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SheetFooter": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SheetTitle": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SheetDescription": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Skeleton": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Slider": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SonnerToaster": "\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Switch": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Table": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TableHeader": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TableBody": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TableFooter": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TableHead": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TableRow": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TableCell": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TableCaption": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Tabs": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TabsList": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TabsTrigger": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TabsContent": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Textarea": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "SimpleToast": "\n  message?: string;\n  type?: string;  // default: 'success'\n  onClose?: (...args: unknown[]) => void;\n",
+    "ToastProvider": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ToastViewport": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Toast": "\n  className?: string;\n  variant?: 'default' | 'destructive';\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ToastTitle": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ToastDescription": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ToastClose": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ToastAction": "\n  className?: string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Toaster": "\n  id?: string;\n  title?: string;\n  description?: string;\n  action?: unknown;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ToggleGroup": "\n  className?: string;\n  variant?: string;\n  size?: number | string;\n  children?: React.ReactNode;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "ToggleGroupItem": "\n  className?: string;\n  children?: React.ReactNode;\n  variant?: string;\n  size?: number | string;\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Toggle": "\n  className?: string;\n  variant?: 'default' | 'outline';\n  size?: 'default' | 'sm' | 'lg';\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "Tooltip": "\n  className?: string;\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TooltipTrigger": "\n  className?: string;\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TooltipContent": "\n  className?: string;\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n",
+    "TooltipProvider": "\n  className?: string;\n  sideOffset?: number;  // default: 4\n  /** Remaining props spread onto the underlying element. */\n  [key: string]: unknown;\n"
+  }
+}
