@@ -1,0 +1,49 @@
+account_code,account_name,parent_code,account_type,normal_balance,schedule_iii_group,tax_nature
+1000,Shareholders' Funds,,EQUITY,C,Shareholders' Funds,
+1010,Share Capital,1000,EQUITY,C,Share Capital,
+1020,Reserves & Surplus,1000,EQUITY,C,Reserves and Surplus,
+1021,Retained Earnings,1020,EQUITY,C,Reserves and Surplus,
+2000,Non-Current Liabilities,,LIABILITY,C,Non-Current Liabilities,
+2010,Long-term Borrowings,2000,LIABILITY,C,Long-term Borrowings,
+3000,Current Liabilities,,LIABILITY,C,Current Liabilities,
+3010,Trade Payables,3000,AP,C,Trade Payables,
+3020,Short-term Borrowings,3000,LIABILITY,C,Short-term Borrowings,
+3030,Output CGST,3000,GST_OUT,C,Other Current Liabilities,GST_OUT
+3031,Output SGST,3000,GST_OUT,C,Other Current Liabilities,GST_OUT
+3032,Output IGST,3000,GST_OUT,C,Other Current Liabilities,GST_OUT
+3033,Output Cess,3000,GST_OUT,C,Other Current Liabilities,GST_OUT
+3040,TDS Payable,3000,TDS_PAYABLE,C,Other Current Liabilities,TDS
+3041,PF Payable,3000,LIABILITY,C,Other Current Liabilities,
+3042,ESI Payable,3000,LIABILITY,C,Other Current Liabilities,
+3050,GST Payable (Net),3000,GST_OUT,C,Other Current Liabilities,GST_OUT
+4000,Non-Current Assets,,ASSET,D,Non-Current Assets,
+4010,"Property, Plant & Equipment",4000,ASSET,D,Property Plant and Equipment,
+4011,Accumulated Depreciation,4000,ASSET,C,Property Plant and Equipment,
+5000,Current Assets,,ASSET,D,Current Assets,
+5010,Trade Receivables,5000,AR,D,Trade Receivables,
+5020,Cash on Hand,5000,CASH,D,Cash and Cash Equivalents,
+5030,Bank Accounts,5000,BANK,D,Cash and Cash Equivalents,
+5040,Input CGST,5000,GST_IN,D,Other Current Assets,GST_IN
+5041,Input SGST,5000,GST_IN,D,Other Current Assets,GST_IN
+5042,Input IGST,5000,GST_IN,D,Other Current Assets,GST_IN
+5050,TDS Receivable,5000,TDS_RECEIVABLE,D,Other Current Assets,TDS
+5060,GST ITC Credit Ledger,5000,GST_IN,D,Other Current Assets,GST_IN
+6000,Revenue from Operations,,INCOME,C,Revenue from Operations,
+6010,Sales - Goods,6000,INCOME,C,Revenue from Operations,
+6020,Sales - Services,6000,INCOME,C,Revenue from Operations,
+6100,Other Income,,INCOME,C,Other Income,
+6110,Interest Income,6100,INCOME,C,Other Income,
+7000,Cost of Materials,,EXPENSE,D,Cost of Materials Consumed,
+7010,Purchases - Goods,7000,EXPENSE,D,Purchases of Stock-in-Trade,
+7100,Employee Benefits Expense,,EXPENSE,D,Employee Benefits Expense,
+7110,Salaries & Wages,7100,EXPENSE,D,Employee Benefits Expense,192
+7120,PF/ESI Employer Contribution,7100,EXPENSE,D,Employee Benefits Expense,
+7200,Finance Costs,,EXPENSE,D,Finance Costs,
+7210,Interest Expense,7200,EXPENSE,D,Finance Costs,
+7300,Depreciation & Amortisation,,EXPENSE,D,Depreciation and Amortisation Expense,
+7400,Other Expenses,,EXPENSE,D,Other Expenses,
+7410,Rent,7400,EXPENSE,D,Other Expenses,194I
+7420,Professional Fees,7400,EXPENSE,D,Other Expenses,194J
+7430,Contractor Charges,7400,EXPENSE,D,Other Expenses,194C
+7440,Cloud & Hosting,7400,EXPENSE,D,Other Expenses,
+7450,Bank Charges,7400,EXPENSE,D,Other Expenses,

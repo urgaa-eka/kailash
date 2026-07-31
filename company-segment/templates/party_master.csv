@@ -1,0 +1,6 @@
+party_name,party_type,gstin,pan,state_code,is_msme,udyam_no,tds_applicable,ledger_account_code,notes
+"SAMPLE - Acme Retail Pvt Ltd",CUSTOMER,27AABCA1234A1Z5,AABCA1234A,27,FALSE,,FALSE,5010,"B2B customer (Maharashtra) - registered, invoices go to GSTR-1 B2B"
+"SAMPLE - Walk-in Customers",CUSTOMER,,,,FALSE,,FALSE,5010,"Unregistered B2C bucket - aggregated into GSTR-1 B2CS"
+"SAMPLE - CloudHost India LLP",VENDOR,29AABFC5678B1Z2,AABFC5678B,29,FALSE,,TRUE,3010,"Service vendor (Karnataka) - inter-state, IGST ITC, TDS 194J on fees"
+"SAMPLE - Bright Components (MSME)",VENDOR,27AAECB9012C1Z8,AAECB9012C,27,TRUE,UDYAM-MH-00-1234567,FALSE,3010,"MSME vendor - dues > 45 days must be reported in MSME-1"
+"SAMPLE - Office Landlord",VENDOR,,ABCPL2345D,27,FALSE,,TRUE,3010,"Unregistered landlord - TDS 194I on rent"

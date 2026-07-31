@@ -122,6 +122,9 @@ agenthub/agents/youtube/db
 # MCP config (contains API keys)
 .mcp.json
 
+# Vite dependency cache (build artifact)
+.vite/
+
 # design-sync (claude.ai/design)
 .ds-sync/
 ds-bundle/

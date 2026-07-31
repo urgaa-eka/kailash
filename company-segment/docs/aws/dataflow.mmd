@@ -1,0 +1,39 @@
+%%{init: {'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#eef4ff','primaryBorderColor':'#3b6fd4','actorBkg':'#eef4ff','actorBorder':'#3b6fd4'}}}%%
+sequenceDiagram
+    autonumber
+    participant SRC as Source<br/>(GSTSAAS / IRP)
+    participant API as API Gateway<br/>(+WAF, Cognito)
+    participant ING as Ingestion Lambda
+    participant DDB as DynamoDB<br/>(source_hash)
+    participant S3 as S3 vault
+    participant AUR as Aurora ledger<br/>(SoR)
+    participant EVB as EventBridge
+    participant CMP as Compliance Lambdas<br/>(GST/TDS/ROC)
+    participant GSTN as GSTN / IRP
+    participant REC as Reconciliation
+    participant DASH as FY dashboard
+
+    Note over SRC,AUR: 1 — Capture a sales invoice (idempotent, validated, posted)
+    SRC->>API: POST sales_invoice.contract.json
+    API->>ING: authorized + schema-valid payload
+    ING->>DDB: seen source_hash?
+    DDB-->>ING: new
+    ING->>S3: store source document (FY-partitioned)
+    ING->>AUR: draft journal (Dr Debtor / Cr Sales / Cr Output GST)
+    ING->>AUR: post → balance check + immutability enforced
+    AUR-->>EVB: JournalPosted event
+
+    Note over EVB,GSTN: 2 — Compliance derives from the ledger (period-end)
+    EVB->>CMP: refresh GSTR-1 / ITC staging
+    CMP->>AUR: read posted vouchers (co_v_gstr1_feed)
+    CMP->>GSTN: e-invoice IRN (real-time) / GSTR-1 JSON (period)
+    GSTN-->>CMP: IRN + signed QR / filing ack
+    CMP->>AUR: write versioned return (co_gstr1, co_gstr3b_summary)
+
+    Note over REC,DASH: 3 — Reconcile internal vs CA/Tally, then publish
+    REC->>AUR: internal figures (trial balance, output tax, ITC)
+    REC->>REC: compare vs Tally export + GSTR-2B (10 control points)
+    REC->>AUR: write variances (co_recon_variance, RAG)
+    AUR-->>EVB: FinancialFactsPublished (turnover, ITC, runway)
+    EVB->>DASH: FY financials + reconciliation matrix
+    Note right of DASH: Same facts also fan out to<br/>Eka Brain (finance_lora) + other products

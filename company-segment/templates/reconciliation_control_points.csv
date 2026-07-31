@@ -1,0 +1,11 @@
+code,description,source_a_internal,source_b_external,tolerance_abs,tolerance_pct
+FY_SALES,"FY sales / turnover match",Kailash sales ledger (co_v_trial_balance revenue),CA / Tally P&L revenue,0,0
+FY_PURCHASES,"FY purchases match",Kailash purchase ledger,CA / Tally purchases,0,0
+OUTPUT_TAX,"Output GST liability match",Kailash GST engine (co_gstr3b_summary.output_tax),GSTR-3B filed,1,0
+GSTR1_VS_3B,"GSTR-1 outward vs GSTR-3B outward",GSTR-1 taxable value (co_v_gstr1_feed),GSTR-3B outward taxable,0,0
+ITC_CLAIMED,"ITC claimed vs GSTR-2B",Kailash ITC register (co_itc_register),GSTR-2B auto-drafted ITC,0,0
+BOOKS_VS_GST_TURNOVER,"Books turnover vs GST turnover (annual)",Schedule III revenue (co_v_schedule_iii),Sum of GSTR-1 annual,0,0
+NET_PROFIT,"Net profit / PAT match",Kailash P&L (co_v_schedule_iii PL),CA audited P&L PAT,0,0
+CLOSING_BALANCES,"Key ledger closing balances (bank/debtors/creditors)",Kailash trial balance closing,Tally trial balance closing,0,0
+TDS_DEDUCTED,"TDS deducted vs 26AS/AIS",Kailash TDS ledger (co_tds_ledger),Form 26AS / AIS,0,0
+BANK_BALANCE,"Bank book vs bank statement (BRS)",Kailash bank sub-ledger (co_bank_txn),Bank statement closing balance,0,0
