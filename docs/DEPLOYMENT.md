@@ -64,6 +64,29 @@ removed by a deploy. Rotating these values requires recreating the Postgres and
 Redis volumes or issuing `ALTER USER` / `CONFIG SET requirepass` — changing the
 variable alone does not change an already-initialised database's password.
 
+### When `ENV=production`
+
+The backend additionally refuses to start if either of these still holds its
+development default (TRD NFR-Sec4 / TR-2, enforced in `app/core/config.py`):
+
+| Variable | Rejected value | Why |
+|---|---|---|
+| `SECRET_KEY` | `dev-secret-key-change-in-production` | It is published in this repository. Anyone who can read the source can forge a JWT for any account, including the admin — no password needed. |
+| `CORS_ORIGINS` | `*` | Any origin may call the API with credentials. |
+
+The check runs at import, so the process exits before serving a request rather
+than serving one signed with a public key. `ENV` defaults to `dev`, where both
+defaults remain allowed.
+
+### Bootstrapping the first admin
+
+`app/core/seeder.py` creates an admin **only** into a database with no users at
+all, and **only** when `ADMIN_SEED_PASSWORD` is set. There is no default and no
+"recreate if missing" branch, so a deleted admin stays deleted. To bootstrap:
+set `ADMIN_SEED_PASSWORD`, start once, sign in, change the password, then unset
+the variable. `database/seed_data.py` requires `SEED_ADMIN_PASSWORD` in the same
+way and exits if it is unset.
+
 ---
 
 ## 1. Frontend → Firebase Hosting

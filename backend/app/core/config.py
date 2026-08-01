@@ -66,23 +66,31 @@ if _explicit_db_name:
 else:
     _database_name = extract_db_name_from_mongo_url(_mongo_url, "kailash")
 
+# The development fallback for SECRET_KEY. It is published in this repository,
+# so anything signed with it can be forged by anyone who has read the source.
+# Startup rejects it when ENV names a production environment (TRD NFR-Sec4).
+DEV_SECRET_KEY = 'dev-secret-key-change-in-production'
+PRODUCTION_ENVS = {'production', 'prod'}
+
+
 class Settings(BaseSettings):
     # App Settings
     APP_NAME: str = "Kailash Backend"
     VERSION: str = "2.0.0"
     DEBUG: bool = False
+    ENV: str = os.environ.get('ENV', 'dev')
 
     # MongoD Settings
     MONGO_URL: str = _mongo_url
     DATABASE_NAME: str = _database_name
 
     # JWT Settings
-    SECRET_KEY: str = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    SECRET_KEY: str = os.environ.get('SECRET_KEY', DEV_SECRET_KEY)
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
     # CORS Settings
-    CORS_ORIGINS: str = "*"  # Configure based on environment
+    CORS_ORIGINS: str = os.environ.get('CORS_ORIGINS', '*')
 
     # OpenAI Settings (for GANESHA AI)
     OPENAI_API_KEY: str | None = None
@@ -126,6 +134,34 @@ class Settings(BaseSettings):
         extra = "ignore"  # Ignore extra fields in .env
 
 settings = Settings()
+
+
+def _reject_development_defaults(s: "Settings") -> None:
+    """Fail fast when a development default reaches a production environment.
+
+    TRD NFR-Sec4 and TR-2. This runs at import, so the process dies before it
+    can accept a request signed with a key that is public knowledge.
+    """
+    if s.ENV.strip().lower() not in PRODUCTION_ENVS:
+        return
+
+    problems = []
+    if s.SECRET_KEY == DEV_SECRET_KEY:
+        problems.append(
+            "SECRET_KEY is the development default published in this repository; "
+            "any JWT signed with it can be forged. Set SECRET_KEY to a long random value."
+        )
+    if s.CORS_ORIGINS.strip() == "*":
+        problems.append(
+            "CORS_ORIGINS is '*'. Set it to an explicit comma-separated origin list."
+        )
+    if problems:
+        raise RuntimeError(
+            f"Refusing to start with ENV={s.ENV!r}:\n  - " + "\n  - ".join(problems)
+        )
+
+
+_reject_development_defaults(settings)
 
 
 def get_settings():
