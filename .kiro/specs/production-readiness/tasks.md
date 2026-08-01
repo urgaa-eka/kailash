@@ -227,7 +227,7 @@ Three questions are open and must be answered by observation, not assumption. Ta
 
   - [ ] 6.1 Implement `secret_scan.py`
     - Create `scripts/verify/secret_scan.py` operating over the `git ls-files -z` corpus from `common.py`. Untracked files are out of scope by definition: 4.3 says "every file tracked by git"
-    - Detector 1, denylist: literals from `scripts/verify/data/denylist.txt`, seeded with `kailash_prod_2026` and `kailash_redis_2026`, applied to every file including lockfiles. Rotation never adds the new value here — a denylist of live credentials would itself be the leak
+    - Detector 1, denylist: literals from `scripts/verify/data/denylist.txt`, seeded with `kailash_prod_2026` and `kailash_redis_2026`, applied to every file including lockfiles. Rotation never adds the new value here — a denylist of live credentials would itself be the leak  <!-- secret-scan: allow documents the credential incident being remediated -->
     - Detector 2, structured patterns: `-----BEGIN [A-Z ]*PRIVATE KEY-----`, `AIza[0-9A-Za-z_\-]{35}`, `gh[pousr]_[A-Za-z0-9]{36,}`, `AKIA[0-9A-Z]{16}`, `xox[baprs]-`, and `"type"\s*:\s*"service_account"`
     - Detector 3, assignment heuristic: a key matching `(PASSWORD|SECRET|TOKEN|API_?KEY|PRIVATE_KEY|CREDENTIAL)` assigned a value that is not a placeholder, not an environment reference (`${...}`, `os.environ`, `secrets.`, `vars.`), and at least 8 characters
     - Detector 4, compose strictness: any strict-required compose variable declared with a `:-` default is a finding, so a reverted default is caught by the same job as task 6.3's edit
@@ -244,7 +244,7 @@ Three questions are open and must be answered by observation, not assumption. Ta
     - _Requirements: 4.4_
 
   - [ ] 6.3 Make credentials strictly required in compose
-    - Replace `${VAR:-default}` with `${VAR:?VAR must be set}` for `POSTGRES_PASSWORD` and `REDIS_PASSWORD` at all four occurrence sites in `docker-compose.yml`: `postgres.environment`, `redis.command`, `backend.environment` (`REDIS_URL`, `POSTGRES_URL`) and `company.environment` (`COMPANY_DB_URL`). Confirm the literals `kailash_prod_2026` and `kailash_redis_2026` no longer appear in the file
+    - Replace `${VAR:-default}` with `${VAR:?VAR must be set}` for `POSTGRES_PASSWORD` and `REDIS_PASSWORD` at all four occurrence sites in `docker-compose.yml`: `postgres.environment`, `redis.command`, `backend.environment` (`REDIS_URL`, `POSTGRES_URL`) and `company.environment` (`COMPANY_DB_URL`). Confirm the literals `kailash_prod_2026` and `kailash_redis_2026` no longer appear in the file  <!-- secret-scan: allow documents the credential incident being remediated -->
     - `:?` aborts during configuration parsing, before any container is created, which is exactly what 4.2 requires and is stronger than a runtime guard that needs a container to exist first
     - Apply `:?` to `PLATFORM_INTERNAL_TOKEN` in the same edit: it currently defaults to empty, and `require_internal_token` comparing an empty expected token against an absent header is an authentication bypass waiting for a caller who omits the header
     - `:?` makes every compose subcommand require the variables, including `config`, `build` and `ps`. In the same task add `POSTGRES_PASSWORD`, `REDIS_PASSWORD` and `PLATFORM_INTERNAL_TOKEN` throwaway values to the `compose-build` job's `env:` block in `ci.yml`, so CI does not break between this task and task 8.3
@@ -553,7 +553,7 @@ Three questions are open and must be answered by observation, not assumption. Ta
 
   - [ ] 14.1 Rotate the Postgres and Redis credentials `[operator]` `[live-network]`
     - Rehearse on staging first, following the ordering in `docs/runbooks/staging.md`. Rehearsing on staging is a concrete reason staging exists
-    - Rotate to values distinct from the previous compose fallbacks `kailash_prod_2026` and `kailash_redis_2026`, then confirm HTTP 200 from `https://api.kailash-ai.in/api/health`
+    - Rotate to values distinct from the previous compose fallbacks `kailash_prod_2026` and `kailash_redis_2026`, then confirm HTTP 200 from `https://api.kailash-ai.in/api/health`  <!-- secret-scan: allow documents the credential incident being remediated -->
     - Do not add the new values to `data/denylist.txt`: a denylist of live credentials would itself be the leak
     - Confirm the secret scan still exits 0 and that the rotated values appear in no tracked file
     - _Requirements: 4.6_

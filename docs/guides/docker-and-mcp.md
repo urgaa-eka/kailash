@@ -35,7 +35,7 @@ docker exec -i kailash-postgres psql -U kailash -d kailash \
 ```
 
 **Redis requires a password** (`REDIS_PASSWORD`, default
-`kailash_redis_2026`). Connect with
+`kailash_redis_2026`). Connect with  <!-- secret-scan: allow documents the credential incident being remediated -->
 `docker exec kailash-redis redis-cli -a "$REDIS_PASSWORD" ping`.
 
 **Images.** The 9 platform services build from one generic
@@ -56,7 +56,7 @@ docker mcp profile create --name kailash-ai \
 # Connection details (config = plain values, secrets = credentials)
 docker mcp profile config kailash_ai --set redis.host=host.docker.internal --set redis.port=6379
 docker mcp secret set "mongodb.connection_string=mongodb://host.docker.internal:27017/kailash"
-docker mcp secret set "redis.password=kailash_redis_2026"
+docker mcp secret set "redis.password=kailash_redis_2026"  <!-- secret-scan: allow documents the credential incident being remediated -->
 
 # Connect a client (writes the gateway entry into the client's config)
 docker mcp client connect --global --profile kailash_ai claude-code

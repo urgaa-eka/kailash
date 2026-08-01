@@ -89,12 +89,12 @@ class TestEndToEnd:
         assert rc == int(Exit.OK), capsys.readouterr().out
 
     def test_wrong_slug_in_deploy_script_fails(self, tmp_repo, capsys):
-        tmp_repo.deploy_sh("https://github.com/flywithvvk/kailash.git")
+        tmp_repo.deploy_sh("https://github.com/flywithvvk/kailash.git")  # secret-scan: allow negative fixture for the slug rule
         tmp_repo.commit()
         rc = repo_state.main(["--root", str(tmp_repo.root)])
         out = capsys.readouterr().out
         assert rc == int(Exit.FAILED)
-        assert "flywithvvk/kailash" in out
+        assert "flywithvvk/kailash" in out  # secret-scan: allow negative fixture for the slug rule
 
 
 @given(

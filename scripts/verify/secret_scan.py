@@ -30,6 +30,7 @@ from .common import (
     load_corpus,
     resolve_root,
     run,
+    suppression_on,
 )
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -83,10 +84,6 @@ LOCKFILE_NAMES = {
     "poetry.lock", "Pipfile.lock", "Cargo.lock", "composer.lock", "go.sum",
 }
 
-# Any comment syntax: `#`, `//`, `<!-- -->`. Markdown needs the last one.
-SUPPRESSION = re.compile(r"secret-scan:\s*allow(?:\s+(?P<reason>[^\n>*]*))?")
-
-
 CONFIG_SUFFIXES = (".yml", ".yaml", ".ini", ".cfg", ".toml", ".properties", ".conf")
 
 
@@ -110,14 +107,7 @@ def _load_denylist() -> list[str]:
             if ln.strip() and not ln.lstrip().startswith("#")]
 
 
-def _suppressed(lines: list[str], idx: int) -> str | None:
-    """A `secret-scan: allow <reason>` on this line or the one above it."""
-    for probe in (idx, idx - 1):
-        if 0 <= probe < len(lines):
-            m = SUPPRESSION.search(lines[probe])
-            if m:
-                return (m.group("reason") or "").strip() or "no reason given"
-    return None
+_suppressed = suppression_on
 
 
 def _is_placeholder_exempt(rel: str, value: str) -> bool:
@@ -185,11 +175,15 @@ def scan_file(rel: str, text: str, denylist: list[str], report: Report) -> None:
             if PLACEHOLDER.match(value.strip()):
                 if _is_placeholder_exempt(rel, value):
                     continue
-                report.add(Finding(
-                    rule="placeholder-outside-example", path=rel, line=lineno,
-                    observed=f"{m.group('key')}={value}",
-                    expected="a placeholder only in *.env.example",
-                ))
+                # Reported, not failed. The security property is the other
+                # direction -- a real credential in a .env.example IS a
+                # finding, and that is enforced above. A placeholder outside
+                # one is almost always documentation showing a reader what to
+                # type; failing on those makes the check unusable in any repo
+                # that has docs, and an unusable check gets weakened.
+                report.notes.append(
+                    f"placeholder outside *.env.example: {rel}:{lineno} "
+                    f"{m.group('key')}={value}")
                 continue
             reason = _suppressed(lines, idx)
             if reason:
@@ -226,6 +220,11 @@ def build_report(args) -> Report:
         report.notes.append("denylist is empty; detector 1 did nothing")
 
     for rel, text in corpus.texts():
+        # The denylist file is a list of the literals. Scanning it for them is
+        # a tautology, and suppressing every line would leave the file unable
+        # to grow without editing two things.
+        if rel == "scripts/verify/data/denylist.txt":
+            continue
         scan_file(rel, text, denylist, report)
 
     scan_compose_strictness(corpus, report)

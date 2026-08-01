@@ -329,7 +329,7 @@ The same defect class, currently live: `ci.yml`'s frontend job pins Node 18, `de
 
 ```yaml
 # before
-POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kailash_prod_2026}
+POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kailash_prod_2026}  <!-- secret-scan: allow documents the credential incident being remediated -->
 # after
 POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
 ```
@@ -346,7 +346,7 @@ Corpus: `git ls-files -z` under `--root`. Untracked files are out of scope by de
 
 Detectors, in order:
 
-1. **Denylist** — literals from `data/denylist.txt`, seeded with `kailash_prod_2026` and `kailash_redis_2026`. Applied to every file including lockfiles. Rotation never adds the *new* value here; a denylist of live credentials would itself be the leak.
+1. **Denylist** — literals from `data/denylist.txt`, seeded with `kailash_prod_2026` and `kailash_redis_2026`. Applied to every file including lockfiles. Rotation never adds the *new* value here; a denylist of live credentials would itself be the leak.  <!-- secret-scan: allow documents the credential incident being remediated -->
 2. **Structured patterns** — `-----BEGIN [A-Z ]*PRIVATE KEY-----`, `AIza[0-9A-Za-z_\-]{35}`, `gh[pousr]_[A-Za-z0-9]{36,}`, `AKIA[0-9A-Z]{16}`, `xox[baprs]-`, and `"type"\s*:\s*"service_account"`.
 3. **Assignment heuristic** — a key matching `(PASSWORD|SECRET|TOKEN|API_?KEY|PRIVATE_KEY|CREDENTIAL)` assigned a value that is not a placeholder, not an environment reference (`${…}`, `os.environ`, `secrets.`, `vars.`), and not shorter than 8 characters.
 4. **Compose strictness** — the `:?`-not-`:-` rule from above, expressed as a scanner rule so a reverted default is caught by the same job.

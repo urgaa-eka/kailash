@@ -61,10 +61,10 @@ class TestRepoSlug:
         assert rc == int(Exit.OK)
 
     def test_wrong_owner_fails(self, tmp_repo, capsys):
-        _minimal(tmp_repo, url="https://github.com/flywithvvk/kailash.git")
+        _minimal(tmp_repo, url="https://github.com/flywithvvk/kailash.git")  # secret-scan: allow negative fixture for the slug rule
         rc, out = _run(tmp_repo.root, capsys)
         assert rc == int(Exit.FAILED)
-        assert "flywithvvk/kailash" in out
+        assert "flywithvvk/kailash" in out  # secret-scan: allow negative fixture for the slug rule
 
     def test_vacuous_required_source_fails(self, tmp_repo, capsys):
         """deploy.sh with no repository URL at all is the most dangerous

@@ -21,10 +21,12 @@ from .common import (
     Corpus,
     Finding,
     Report,
+    Suppression,
     base_parser,
     load_corpus,
     resolve_root,
     run,
+    suppression_on,
 )
 
 EXPECTED_FIREBASE_PROJECT = "kailash-29111"
@@ -93,7 +95,7 @@ def _firebase_js_field(field_name: str) -> Callable[[str], str | None]:
     return extract
 
 
-# Both the URL form and the bare `owner/kailash` form.
+# Both the URL form and the bare `owner/kailash` form.  # secret-scan: allow documents the slug defect this rule detects
 REPO_URL_RX = re.compile(r"github\.com[:/](?P<owner>[\w.-]+)/(?P<name>kailash)(?:\.git)?\b")
 
 # The bare form is genuinely ambiguous: `postgres://user:pw@host:5432/kailash`
@@ -164,13 +166,21 @@ def check_github_repo_slug(corpus: Corpus, report: Report) -> None:
     for rel, text in corpus.texts():
         if rel.startswith(".kiro/") or rel == "CHANGELOG.md":
             continue  # prose describing the defect, not a live reference
-        for lineno, line in enumerate(text.splitlines(), 1):
+        lines = text.splitlines()
+        for idx, line in enumerate(lines):
+            lineno = idx + 1
             for rx in (REPO_URL_RX, REPO_BARE_RX):
                 for m in rx.finditer(line):
                     slug = f"{m.group('owner')}/{m.group('name')}"
                     if rel == required:
                         required_hits += 1
-                    if slug != EXPECTED_REPO_SLUG:
+                    if slug == EXPECTED_REPO_SLUG:
+                        continue
+                    reason = suppression_on(lines, idx)
+                    if reason:
+                        report.suppressions.append(
+                            Suppression("github-repo-slug", rel, lineno, reason))
+                    else:
                         report.add(Finding(
                             rule="github-repo-slug", path=rel, line=lineno,
                             observed=slug, expected=EXPECTED_REPO_SLUG,

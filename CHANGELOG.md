@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SEED_ADMIN_PASSWORD` and no longer prints credentials to stdout;
   `app/schemas/auth.py` no longer publishes them as OpenAPI examples at `/docs`.
 - **Production startup rejects the published `SECRET_KEY`.** It fell back to
-  `dev-secret-key-change-in-production`, which is in this repository and signs
+  `dev-secret-key-change-in-production`, which is in this repository and signs  <!-- secret-scan: allow documents the credential incident being remediated -->
   every JWT, so any account could be forged without a password. With
   `ENV=production`, `app/core/config.py` now refuses to start on that value or
   on `CORS_ORIGINS="*"` (TRD NFR-Sec4 / TR-2). `CORS_ORIGINS` also reads the

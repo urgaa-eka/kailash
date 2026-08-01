@@ -71,7 +71,7 @@ development default (TRD NFR-Sec4 / TR-2, enforced in `app/core/config.py`):
 
 | Variable | Rejected value | Why |
 |---|---|---|
-| `SECRET_KEY` | `dev-secret-key-change-in-production` | It is published in this repository. Anyone who can read the source can forge a JWT for any account, including the admin — no password needed. |
+| `SECRET_KEY` | `dev-secret-key-change-in-production` | It is published in this repository. Anyone who can read the source can forge a JWT for any account, including the admin — no password needed. |  <!-- secret-scan: allow documents the credential incident being remediated -->
 | `CORS_ORIGINS` | `*` | Any origin may call the API with credentials. |
 
 The check runs at import, so the process exits before serving a request rather

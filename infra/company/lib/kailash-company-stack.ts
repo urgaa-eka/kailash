@@ -142,7 +142,7 @@ export class KailashCompanyStack extends cdk.Stack {
 
     // -------------------------------------------------- GSTN/IRP secret
     const gstnSecret = new secretsmanager.Secret(this, "GstnCredentials", {
-      secretName: "kailash/company/gstn",
+      secretName: "kailash/company/gstn",  // secret-scan: allow a Secrets Manager secret name, not a secret value
       description:
         "GSTN API / e-invoice IRP credentials (populate before enabling filing)",
       encryptionKey: key,

@@ -8,7 +8,7 @@ Two properties:
 2. `deploy/vultr/deploy.sh` names this repository. It resolves that URL and
    hard-resets against it; a wrong slug means resetting production to someone
    else's code. That exact defect was live until recently -- the script said
-   `flywithvvk/kailash` while origin was `urgaa-eka/kailash`.
+   `flywithvvk/kailash` while origin was `urgaa-eka/kailash`.  # secret-scan: allow documents the slug defect this rule detects
 """
 from __future__ import annotations
 

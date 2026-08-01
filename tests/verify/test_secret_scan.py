@@ -1,4 +1,9 @@
-"""Secret scanning: four detectors, one narrow exemption."""
+"""Secret scanning: four detectors, one narrow exemption.
+
+This file necessarily contains the shapes it tests -- a scanner whose test
+corpus avoided them would be testing nothing. Each is suppressed with a
+reason, which also exercises the suppression mechanism on real input.
+"""
 from __future__ import annotations
 
 import pytest
@@ -16,33 +21,33 @@ def _run(root, capsys) -> tuple[int, str]:
 
 class TestDenylist:
     def test_known_literal_is_found_at_the_right_line(self, tmp_repo, capsys):
-        tmp_repo.write("a.txt", "line one\nline two\nPASSWORD_WAS=kailash_prod_2026\n")
+        tmp_repo.write("a.txt", "line one\nline two\nPASSWORD_WAS=kailash_prod_2026\n")  # secret-scan: allow test corpus for the denylist detector
         rc, out = _run(tmp_repo.root, capsys)
         assert rc == int(Exit.FAILED)
         assert "a.txt:3" in out
 
     def test_denylist_applies_to_lockfiles(self, tmp_repo, capsys):
         """Lockfiles are exempt from the heuristics, never from the denylist."""
-        tmp_repo.write("yarn.lock", "# yarn\nkailash_redis_2026\n")
+        tmp_repo.write("yarn.lock", "# yarn\nkailash_redis_2026\n")  # secret-scan: allow test corpus for the denylist detector
         rc, out = _run(tmp_repo.root, capsys)
         assert rc == int(Exit.FAILED)
         assert "yarn.lock:2" in out
 
     def test_value_is_not_echoed_in_full(self, tmp_repo, capsys):
         """Reporting a leak by reprinting it makes the log a second copy."""
-        tmp_repo.write("a.txt", "kailash_prod_2026\n")
+        tmp_repo.write("a.txt", "kailash_prod_2026\n")  # secret-scan: allow test corpus for the denylist detector
         _, out = _run(tmp_repo.root, capsys)
-        assert "kailash_prod_2026" not in out
+        assert "kailash_prod_2026" not in out  # secret-scan: allow test corpus for the denylist detector
 
 
 class TestStructuredPatterns:
     @pytest.mark.parametrize("payload,rule", [
-        ("-----BEGIN RSA PRIVATE KEY-----", "private-key-block"),
-        ("AIzaSyDD70yOW6vheOK2OPzNXT0b0R5B9ZXI1ho", "google-api-key"),
+        ("-----BEGIN RSA PRIVATE KEY-----", "private-key-block"),  # secret-scan: allow test corpus for the private-key-block detector
+        ("AIzaSyDD70yOW6vheOK2OPzNXT0b0R5B9ZXI1ho", "google-api-key"),  # secret-scan: allow test corpus for the google-api-key detector
         ("ghp_" + "a" * 36, "github-token"),
-        ("AKIAIOSFODNN7EXAMPLE", "aws-access-key"),
-        ("xoxb-123-abc", "slack-token"),
-        ('"type": "service_account"', "gcp-service-account"),
+        ("AKIAIOSFODNN7EXAMPLE", "aws-access-key"),  # secret-scan: allow test corpus for the aws-access-key detector
+        ("xoxb-123-abc", "slack-token"),  # secret-scan: allow test corpus for the slack-token detector
+        ('"type": "service_account"', "gcp-service-account"),  # secret-scan: allow test corpus for the gcp-service-account detector
     ])
     def test_each_shape_fires(self, tmp_repo, capsys, payload, rule):
         tmp_repo.write("f.txt", f"prefix\n{payload}\n")
@@ -58,7 +63,7 @@ class TestStructuredPatterns:
 
 class TestAssignmentHeuristic:
     def test_literal_secret_fires(self, tmp_repo, capsys):
-        tmp_repo.write("s.py", 'API_KEY = "sk-live-abcdef123456"\n')
+        tmp_repo.write("s.py", 'API_KEY = "sk-live-abcdef123456"\n')  # secret-scan: allow test corpus for the assignment detector
         rc, out = _run(tmp_repo.root, capsys)
         assert rc == int(Exit.FAILED)
         assert "assignment" in out
@@ -83,20 +88,34 @@ class TestAssignmentHeuristic:
 
 
 class TestPlaceholderMatrix:
-    """Both conditions, never either alone."""
+    """The exemption needs both conditions; the failure needs only one.
+
+    The security property runs one way: a real credential in a `.env.example`
+    is a finding. A placeholder outside one is reported as a note, not a
+    failure -- it is nearly always documentation showing a reader what to
+    type, and failing on those makes the check unusable in any repository
+    that has docs. An unusable check gets weakened, which costs more than the
+    noise it saves.
+    """
 
     @pytest.mark.parametrize("path,value,should_pass", [
         ("backend/.env.example", "changeme", True),
         ("backend/.env.example", "<your-password>", True),
         ("backend/.env.example", "your-secret-here", True),
         ("backend/.env.example", "hunter2hunter2", False),   # real value in an example
-        ("backend/config.py", "changeme", False),            # placeholder outside one
-        ("backend/config.py", "hunter2hunter2", False),
+        ("backend/config.py", "changeme", True),             # note, not a finding
+        ("backend/config.py", "hunter2hunter2", False),      # real value anywhere
     ])
     def test_matrix(self, tmp_repo, capsys, path, value, should_pass):
         tmp_repo.write(path, f'API_KEY = "{value}"\n')
         rc, out = _run(tmp_repo.root, capsys)
         assert (rc == int(Exit.OK)) is should_pass, out
+
+    def test_placeholder_outside_example_is_still_reported(self, tmp_repo, capsys):
+        """Reported, so it is visible -- just not a build failure."""
+        tmp_repo.write("backend/config.py", 'API_KEY = "changeme"\n')
+        _, out = _run(tmp_repo.root, capsys)
+        assert "placeholder outside" in out
 
 
 class TestSuppression:

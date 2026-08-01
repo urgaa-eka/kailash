@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from collections.abc import Callable, Iterable, Sequence
@@ -213,6 +214,23 @@ def load_corpus(root: Path) -> Corpus:
 # --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
+
+# Any comment syntax: `#`, `//`, `<!-- -->`. Markdown needs the last one.
+# Shared, because every check that scans the corpus eventually scans its own
+# source and tests -- the negative fixtures are, by construction, the thing
+# being looked for.
+SUPPRESSION = re.compile(r"secret-scan:\s*allow(?:\s+(?P<reason>[^\n>*]*))?")
+
+
+def suppression_on(lines: list[str], idx: int) -> str | None:
+    """A `secret-scan: allow <reason>` on this line or the one above it."""
+    for probe in (idx, idx - 1):
+        if 0 <= probe < len(lines):
+            m = SUPPRESSION.search(lines[probe])
+            if m:
+                return (m.group("reason") or "").strip() or "no reason given"
+    return None
+
 
 def base_parser(description: str) -> argparse.ArgumentParser:
     """The argument surface every check shares."""
