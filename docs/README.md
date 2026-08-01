@@ -17,6 +17,7 @@ Structured reference for the KAILASH AEGIS Hub project.
 | Audience          | Start here                                                      |
 | ----------------- | --------------------------------------------------------------- |
 | New engineer      | [`guides/kailash-overview.md`](./guides/kailash-overview.md)    |
+| Running it locally | [`guides/docker-and-mcp.md`](./guides/docker-and-mcp.md)       |
 | Backend developer | [`architecture/application-flow.md`](./architecture/application-flow.md) |
 | API consumer      | [`api/api-reference.md`](./api/api-reference.md)                |
 | DevOps            | [`deployment/production-deployment.md`](./deployment/production-deployment.md) |

@@ -4,7 +4,7 @@
 
 **The internal ML/AI platform powering India's EV revolution.**
 
-[![CI](https://github.com/flywithvvk/kailash/actions/workflows/ci.yml/badge.svg)](https://github.com/flywithvvk/kailash/actions/workflows/ci.yml)
+[![CI](https://github.com/urgaa-eka/kailash/actions/workflows/ci.yml/badge.svg)](https://github.com/urgaa-eka/kailash/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
@@ -87,6 +87,7 @@ Full design, capability matrix, and the Automobile-LLM moat strategy:
 | `model-registry`       | MLflow-shape registry + evaluations         | SQLite                                                |
 | `knowledge-graph`      | Regs · parts · HSN · workflows · certs      | In-memory graph + BFS neighbours                      |
 | `automobile-llm`       | Automobile-domain chat (the moat)           | OpenRouter with pinned system prompt                  |
+| `company`              | Statutory ledger: double-entry SoR, GST, recon | PostgreSQL, immutable FY-partitioned journal       |
 
 Each service module follows `routes.py` → `service.py` pattern, wired through
 `backend/shared/app.py`'s `build_app()` factory. Domain routes are guarded by
@@ -106,8 +107,9 @@ Each service module follows `routes.py` → `service.py` pattern, wired through
 │   │   ├── guardians/          # GANESHA, SHIV, PARVATI agents
 │   │   ├── middleware/         # Security, error handling
 │   │   └── agents/             # Multi-model strategy, prompts
-│   ├── services/               # 9 platform AI services (internal modules)
+│   ├── services/               # 10 platform services (internal modules)
 │   │   ├── document-ai/ ... automobile-llm/
+│   │   └── company/            # Company segment: statutory ledger + GST + recon
 │   ├── shared/                 # Shared library (schemas, auth, errors, logging)
 │   ├── knowledge/              # Knowledge base data for departments
 │   ├── routers/                # V2 GANESHA router
@@ -130,6 +132,9 @@ Each service module follows `routes.py` → `service.py` pattern, wired through
 ├── deploy/
 │   ├── docker/                 # Docker Compose variants
 │   └── vultr/                  # VPS setup & deploy scripts
+├── infra/
+│   └── company/                # CDK app: KailashCompanyStack (AWS backend
+│                               #   for the Company segment ledger)
 ├── docs/
 │   ├── architecture/           # Platform overview, knowledge architecture
 │   ├── api/                    # API documentation
@@ -151,12 +156,48 @@ Each service module follows `routes.py` → `service.py` pattern, wired through
 
 ### 1. Full stack via Docker Compose
 
+`docker-compose.yml` declares its credentials with `${VAR:?...}`, so **every**
+compose subcommand — `up`, `build`, `config`, `ps` — aborts before creating a
+container if any is unset. Set them once in a `.env` beside `docker-compose.yml`
+(gitignored):
+
+```bash
+umask 077 && cat > .env <<'EOF'
+POSTGRES_PASSWORD=<generated>
+REDIS_PASSWORD=<generated>
+PLATFORM_INTERNAL_TOKEN=<generated>
+EOF
+```
+
+See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) section 0 for why, and for the
+extra variables production requires (`SECRET_KEY`, `CORS_ORIGINS`).
+
 ```bash
 docker compose up -d --build
 
 # Health check
 curl http://localhost:8000/api/health
 ```
+
+**Full stack, end-to-end (profile `kailash-ai`)** — everything at once:
+core backend + MongoDB/Postgres/Redis, the React frontend behind nginx,
+the Company-segment ledger, and all 9 platform/ML services:
+
+```bash
+docker compose --profile kailash-ai up -d --build
+```
+
+| Surface | URL |
+|---|---|
+| Frontend (nginx, proxies `/api` → backend) | http://localhost:3000 |
+| Main backend API | http://localhost:8000/api/health |
+| Company ledger + dashboard | http://localhost:8110/dashboard |
+| document-ai · forecasting · anomaly · rag · vision-gateway · speech · model-registry · knowledge-graph · automobile-llm | http://localhost:8101 … :8109 (`/health`, `/docs`) |
+
+Postgres ships with `pgcrypto` + `uuid-ossp` enabled; Mongo initializes
+collections/indexes from `database/mongodb_init.js` on first run. Just the
+ledger: `docker compose --profile kailash-ai up -d --build company`, then
+`curl -X POST localhost:8110/admin/init`.
 
 ### 2. Backend locally, without Docker
 
@@ -245,6 +286,8 @@ make test
 | `lint`           | `ruff check` across `backend/`                                 |
 | `shared`         | Runs `tests/platform/`                                         |
 | `services`       | 9-way matrix — each platform service tested                    |
+| `company-service`| Company segment against a `postgres:16` service container      |
+| `company-infra`  | Lambda bundle build + `cdk synth` of `KailashCompanyStack`     |
 | `backend`        | Smoke tests for the main application                           |
 | `frontend`       | `yarn install` + `yarn build`                                  |
 | `compose-build`  | `docker compose build` sanity check                            |
