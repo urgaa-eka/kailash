@@ -78,6 +78,39 @@ The check runs at import, so the process exits before serving a request rather
 than serving one signed with a public key. `ENV` defaults to `dev`, where both
 defaults remain allowed.
 
+### Creating the file
+
+```bash
+bash deploy/vultr/bootstrap-env.sh          # defaults to /opt/kailash
+cd /opt/kailash && docker compose config --quiet && echo OK
+```
+
+Generates all four values from `/dev/urandom`, writes mode 0600, and refuses
+to overwrite an existing file. That refusal matters: regenerating credentials
+while the Postgres and Redis volumes still hold the old ones produces a stack
+that cannot authenticate against its own databases.
+
+### Rotating on a stack that is already running
+
+```bash
+bash deploy/vultr/rotate-credentials.sh
+```
+
+`POSTGRES_PASSWORD` and the Redis `requirepass` are read **only when the
+volume is first initialised**. Editing `.env` and restarting changes the
+password the *clients present*, not the one the database *accepts* — so the
+stack comes up unable to log in to its own datastores, and the symptom points
+at the application rather than at the rotation.
+
+The script does it in the order that works: `ALTER USER` inside the running
+Postgres and `CONFIG SET requirepass` inside the running Redis first, `.env`
+second, restart third. It backs up the previous file and tells you to delete
+the backup once the stack is healthy.
+
+Rotating `SECRET_KEY` invalidates every issued JWT and forces everyone to sign
+in again. That is the point — tokens signed with the old key stop being
+forgeable.
+
 ### Bootstrapping the first admin
 
 `app/core/seeder.py` creates an admin **only** into a database with no users at
@@ -86,6 +119,44 @@ all, and **only** when `ADMIN_SEED_PASSWORD` is set. There is no default and no
 set `ADMIN_SEED_PASSWORD`, start once, sign in, change the password, then unset
 the variable. `database/seed_data.py` requires `SEED_ADMIN_PASSWORD` in the same
 way and exits if it is unset.
+
+---
+
+## 0b. Going live — the actual blocking order
+
+As of this writing the site at `kailash-ai.com` is a static SPA on Firebase
+project `kailash-29111` with **no backend anywhere**:
+
+```
+api.kailash-ai.in       NXDOMAIN
+api.kailash-ai.com      NXDOMAIN
+backend.kailash-ai.com  NXDOMAIN
+```
+
+`kailash-ai.com/api/health` answers 200, but with `Content-Type: text/html`
+and the SPA index — that is `firebase.json`'s catch-all rewrite, not an API.
+
+The deployed build's login therefore cannot work, and neither can this
+repository's, because both point at a hostname with no DNS record. Deploying
+the frontend before the backend exists produces a site that loads and cannot
+authenticate anyone.
+
+Do it in this order:
+
+| # | Step | Blocked on |
+|---|---|---|
+| 1 | `bash deploy/vultr/bootstrap-env.sh` on the VPS | nothing |
+| 2 | Confirm `git remote -v` in `/opt/kailash` is `urgaa-eka/kailash` | nothing |
+| 3 | Bring the stack up, confirm `curl -sf localhost:8000/api/health` | 1, 2 |
+| 4 | Point an `A` record at the VPS for the API hostname | 3 |
+| 5 | Set `REACT_APP_BACKEND_URL` in `frontend/.env.production` to it | 4 |
+| 6 | Rebuild and deploy the frontend | 5 |
+| 7 | `python -m scripts.verify.deployment_check --env production` | 6 |
+
+Step 4 is the only one that is not in this repository, and everything after it
+depends on it. Step 7 currently reports the two known defects — the `.in`
+domain 301ing to `.com`, and the missing API record — and will go green when
+they are fixed.
 
 ---
 
