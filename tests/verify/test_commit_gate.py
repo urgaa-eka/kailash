@@ -8,6 +8,7 @@ through" -- only a real `git commit` exercises the wiring.
 """
 from __future__ import annotations
 
+import stat
 import subprocess
 
 from scripts.verify import commit_gate
@@ -66,6 +67,10 @@ exec python -m scripts.verify.commit_gate $(git diff --cached --name-only)
 def _install_hook(repo) -> None:
     hook = repo.root / ".git" / "hooks" / "pre-commit"
     hook.write_text(HOOK, encoding="utf-8", newline="\n")
+    # Linux git silently skips a hook without the execute bit -- the commit
+    # then succeeds and the "refuses" half of the test fails. Windows git
+    # ignores the bit entirely, so this is load-bearing only on CI.
+    hook.chmod(hook.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
 def _commit(repo, message, *, env_extra=None, project_root=None) -> subprocess.CompletedProcess:
