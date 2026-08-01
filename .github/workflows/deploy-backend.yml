@@ -80,7 +80,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Record deployed commit
-        run: echo "Deploying \`${{ github.sha }}\` to the Vultr VPS." >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "Deploying \`${{ github.sha }}\` to the Vultr VPS." >> "$GITHUB_STEP_SUMMARY"
+          echo "Backend image tagged \`kailash-backend:${{ github.sha }}\` on the host (task 10.4)." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy to Vultr via SSH
         uses: appleboy/ssh-action@v1
@@ -108,9 +110,38 @@ jobs:
             # the VPS. Keep in step with PROD_SERVICES in deploy/vultr/deploy.sh.
             PROD_SERVICES="backend mongo postgres redis company document-ai forecasting anomaly rag vision-gateway speech model-registry knowledge-graph automobile-llm"
 
+            # The commit actually checked out, exported so compose substitutes
+            # it into the backend environment (docker-compose.yml:
+            # GIT_COMMIT=${GIT_COMMIT:-unknown}) and /api/health reports what
+            # is running (Requirement 6.6). Keep in step with the same export
+            # in deploy/vultr/deploy.sh.
+            GIT_COMMIT="$(git rev-parse HEAD)"
+            export GIT_COMMIT
+
             # Rebuild and restart containers. $PROD_SERVICES is deliberately
             # unquoted: compose takes the service names as separate arguments.
             docker compose -f docker-compose.yml --profile kailash-ai up -d --build --remove-orphans $PROD_SERVICES
+
+            # Task 10.4 / Requirement 6.4: tag the image the backend container
+            # runs with the deployed commit, then verify the tag exists on the
+            # host. Resolved from the container's .Image rather than a
+            # compose-derived name, which depends on the project directory.
+            docker tag "$(docker inspect kailash-backend --format '{{.Image}}')" "kailash-backend:${GIT_COMMIT}"
+            docker image inspect "kailash-backend:${GIT_COMMIT}" > /dev/null
+            echo "Tagged kailash-backend:${GIT_COMMIT}"
+
+            # Prune commit tags beyond the retention depth: 3, a conservative
+            # default until the task 4.5 disk-headroom record justifies more
+            # (the design proposed 10). Only full 40-hex tags are candidates,
+            # so :latest is left alone, as is the tag just written. Keep in
+            # step with RETAINED_IMAGE_TAGS in deploy/vultr/deploy.sh.
+            docker image ls kailash-backend --format '{{.Tag}}' \
+              | grep -E '^[0-9a-f]{40}$' | grep -vx "$GIT_COMMIT" \
+              | tail -n +3 \
+              | while read -r tag; do
+                  docker rmi "kailash-backend:${tag}" > /dev/null 2>&1 \
+                    || echo "could not remove kailash-backend:${tag} (in use?)"
+                done
 
             # Wait and health check
             sleep 15

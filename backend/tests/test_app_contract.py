@@ -32,6 +32,30 @@ def test_health_alias_returns_200():
     assert client.get("/health").status_code == 200
 
 
+def test_health_reports_the_deployed_commit(monkeypatch):
+    """The health body identifies what is actually running (Requirement 6.6).
+
+    The deploy pipeline exports GIT_COMMIT and compose passes it into the
+    container; during an incident this field is what says whether a rollback
+    actually took effect. Read at request time, so the test can pin it.
+    """
+    sha = "0f5a3c1d9e8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f"
+    monkeypatch.setenv("GIT_COMMIT", sha)
+    assert client.get("/api/health").json()["commit"] == sha
+
+
+def test_health_commit_defaults_to_unknown_when_unset(monkeypatch):
+    """An absent GIT_COMMIT is an explicit "unknown", never a crash.
+
+    A developer machine and a hand-started container have no deploy pipeline
+    to export the variable; the health route must still answer 200.
+    """
+    monkeypatch.delenv("GIT_COMMIT", raising=False)
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    assert response.json()["commit"] == "unknown"
+
+
 @pytest.mark.parametrize(
     "path",
     [

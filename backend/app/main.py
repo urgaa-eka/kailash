@@ -324,6 +324,11 @@ async def health_check():
             "database": "connected" if db_healthy else "initializing",
             "timestamp": datetime.now().isoformat(),
             "version": settings.VERSION,
+            # The deployed git commit (Requirement 6.6): the deploy pipeline
+            # exports GIT_COMMIT and docker-compose.yml passes it through, so
+            # the health body identifies what is actually running. Read at
+            # request time, defaulting rather than crashing when unset.
+            "commit": os.environ.get("GIT_COMMIT", "unknown"),
             "company": "Go4Garage",
             "product": "Kailash",
             "domain": "kailash-ai.in",
@@ -338,6 +343,7 @@ async def health_check():
             "database": "initializing",
             "timestamp": datetime.now().isoformat(),
             "version": settings.VERSION,
+            "commit": os.environ.get("GIT_COMMIT", "unknown"),
             "error": "Database connection in progress"
         }
 

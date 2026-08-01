@@ -4,7 +4,24 @@ The module has two halves and the seam between them is the point.
 
 The **collector** (everything above the `Phase A classifier` banner) shells out
 to Docker and writes what it saw, verbatim, to
-`docs/records/container-health-evidence.json`. It decides nothing.
+`docs/records/container-health-evidence.json`. It decides nothing. One live
+invocation runs three phases: the Phase A captures; the Phase C replay, which
+re-runs each non-healthy container's own probe via `docker exec` and records
+exit code, stdout, stderr and wall time, a failing exec recorded verbatim
+rather than raised; and the Phase D executable evidence, `docker exec <c>
+which <exe>` for every container with a probe -- passing ones included,
+because Requirement 1.2 is a claim about all fifteen. With `--phase-b` the
+same invocation also runs the Phase B uniform-cause probes (task 4.5), once
+for the host rather than per container: one `docker stats --no-stream`
+snapshot plus a Docker-VM disk reading and the probe wall times Phase A
+already recorded for H1, the clock-skew reading `collect_host` already took
+folded in for H9, and for H2 each service's *declared* healthcheck test read
+unrendered from docker-compose.yml (so no credential enters the capture) and
+compared against the rendered `.Config.Healthcheck`; a container whose
+rendered probe differs from its declaration -- `redis` is the live instance
+-- has that rendered probe replayed inside it even while healthy. The
+captures shell out; the H1/H2/H9 verdicts are pure functions of the captured
+numbers.
 
 The **classifier** (everything below that banner) is a pure function from that
 captured JSON to `list[Finding]` plus Diagnosis_Record entries. It calls no
@@ -44,6 +61,8 @@ findings from a capture that never happened means nothing at all.
 Usage:
 
     python -m scripts.verify.health_diagnose \
+        --emit-record docs/records/container-health-diagnosis.md
+    python -m scripts.verify.health_diagnose --phase-b \
         --emit-record docs/records/container-health-diagnosis.md
     python -m scripts.verify.health_diagnose \
         --from-evidence docs/records/container-health-evidence.json \
@@ -277,10 +296,19 @@ def compose_services(root: Path) -> list[dict]:
     out = []
     for service, body in services.items():
         body = body if isinstance(body, dict) else {}
+        healthcheck = body.get("healthcheck")
         out.append({
             "service": service,
             "name": body.get("container_name") or service,
             "compose_declares_healthcheck": "healthcheck" in body,
+            # The *declared* test, unrendered -- `${...}` references intact.
+            # H2's question is "is the probe the runtime runs the probe
+            # somebody wrote", and this is the written half of that
+            # comparison. Reading it from the YAML rather than from `docker
+            # compose config` keeps credentials out of the capture entirely:
+            # the rendered half already sits in `.Config.Healthcheck`.
+            "declared_test": (healthcheck.get("test")
+                              if isinstance(healthcheck, dict) else None),
         })
     return out
 
@@ -405,11 +433,13 @@ def collect_host(execute: Executor, *, clock: Callable[[], float] = time.time) -
 def collect_container(execute: Executor, entry: dict, roster: dict[str, dict]) -> dict:
     """The four captures for one container, plus what reads straight off them.
 
-    Every field the design's schema fills in a later phase -- `executable`
-    (task 4.4 Phase D), `replay` (task 4.4 Phase C),
+    Every field another step fills -- `executable` (Phase D) and `replay`
+    (Phase C), both filled by `collect` in the same invocation,
     `measured_first_success_seconds` (task 4.3) and `attribution` (task 4.2) --
     is present and null. Present-and-null says "not yet collected"; absent
     would say "no such concept", and a later reader cannot tell those apart.
+    A capture that predates Phases C and D still parses under this schema for
+    exactly that reason.
     """
     name = entry["name"]
     raw: dict[str, dict] = {}
@@ -458,13 +488,15 @@ def collect_container(execute: Executor, entry: dict, roster: dict[str, dict]) -
             compose_declares=entry["compose_declares_healthcheck"],
         ),
         "compose_declares_healthcheck": entry["compose_declares_healthcheck"],
+        "intent_test": entry.get("declared_test"),
         "effective_test": (effective or {}).get("Test"),
         "declared_interval_seconds": _ns_to_seconds((effective or {}).get("Interval")),
         "declared_timeout_seconds": _ns_to_seconds((effective or {}).get("Timeout")),
         "declared_start_period_seconds": _ns_to_seconds((effective or {}).get("StartPeriod")) or 0,
         "declared_retries": (effective or {}).get("Retries"),
         "probe_log": probe_log(health),
-        # Filled by later phases; see the docstring.
+        # Initialised null; `collect` fills `executable` (Phase D) and, for a
+        # non-healthy container, `replay` (Phase C) before writing evidence.
         "executable": None,
         "replay": None,
         "measured_first_success_seconds": None,
@@ -473,6 +505,262 @@ def collect_container(execute: Executor, entry: dict, roster: dict[str, dict]) -
         "capture_failed": failed,
         "parse_errors": parse_errors,
     }
+
+
+# --------------------------------------------------------------------------
+# Phase C replay and Phase D executable evidence (task 4.4)
+# --------------------------------------------------------------------------
+
+def replay_argv(name: str, test: object) -> list[str] | None:
+    """The `docker exec` invocation that replays a probe, or None.
+
+    A `CMD` test is an argv the runtime execs directly, so the replay passes
+    it through untouched -- no quote-stripping, no joining, because any edit
+    would replay a different command than the one that failed. `CMD-SHELL` and
+    a bare string both mean `/bin/sh -c <s>` at probe time, so the replay is
+    `docker exec <c> sh -c <s>`.
+    """
+    probe = parse_probe(test)
+    if not probe.declared:
+        return None
+    if probe.form in ("CMD-SHELL", "SHELL"):
+        return ["docker", "exec", name, "sh", "-c", probe.command] if probe.command else None
+    if isinstance(test, list | tuple):
+        items = [str(x) for x in test if x is not None]
+        head = _strip_quotes(items[0]).upper() if items else ""
+        argv = items[1:] if head == "CMD" else items
+        return ["docker", "exec", name, *argv] if argv else None
+    return None  # an UNKNOWN non-list form: nothing runnable to replay
+
+
+def replay_probe(execute: Executor, container: dict, *,
+                 clock: Callable[[], float] = time.time) -> dict | None:
+    """Phase C: one replay of the container's own probe, recorded verbatim.
+
+    The replay is the decisive step because it separates three outcomes that
+    `unhealthy` alone conflates: the service is fine and the probe invocation
+    is at fault, the service is not listening, or the service is listening and
+    rejecting the probed path. A failing or erroring `docker exec` is exactly
+    as informative as a succeeding one, so it is recorded, never raised.
+
+    `argv` is part of the record: the classifier reads the replayed URL out of
+    it, which is what turns "replay succeeded" plus "probe asks for a
+    different path" into the path-mismatch finding.
+    """
+    argv = replay_argv(container["name"], container.get("effective_test"))
+    if argv is None:
+        return None
+    before = clock()
+    result = _run(execute, argv)
+    after = clock()
+    return {
+        "argv": result["argv"],
+        "exit_code": result["exit_code"],
+        "stdout": result["stdout"],
+        "stderr": result["stderr"],
+        "duration_seconds": after - before,
+    }
+
+
+def which_argv(name: str, executable: str) -> list[str]:
+    return ["docker", "exec", name, "which", executable]
+
+
+def collect_executable(execute: Executor, container: dict) -> dict | None:
+    """Phase D: `which <exe>` inside the container, for Requirement 1.2.
+
+    Collected for every container with a probe, the passing ones included,
+    because 1.2 is a claim about all fifteen. A container with no probe at all
+    keeps `executable: null` -- there is no executable to ask about, and the
+    `probe-absent` attribution already carries that fact.
+
+    `present` is a three-way reading: True and False report what `which` said,
+    None reports a `which` that never answered (a timed-out or unspawnable
+    exec), which must not be read as "absent".
+    """
+    name = extract_executable(container.get("effective_test"))
+    if not name:
+        return None
+    result = _run(execute, which_argv(container["name"], name))
+    exit_code = result["exit_code"]
+    return {
+        "name": name,
+        "present": (exit_code == 0) if exit_code is not None else None,
+        "which_exit_code": exit_code,
+        "which_output": result["stdout"] or result["stderr"],
+    }
+
+
+# --------------------------------------------------------------------------
+# Phase B uniform-cause probes (task 4.5)
+# --------------------------------------------------------------------------
+#
+# Fourteen probes failing across five heterogeneous mechanisms points at a
+# common cause before fourteen independent ones. Phase B runs once for the
+# host: a `docker stats` snapshot and a disk reading for H1, the clock skew
+# `collect_host` already measured folded in for H9, and for H2 the
+# declared-versus-rendered probe comparison plus a replay of any container
+# whose rendered probe differs from its declared one. If H1 confirms, the
+# remediation path is the host, not fourteen probe definitions.
+
+STATS_ARGV = ["docker", "stats", "--no-stream", "--no-trunc",
+              "--format", "{{json .}}"]
+# Disk free inside the Docker VM (the filesystem images and volumes live on),
+# via the same tiny image the clock reading uses. `df -kP /` is POSIX output:
+# one header line, then blocks/used/available in KiB.
+DISK_ARGV = ["docker", "run", "--rm", CLOCK_IMAGE, "df", "-kP", "/"]
+
+# A probe habitually consuming this share of its declared timeout is evidence
+# of starvation even while it still passes.
+_TIMEOUT_PRESSURE = 0.8
+_SATURATION_FRACTION = 0.9
+
+
+def parse_percent(text: object) -> float | None:
+    """`"1.23%"` -> 0.0123. Tolerant: anything unparseable is None."""
+    if not isinstance(text, str):
+        return None
+    try:
+        return float(text.strip().rstrip("%")) / 100.0
+    except ValueError:
+        return None
+
+
+def parse_stats_lines(stdout: str) -> tuple[list[dict], list[str]]:
+    """One JSON object per line from `docker stats --format {{json .}}`.
+
+    Malformed lines are preserved as errors, never raised: a truncated stats
+    line is evidence about the daemon, and losing the parseable lines with it
+    would lose the measurement.
+    """
+    parsed: list[dict] = []
+    errors: list[str] = []
+    for line in (stdout or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        value, error = parse_json_capture(line)
+        if isinstance(value, dict):
+            parsed.append(value)
+        elif error:
+            errors.append(f"{error}: {line[:80]!r}")
+    return parsed, errors
+
+
+def parse_df_available(stdout: str) -> int | None:
+    """Available bytes from POSIX `df -kP` output, or None."""
+    lines = [ln for ln in (stdout or "").splitlines() if ln.strip()]
+    for line in lines[1:]:
+        fields = line.split()
+        if len(fields) >= 4:
+            try:
+                return int(fields[3]) * 1024
+            except ValueError:
+                continue
+    return None
+
+
+def probe_time_pressure(containers: list[dict]) -> list[dict]:
+    """Per container, the worst probe duration as a fraction of its timeout."""
+    out = []
+    for container in containers:
+        if not isinstance(container, dict):
+            continue
+        timeout = container.get("declared_timeout_seconds")
+        if not isinstance(timeout, int | float) or timeout <= 0:
+            continue
+        durations = [entry.get("duration_seconds")
+                     for entry in container.get("probe_log") or []
+                     if isinstance(entry, dict)
+                     and isinstance(entry.get("duration_seconds"), int | float)]
+        if durations:
+            out.append({"name": container.get("name"),
+                        "worst_ratio": max(durations) / timeout})
+    return out
+
+
+def saturation_verdict(*, stats: list[dict], mem_total_bytes: object,
+                       ncpu: object, containers: list[dict],
+                       disk_free_bytes: int | None,
+                       clock_skew_seconds: object) -> dict:
+    """H1's verdict as a pure function of the captured numbers.
+
+    Confirmed when memory or CPU in use crosses 90% of the host's ceiling, or
+    when at least half of the probed containers see their worst probe consume
+    over 80% of its declared timeout -- probes starved of CPU run slow long
+    before they fail outright.
+    """
+    mem_fractions = [f for s in stats if (f := parse_percent(s.get("MemPerc"))) is not None]
+    mem_used = sum(mem_fractions) if mem_fractions else None
+    cpu_fractions = [f for s in stats if (f := parse_percent(s.get("CPUPerc"))) is not None]
+    cpu_used = None
+    if cpu_fractions and isinstance(ncpu, int | float) and ncpu:
+        cpu_used = sum(cpu_fractions) / ncpu
+
+    pressure = probe_time_pressure(containers)
+    slow = [p for p in pressure if p["worst_ratio"] > _TIMEOUT_PRESSURE]
+    worst = max((p["worst_ratio"] for p in pressure), default=None)
+
+    confirmed = bool(
+        (mem_used is not None and mem_used > _SATURATION_FRACTION)
+        or (cpu_used is not None and cpu_used > _SATURATION_FRACTION)
+        or (pressure and len(slow) * 2 >= len(pressure))
+    )
+
+    def pct(value: float | None) -> str:
+        return f"{value:.0%}" if isinstance(value, int | float) else "unmeasured"
+
+    gib = (f"{disk_free_bytes / 2**30:.1f} GiB"
+           if isinstance(disk_free_bytes, int) else "unmeasured")
+    skew = (f"{clock_skew_seconds:+.2f}s"
+            if isinstance(clock_skew_seconds, int | float) else "unmeasured")
+    detail = (
+        f"memory in use {pct(mem_used)} of the ceiling across {len(stats)} "
+        f"container(s), CPU {pct(cpu_used)} of {ncpu or '?'} core(s), "
+        f"{len(slow)} of {len(pressure)} probed container(s) over "
+        f"{_TIMEOUT_PRESSURE:.0%} of their probe timeout "
+        f"(worst {pct(worst)}), free disk in the Docker VM {gib}, "
+        f"clock skew {skew} (H9)"
+    )
+    return {
+        "confirmed": confirmed,
+        "detail": detail,
+        "mem_used_fraction": mem_used,
+        "cpu_used_fraction": cpu_used,
+        "disk_free_bytes": disk_free_bytes,
+        "probe_time_pressure": pressure,
+        "stats_containers": len(stats),
+    }
+
+
+def rendered_probe_differs(container: dict) -> bool:
+    """H2's trigger: the probe the runtime runs is not the one declared."""
+    intent = container.get("intent_test")
+    effective = container.get("effective_test")
+    if intent is None or effective is None:
+        return False
+    declared = " ".join(parse_probe(intent).command.split())
+    rendered = " ".join(parse_probe(effective).command.split())
+    return bool(declared) and bool(rendered) and declared != rendered
+
+
+def collect_phase_b(execute: Executor, containers: list[dict], host: dict) -> dict:
+    """The host-wide captures, reduced to the H1 verdict dict."""
+    stats_result = _run(execute, STATS_ARGV, timeout=120)
+    disk_result = _run(execute, DISK_ARGV, timeout=120)
+    stats, stat_errors = parse_stats_lines(stats_result["stdout"])
+    verdict = saturation_verdict(
+        stats=stats,
+        mem_total_bytes=host.get("mem_total_bytes"),
+        ncpu=host.get("ncpu"),
+        containers=containers,
+        disk_free_bytes=parse_df_available(disk_result["stdout"]),
+        clock_skew_seconds=host.get("clock_skew_seconds"),
+    )
+    verdict["raw"] = {"stats": stats_result, "disk": disk_result}
+    if stat_errors:
+        verdict["parse_errors"] = stat_errors
+    return verdict
 
 
 def summarise(containers: list[dict]) -> dict:
@@ -493,14 +781,35 @@ def summarise(containers: list[dict]) -> dict:
 
 
 def collect(root: Path, execute: Executor, *,
-            clock: Callable[[], float] = time.time) -> dict:
-    """Phase A end to end. Raises only `Unavailable`."""
+            clock: Callable[[], float] = time.time,
+            phase_b: bool = False) -> dict:
+    """Phases A, C and D end to end; B as well when asked. Raises only
+    `Unavailable`."""
     entries = compose_services(root)
     host = collect_host(execute, clock=clock)
     containers = [collect_container(execute, entry, host["roster"]) for entry in entries]
+    # Phase C: replay the probe of every container not reporting healthy. A
+    # healthy container's probe just succeeded on the daemon's own schedule,
+    # so a replay would prove nothing it has not already proved.
+    for container in containers:
+        if not is_healthy(container):
+            container["replay"] = replay_probe(execute, container, clock=clock)
+    # Phase D: the `which` evidence, for all containers with a probe.
+    for container in containers:
+        container["executable"] = collect_executable(execute, container)
+    if phase_b:
+        host["saturation"] = collect_phase_b(execute, containers, host)
+        # H2: a rendered probe that differs from its declaration is replayed
+        # even on a healthy container -- `redis` is the live instance, where
+        # the declaration names `${REDIS_PASSWORD:?}` and the runtime carries
+        # a rendered literal. The replay proves whether the rendered form is
+        # the one the service actually accepts.
+        for container in containers:
+            if container.get("replay") is None and rendered_probe_differs(container):
+                container["replay"] = replay_probe(execute, container, clock=clock)
     return {
         "captured_at": datetime.now(UTC).isoformat(),
-        "phase": "A",
+        "phase": "A+B+C+D" if phase_b else "A+C+D",
         "generated_by": "scripts/verify/health_diagnose.py",
         "host": host,
         "containers": containers,
@@ -600,9 +909,10 @@ def capture_findings(evidence: dict) -> list[Finding]:
 
 def build_report(args) -> Report:
     root = resolve_root(args.root)
-    # Injectable so the CLI path is testable with the recording fake executor;
-    # the real invocation never sets it.
+    # Injectable so the CLI path is testable with the recording fake executor
+    # and a deterministic clock; the real invocation never sets either.
     execute = getattr(args, "execute", None) or default_execute
+    clock = getattr(args, "clock", None) or time.time
     report = Report()
 
     source = getattr(args, "from_evidence", None)
@@ -615,11 +925,17 @@ def build_report(args) -> Report:
         annotate_first_success(evidence)
         report.notes.append(f"classified {evidence_path} without contacting Docker")
     else:
-        evidence = collect(root, execute)
+        evidence = collect(root, execute, clock=clock,
+                           phase_b=bool(getattr(args, "phase_b", False)))
         evidence_path = Path(args.evidence) if args.evidence else root / EVIDENCE_PATH
         annotate_first_success(evidence)
         write_evidence(evidence, evidence_path)
         report.notes.append(f"evidence written to {evidence_path}")
+
+    saturated, saturation_detail = host_saturation(evidence.get("host") or {})
+    if saturated is not None:
+        report.notes.append(
+            f"H1 {'confirmed' if saturated else 'refuted'}: {saturation_detail}")
 
     for finding in capture_findings(evidence):
         report.add(finding)
@@ -701,6 +1017,11 @@ def main(argv=None) -> int:
     parser.add_argument("--from-evidence", type=Path, default=None,
                         help="classify a previously captured evidence file instead "
                              "of contacting Docker")
+    parser.add_argument("--phase-b", action="store_true", dest="phase_b",
+                        help="also run the Phase B uniform-cause probes (one "
+                             "docker stats snapshot, a disk reading, and the "
+                             "declared-versus-rendered probe comparison) and "
+                             "record the H1 verdict")
     return run(build_report, argv, parser)
 
 # ==========================================================================
@@ -724,12 +1045,14 @@ def main(argv=None) -> int:
 #     produces one entry. A classifier tuned to make today's data look
 #     interesting would be a classifier that invents findings.
 #
-#   * `executable` and `replay` are null in today's evidence: Phase C and
-#     Phase D are task 4.4. Every branch here treats null as "not yet
-#     collected", attributes what the recorded probe output alone can carry,
-#     and names the missing evidence rather than assuming it. An attribution
-#     that says "not yet discriminated, because the replay has not run" is
-#     honest; one that guesses is not.
+#   * `executable` and `replay` are filled by the collector's Phase D and
+#     Phase C (task 4.4) on a live run, but they are still null in any capture
+#     that predates those phases, in a container with no probe to replay, and
+#     in a replay skipped because the container is healthy. Every branch here
+#     therefore treats null as "not collected", attributes what the recorded
+#     probe output alone can carry, and names the missing evidence rather than
+#     assuming it. An attribution that says "not yet discriminated, because
+#     the replay has not run" is honest; one that guesses is not.
 
 DIAGNOSIS_PATH = "docs/records/container-health-diagnosis.md"
 
@@ -1855,8 +2178,23 @@ def render_record(evidence: dict, entries: Sequence[Entry], *,
         f"({_cell(host.get('docker_os_arch'))})",
         f"- Clock skew, container minus host: "
         f"{_cell(host.get('clock_skew_seconds'))}s",
-        "",
     ]
+    saturation = host.get("saturation")
+    if isinstance(saturation, dict):
+        def _fraction(value: object) -> str:
+            return f"{value:.0%}" if isinstance(value, int | float) else "unmeasured"
+        disk = saturation.get("disk_free_bytes")
+        out += [
+            f"- Measured memory in use: {_fraction(saturation.get('mem_used_fraction'))} "
+            f"of the ceiling, across {_cell(saturation.get('stats_containers'))} "
+            "container(s) in the stats snapshot",
+            f"- Measured CPU in use: {_fraction(saturation.get('cpu_used_fraction'))} "
+            "of all cores",
+            "- Free disk in the Docker VM: "
+            + (f"{disk / 2**30:.1f} GiB" if isinstance(disk, int) else "unmeasured")
+            + " (task 10.4 sizes the image-tag retention depth from this)",
+        ]
+    out.append("")
     if saturated is None:
         out += [
             f"H1 verdict: **not yet assessed**. {detail}. Task 4.5 runs the Phase B "

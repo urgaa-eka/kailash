@@ -19,6 +19,9 @@ COPY backend/services/${SERVICE}/app /srv/app
 RUN touch /srv/backend/__init__.py
 
 EXPOSE ${PORT}
-HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
+# --start-period: the interpreter start + app import takes seconds on a busy
+# host; without it those early failing probes count toward the streak
+# (Requirement 1.6; verified per-boot by scripts/verify/health_diagnose.py).
+HEALTHCHECK --interval=30s --timeout=5s --retries=5 --start-period=15s \
   CMD python -c "import os,urllib.request,sys;sys.exit(0 if urllib.request.urlopen(f'http://localhost:{os.environ[\"PORT\"]}/health').status==200 else 1)"
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

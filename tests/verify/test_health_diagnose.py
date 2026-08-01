@@ -122,7 +122,8 @@ def test_issues_exactly_the_four_captures_for_every_declared_container(repo, fak
 
     hd.collect(repo, fake_executor, clock=fake_clock())
 
-    issued = fake_executor.commands()
+    issued = [c for c in fake_executor.commands()
+              if c.startswith("docker inspect --format")]
     for name in ("kailash-frontend", "kailash-forecasting", "kailash-postgres"):
         assert [c for c in issued if f" {name}" in c] == [
             inspect_cmd(name, "health"),
@@ -130,7 +131,7 @@ def test_issues_exactly_the_four_captures_for_every_declared_container(repo, fak
             inspect_cmd(name, "state"),
             inspect_cmd(name, "restarts"),
         ]
-    assert len([c for c in issued if c.startswith("docker inspect --format")]) == 12
+    assert len(issued) == 12
 
 
 def test_reads_the_probe_from_config_healthcheck_and_never_from_compose(repo, fake_executor):
@@ -298,6 +299,155 @@ def test_in_flight_probe_yields_no_duration_rather_than_a_negative_one(repo, fak
 
 
 # --------------------------------------------------------------------------
+# Phase C replay and Phase D executable evidence (task 4.4)
+# --------------------------------------------------------------------------
+
+TRIO = {
+    "kailash-frontend": "inspect_no_healthcheck.json",
+    "kailash-forecasting": "inspect_replay_succeeds.json",
+    "kailash-postgres": "inspect_healthy.json",
+}
+
+
+def script_trio(fake, **overrides) -> dict[str, dict]:
+    fixtures = {name: overrides.get(name) or load_fixture(fname)
+                for name, fname in TRIO.items()}
+    script_all(fake, fixtures)
+    return fixtures
+
+
+def test_unhealthy_cmd_shell_probe_is_replayed_with_the_exact_argv(repo, fake_executor):
+    fixtures = script_trio(fake_executor)
+    fake_executor.script("docker exec kailash-forecasting sh -c", 0, "ok\n", "")
+
+    evidence = hd.collect(repo, fake_executor, clock=fake_clock())
+
+    # CMD-SHELL means `/bin/sh -c <s>` at probe time, so the replay is the
+    # same shell invocation, the command string passed through untouched.
+    command = fixtures["kailash-forecasting"]["effective"]["Test"][1]
+    [call] = [c for c in fake_executor.calls
+              if c.argv[:4] == ("docker", "exec", "kailash-forecasting", "sh")]
+    assert call.argv == ("docker", "exec", "kailash-forecasting", "sh", "-c", command)
+
+    replay = next(c for c in evidence["containers"]
+                  if c["name"] == "kailash-forecasting")["replay"]
+    assert replay["exit_code"] == 0
+    assert replay["stdout"] == "ok\n"
+    assert replay["stderr"] == ""
+    # Wall time comes from the injected clock: one tick per read, two reads.
+    assert replay["duration_seconds"] == pytest.approx(1.0)
+    assert replay["argv"] == list(call.argv)
+
+
+def test_cmd_form_replays_as_argv_and_bare_string_replays_via_sh(repo, fake_executor):
+    cmd_form = load_fixture("inspect_replay_succeeds.json")
+    cmd_form["effective"]["Test"] = ["CMD", "redis-cli", "-p", "6379", "ping"]
+    bare = load_fixture("inspect_replay_succeeds.json")
+    bare["effective"]["Test"] = "curl -f http://localhost/health || exit 1"
+    script_trio(fake_executor, **{"kailash-forecasting": cmd_form,
+                                  "kailash-postgres": bare})
+
+    hd.collect(repo, fake_executor, clock=fake_clock())
+
+    replays = [c.argv for c in fake_executor.calls
+               if c.argv[:2] == ("docker", "exec") and c.argv[3] != "which"]
+    assert replays == [
+        # CMD is an argv the runtime execs directly: no shell inserted.
+        ("docker", "exec", "kailash-forecasting", "redis-cli", "-p", "6379", "ping"),
+        # A bare string is CMD-SHELL written out longhand.
+        ("docker", "exec", "kailash-postgres", "sh", "-c",
+         "curl -f http://localhost/health || exit 1"),
+    ]
+
+
+def test_healthy_container_is_not_replayed_but_which_still_runs(repo, fake_executor):
+    script_trio(fake_executor)
+    fake_executor.script("docker exec kailash-postgres which pg_isready", 0,
+                         "/usr/bin/pg_isready\n")
+
+    evidence = hd.collect(repo, fake_executor, clock=fake_clock())
+    by_name = {c["name"]: c for c in evidence["containers"]}
+
+    # Phase C: the healthy container's probe just succeeded on the daemon's
+    # own schedule, so it is never replayed.
+    fake_executor.assert_never("sh -c pg_isready")
+    assert by_name["kailash-postgres"]["replay"] is None
+    # Phase D: `which` covers every container with a probe, the passing one
+    # included -- Requirement 1.2 is a claim about all fifteen.
+    assert fake_executor.matching(" which ") == [
+        "docker exec kailash-forecasting which python",
+        "docker exec kailash-postgres which pg_isready",
+    ]
+    assert by_name["kailash-postgres"]["executable"] == {
+        "name": "pg_isready", "present": True, "which_exit_code": 0,
+        "which_output": "/usr/bin/pg_isready\n"}
+    # No probe: no exec of any kind, and an explicit null rather than a guess.
+    fake_executor.assert_never("docker exec kailash-frontend")
+    assert by_name["kailash-frontend"]["executable"] is None
+
+
+def test_a_failing_docker_exec_is_recorded_verbatim_never_raised(repo, fake_executor):
+    fixture = load_fixture("inspect_executable_absent.json")
+    script_all(fake_executor, {"kailash-postgres": fixture})
+    fake_executor.script(
+        "docker exec kailash-postgres sh -c", 126, "",
+        'OCI runtime exec failed: exec: "mongosh": '
+        "executable file not found in $PATH\n")
+    fake_executor.script("docker exec kailash-postgres which mongosh", 1, "", "")
+
+    evidence = hd.collect(repo, fake_executor, clock=fake_clock())
+    [postgres] = [c for c in evidence["containers"] if c["name"] == "kailash-postgres"]
+
+    assert postgres["replay"]["exit_code"] == 126
+    assert "executable file not found" in postgres["replay"]["stderr"]
+    assert postgres["executable"] == {
+        "name": "mongosh", "present": False, "which_exit_code": 1, "which_output": ""}
+
+
+def test_replay_success_moves_the_attribution_onto_the_invocation(repo, fake_executor):
+    """`inspect_replay_succeeds.json` end-to-end: the recorded attempts are
+    timeout-shaped, so Phase A alone could not separate a failing invocation
+    from a failing service. A replay that exits 0 is the discriminating
+    evidence, and the attribution lands on the invocation (Requirement 1.6)."""
+    script_trio(fake_executor)
+    fake_executor.script("docker exec kailash-forecasting sh -c", 0, "", "")
+    fake_executor.script("docker exec kailash-forecasting which python", 0,
+                         "/usr/local/bin/python\n")
+
+    evidence = hd.collect(repo, fake_executor, clock=fake_clock())
+    _, entries = hd.classify(evidence)
+    entry = next(e for e in entries if e.name == "kailash-forecasting")
+
+    assert entry.attribution_rule == "probe-invocation"
+    assert entry.determined
+    assert "exited 0" in entry.attribution
+    assert "raise timeout" in entry.remedy
+    assert entry.criterion == "1.6"
+
+
+def test_which_nonzero_moves_the_attribution_onto_the_absent_executable(repo, fake_executor):
+    """`inspect_executable_absent.json` end-to-end, with the runtime's own
+    error text stripped from the log so the Phase D `which` evidence alone
+    must carry the attribution (Requirement 1.2)."""
+    fixture = load_fixture("inspect_executable_absent.json")
+    for attempt in fixture["health"]["Log"]:
+        attempt["ExitCode"] = 1
+        attempt["Output"] = ""
+    script_trio(fake_executor, **{"kailash-forecasting": fixture})
+    fake_executor.script("docker exec kailash-forecasting which mongosh", 1, "", "")
+
+    evidence = hd.collect(repo, fake_executor, clock=fake_clock())
+    findings, entries = hd.classify(evidence)
+    entry = next(e for e in entries if e.name == "kailash-forecasting")
+
+    assert entry.attribution_rule == "probe-executable-absent"
+    assert "`which mongosh` exited 1" in entry.attribution
+    assert entry.criterion == "1.2"
+    assert any(f.rule == "probe-executable-absent" and f.path == "kailash-forecasting"
+               for f in findings)
+
+
+# --------------------------------------------------------------------------
 # An unreachable daemon classifies nothing
 # --------------------------------------------------------------------------
 
@@ -310,6 +460,7 @@ def test_unreachable_daemon_is_unavailable_and_inspects_nothing(repo, fake_execu
 
     fake_executor.assert_never("docker inspect")
     fake_executor.assert_never("docker ps")
+    fake_executor.assert_never("docker exec")
 
 
 def test_daemon_failure_exits_unavailable_and_writes_no_evidence(repo, fake_executor):
@@ -349,11 +500,18 @@ def test_writes_the_evidence_file_in_the_designed_schema(repo, fake_executor):
             "effective_test", "executable", "probe_log", "replay",
             "measured_first_success_seconds", "declared_start_period_seconds", "attribution",
         }
-        # The fields later phases fill are present and null, so a reader can
-        # tell "not collected yet" from "no such concept".
-        assert container["executable"] is None
-        assert container["replay"] is None
         assert container["attribution"] is None
+    by_name = {c["name"]: c for c in written["containers"]}
+    # Phase D fills `executable` for every container with a probe, healthy
+    # ones included; a container with no probe keeps the explicit null.
+    assert by_name["kailash-frontend"]["executable"] is None
+    assert by_name["kailash-forecasting"]["executable"]["name"] == "python"
+    assert by_name["kailash-postgres"]["executable"]["name"] == "pg_isready"
+    # Phase C replays only the containers not reporting healthy.
+    assert by_name["kailash-frontend"]["replay"] is None      # nothing to replay
+    assert by_name["kailash-postgres"]["replay"] is None      # healthy: skipped
+    assert set(by_name["kailash-forecasting"]["replay"]) == {
+        "argv", "exit_code", "stdout", "stderr", "duration_seconds"}
 
     # The capture succeeded, but the check still fails: the classifier runs on
     # every invocation, and this trio contains a container with no probe and a
@@ -396,6 +554,149 @@ def test_missing_compose_file_is_unavailable(tmp_path, fake_executor):
     script_host(fake_executor)
     with pytest.raises(Unavailable):
         hd.collect(tmp_path, fake_executor, clock=fake_clock())
+
+
+# --------------------------------------------------------------------------
+# Phase B uniform-cause probes (task 4.5)
+# --------------------------------------------------------------------------
+
+STATS_CMD = "docker stats --no-stream --no-trunc --format {{json .}}"
+DISK_CMD = "docker run --rm alpine df -kP /"
+DF_OUTPUT = ("Filesystem     1024-blocks      Used Available Capacity Mounted on\n"
+             "overlay          987654321  12345678 850000000       2% /\n")
+
+
+def _stats_line(name: str, cpu: str, mem: str) -> str:
+    return json.dumps({"Name": name, "CPUPerc": cpu, "MemPerc": mem,
+                       "MemUsage": "1GiB / 7.7GiB"})
+
+
+def script_phase_b(fake, *, stats_lines: list[str], df: str = DF_OUTPUT) -> None:
+    fake.script(STATS_CMD, 0, "\n".join(stats_lines) + "\n")
+    fake.script(DISK_CMD, 0, df)
+
+
+def test_phase_b_issues_the_stats_and_disk_captures_only_when_asked(repo, fake_executor):
+    script_all(fake_executor, {"kailash-postgres": load_fixture("inspect_healthy.json")})
+
+    hd.collect(repo, fake_executor, clock=fake_clock())
+
+    fake_executor.assert_never("docker stats")
+    fake_executor.assert_never("df -kP")
+
+
+def test_phase_b_records_the_verdict_and_disk_reading(repo, fake_executor):
+    script_all(fake_executor, {"kailash-postgres": load_fixture("inspect_healthy.json")})
+    script_phase_b(fake_executor, stats_lines=[
+        _stats_line("kailash-postgres", "1.25%", "2.10%"),
+    ])
+
+    evidence = hd.collect(repo, fake_executor, clock=fake_clock(), phase_b=True)
+
+    assert evidence["phase"] == "A+B+C+D"
+    saturation = evidence["host"]["saturation"]
+    assert saturation["confirmed"] is False
+    assert saturation["disk_free_bytes"] == 850_000_000 * 1024
+    assert "memory in use" in saturation["detail"]
+    assert fake_executor.matching("docker stats") == [STATS_CMD]
+
+
+def test_saturated_stats_confirm_h1():
+    """Pure verdict: a host with memory nearly exhausted confirms H1."""
+    stats = [{"Name": f"c{i}", "CPUPerc": "5.0%", "MemPerc": "19.0%"}
+             for i in range(5)]  # 95% of the ceiling in aggregate
+    verdict = hd.saturation_verdict(
+        stats=stats, mem_total_bytes=8_000_000_000, ncpu=8,
+        containers=[], disk_free_bytes=100 * 2**30, clock_skew_seconds=0.1)
+    assert verdict["confirmed"] is True
+    assert "memory in use 95%" in verdict["detail"]
+
+
+def test_probes_running_near_their_timeouts_confirm_h1():
+    """Starved probes run slow long before they fail outright."""
+    containers = [
+        {"name": f"kailash-c{i}", "declared_timeout_seconds": 5.0,
+         "probe_log": [{"duration_seconds": 4.6}]}
+        for i in range(4)
+    ]
+    verdict = hd.saturation_verdict(
+        stats=[{"Name": "x", "CPUPerc": "1.0%", "MemPerc": "1.0%"}],
+        mem_total_bytes=8_000_000_000, ncpu=8,
+        containers=containers, disk_free_bytes=100 * 2**30,
+        clock_skew_seconds=0.0)
+    assert verdict["confirmed"] is True
+    assert "4 of 4 probed container(s)" in verdict["detail"]
+
+
+def test_quiet_stats_refute_h1_and_malformed_lines_are_preserved(repo, fake_executor):
+    script_all(fake_executor, {"kailash-postgres": load_fixture("inspect_healthy.json")})
+    script_phase_b(fake_executor, stats_lines=[
+        _stats_line("kailash-postgres", "0.5%", "1.0%"),
+        "{this is not json",
+    ])
+
+    evidence = hd.collect(repo, fake_executor, clock=fake_clock(), phase_b=True)
+    saturation = evidence["host"]["saturation"]
+
+    assert saturation["confirmed"] is False
+    assert saturation["stats_containers"] == 1
+    assert saturation["parse_errors"], "the malformed line must be preserved"
+
+
+def test_h2_replays_a_rendered_probe_that_differs_from_its_declaration(repo, fake_executor):
+    """`redis` shape: compose declares `${REDIS_PASSWORD:?}`, the runtime holds
+    a rendered literal. Healthy or not, Phase B replays the rendered probe."""
+    (repo / "docker-compose.yml").write_text(COMPOSE + """
+  redis:
+    container_name: kailash-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?must be set}", "ping"]
+""", encoding="utf-8")
+    redis_fixture = load_fixture("inspect_healthy.json")
+    redis_fixture["effective"] = {
+        "Test": ["CMD", "redis-cli", "-a", "rendered-literal-value", "ping"],
+        "Interval": 30000000000, "Timeout": 10000000000,
+        "StartPeriod": 10000000000, "Retries": 3,
+    }
+    script_all(fake_executor, {
+        "kailash-postgres": load_fixture("inspect_healthy.json"),
+        "kailash-redis": redis_fixture,
+    })
+    script_phase_b(fake_executor, stats_lines=[
+        _stats_line("kailash-postgres", "1.0%", "1.0%")])
+    fake_executor.script("docker exec kailash-redis redis-cli", 0, "PONG\n")
+
+    evidence = hd.collect(repo, fake_executor, clock=fake_clock(), phase_b=True)
+    by_name = {c["name"]: c for c in evidence["containers"]}
+
+    redis = by_name["kailash-redis"]
+    assert redis["intent_test"] == ["CMD", "redis-cli", "-a",
+                                    "${REDIS_PASSWORD:?must be set}", "ping"]
+    assert redis["replay"] is not None
+    assert redis["replay"]["argv"] == [
+        "docker", "exec", "kailash-redis",
+        "redis-cli", "-a", "rendered-literal-value", "ping"]
+    # The declared-equals-rendered container is not replayed while healthy.
+    assert by_name["kailash-postgres"]["replay"] is None
+
+
+def test_the_record_carries_the_h1_verdict_and_the_disk_reading(repo, fake_executor):
+    script_all(fake_executor, {"kailash-postgres": load_fixture("inspect_healthy.json")})
+    script_phase_b(fake_executor, stats_lines=[
+        _stats_line("kailash-postgres", "1.0%", "2.0%")])
+
+    record_path = repo / "record.md"
+    args = argparse.Namespace(root=repo, json=False, emit_record=record_path,
+                              evidence=repo / "evidence.json",
+                              execute=fake_executor, clock=fake_clock(),
+                              phase_b=True)
+    hd.build_report(args)
+
+    record = record_path.read_text(encoding="utf-8")
+    assert "## Host resource assessment" in record
+    assert "H1 verdict: **refuted**" in record
+    assert "Free disk in the Docker VM" in record
+    assert "Measured memory in use" in record
 
 
 # --------------------------------------------------------------------------

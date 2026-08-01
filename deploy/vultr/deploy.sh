@@ -144,6 +144,21 @@ update_code() {
         cd "$APP_DIR"
         assert_expected_checkout "$APP_DIR"
     fi
+
+    # After `git reset --hard`, a clean tree is the definition of "deployed
+    # what was committed". Any modification reported here means somebody
+    # edited files on the production server; deploying would silently bake
+    # those edits into the running containers, so the deploy terminates and
+    # prints each modified path instead (Requirement 9.2).
+    if command -v python3 >/dev/null 2>&1; then
+        if ! (cd "$APP_DIR" && python3 -m scripts.verify.repo_state); then
+            echo "  ✖ Working tree on the server does not match the committed state; refusing to deploy." >&2
+            return 1
+        fi
+    else
+        echo "  ⚠️  python3 not found; repo-state verification skipped on this host" >&2
+    fi
+
     echo "  ✅ Code updated to $(git rev-parse --short HEAD)"
 }
 
@@ -160,12 +175,61 @@ check_env() {
 deploy_containers() {
     echo "▶ Building and deploying ${#PROD_SERVICES[@]} containers..."
     cd "$APP_DIR"
+    # The commit actually checked out, exported so compose substitutes it into
+    # the backend environment (docker-compose.yml: GIT_COMMIT=${GIT_COMMIT:-unknown})
+    # and /api/health reports what is running (Requirement 6.6). Read from the
+    # work tree rather than passed in, so it is the deployed code by
+    # construction. Keep in step with the same export in
+    # .github/workflows/deploy-backend.yml.
+    GIT_COMMIT="$(git rev-parse HEAD)"
+    export GIT_COMMIT
     docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" \
         pull --ignore-buildable "${PROD_SERVICES[@]}" 2>/dev/null || true
     docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" \
         up -d --build --remove-orphans "${PROD_SERVICES[@]}"
     docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" ps
     echo "  ✅ Containers deployed"
+}
+
+# How many commit-tagged backend images to keep, counting the one just
+# written. A conservative default: task 10.4 wants this set from the disk
+# headroom the task 4.5 record quantifies, and that record does not exist yet
+# (the design proposed 10 as a starting point). Keep in step with the same
+# value in .github/workflows/deploy-backend.yml and docs/runbooks/rollback.md.
+RETAINED_IMAGE_TAGS=3
+
+tag_backend_image() {
+    echo "▶ Tagging backend image by deployed commit..."
+    local sha
+    sha="${GIT_COMMIT:-$(git -C "$APP_DIR" rev-parse HEAD)}"
+
+    # Resolve the image the backend container actually runs rather than
+    # guessing the compose-derived name: compose names built images after the
+    # project directory, so the name differs between /opt/kailash and a
+    # developer checkout while `.Image` never does.
+    local image_id
+    image_id="$(docker inspect kailash-backend --format '{{.Image}}')"
+    docker tag "$image_id" "kailash-backend:${sha}"
+
+    # Task 10.4: the tag must verifiably exist on the host after a deploy.
+    docker image inspect "kailash-backend:${sha}" > /dev/null
+    echo "  ✅ Tagged kailash-backend:${sha}"
+
+    # Prune commit tags beyond the retention depth. `docker image ls` lists
+    # newest first; only full 40-hex tags are candidates, so :latest and any
+    # hand-made tag are left alone, as is the tag just written.
+    local pruned=0 tag
+    while read -r tag; do
+        [ -n "$tag" ] || continue
+        if docker rmi "kailash-backend:${tag}" > /dev/null 2>&1; then
+            pruned=$((pruned + 1))
+        else
+            echo "  ⚠️  Could not remove kailash-backend:${tag} (in use?)"
+        fi
+    done < <(docker image ls kailash-backend --format '{{.Tag}}' \
+        | grep -E '^[0-9a-f]{40}$' | grep -vx "$sha" \
+        | tail -n +"$RETAINED_IMAGE_TAGS")
+    [ "$pruned" -eq 0 ] || echo "  ✅ Pruned ${pruned} old commit tag(s)"
 }
 
 setup_nginx() {
@@ -235,6 +299,7 @@ main() {
     update_code
     check_env
     deploy_containers
+    tag_backend_image
     setup_nginx
     setup_ssl
     setup_cron

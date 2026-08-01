@@ -1,0 +1,50 @@
+{
+  "retained": [
+    {
+      "name": "mcp-tunnel-cloudflared-1",
+      "image": "cloudflare/cloudflared@sha256:6b599ca3e974349ead3286d178da61d291961182ec3fe9c505e1dd02c8ac31b0",
+      "owner": "external compose project `mcp-tunnel` - C:\\Users\\abcom\\AppData\\Local\\Temp\\opencode\\mcp-tunnel\\docker-compose.yaml (opencode MCP tunnel; not this repository's stack, and not the `docker mcp` gateway of docs/guides/docker-and-mcp.md, whose containers carry docker-mcp labels this one lacks)",
+      "published_ports": [],
+      "justification": "Labels, not the name, resolve ownership: com.docker.compose.project=mcp-tunnel with config_files under Temp\\opencode\\mcp-tunnel, a compose file that still exists on disk. This is the cloudflared egress half of an operator tool (service `cloudflared`, entrypoint `cloudflared --no-autoupdate tunnel run --url http://localhost:8080`), created 2026-07-28, restart=unless-stopped, publishes no host port. Observed Restarting (255) at review time - noted for the operator. It belongs to a living external compose project, so any stop/remove decision is `docker compose -p mcp-tunnel down` in that project, not a `docker rm` from this repository's cleanup.",
+      "reviewed": "2026-08-01"
+    },
+    {
+      "name": "mcp-tunnel-mcp-proxy-1",
+      "image": "us-docker.pkg.dev/anthropic-public-registry/images/mcp-proxy@sha256:efb27b299d627e4134815663cb8896641eeaee025d734c0f695582b4df38f013",
+      "owner": "external compose project `mcp-tunnel` - C:\\Users\\abcom\\AppData\\Local\\Temp\\opencode\\mcp-tunnel\\docker-compose.yaml (opencode MCP tunnel; not this repository's stack)",
+      "published_ports": [],
+      "justification": "Labels resolve ownership to the same external compose project as its cloudflared sidecar: com.docker.compose.project=mcp-tunnel, service `mcp-proxy`, image from Anthropic's public registry (org.opencontainers.image.title=mcp-proxy), entrypoint `/mcp-proxy -config /etc/mcp-gateway/config.yaml` with read-only binds into the project's config. Created 2026-07-28, running, restart=unless-stopped, publishes no host port (it is reached through the cloudflared tunnel, not a host listener). Active operator tooling managed by its own compose project.",
+      "reviewed": "2026-08-01"
+    },
+    {
+      "name": "log-reader",
+      "image": "ubuntu",
+      "owner": "Docker Desktop extension `drone_drone-ci-docker-extension` (Drone CI) - C:\\Users\\abcom\\AppData\\Roaming\\Docker\\extensions\\drone_drone-ci-docker-extension\\vm\\docker-compose.yaml",
+      "published_ports": [],
+      "justification": "Labels prove Docker Desktop extension ownership: com.docker.desktop.extension=true, com.docker.compose.project=drone_drone-ci-docker-extension-desktop-extension, service `log-reader`. An idle log tailer (command `tail -f /dev/null`, read-only bind on the extension's data volume), created 2026-07-26, restart=always, publishes no host port. Docker Desktop manages the extension lifecycle, so a bare `docker rm` fights the manager; if the container is unwanted, uninstall the Drone CI extension in Docker Desktop instead.",
+      "reviewed": "2026-08-01"
+    },
+    {
+      "name": "gifted_leavitt",
+      "image": "vonwig/inotifywait:latest",
+      "owner": "Docker Desktop extension `docker_labs-ai-tools-for-devs` (MCP Toolkit registry watcher) - labels com.docker.desktop.extension=true, com.docker.mcp.watch-service=true; the `docker mcp` machinery it serves is documented in docs/guides/docker-and-mcp.md section 2",
+      "published_ports": [],
+      "justification": "The Docker-generated name suggests ad-hoc `docker run`, but the labels say otherwise: com.docker.compose.project=docker_labs-ai-tools-for-devs-desktop-extension, service `registry-watcher`, com.docker.mcp.watch-service=true. It is an inotifywait watcher on the `docker-prompts` volume (`/usr/bin/inotifywait -e create -e modify -e delete -q -m /prompts`), part of the Docker Desktop MCP Toolkit this repository's docker-and-mcp guide documents and uses. Created 2026-07-31, running, publishes no host port. Extension-managed; remove by uninstalling the extension, not by `docker rm`.",
+      "reviewed": "2026-08-01"
+    }
+  ],
+  "proposed_removals": [
+    {
+      "name": "nervous_dhawan",
+      "image": "mcp/mongodb@sha256:6ab64d0ba27f23c88d206f75a393a6fc2930b16600f6d5d826e3f65020683005",
+      "reason": "Labels docker-mcp=true, docker-mcp-name=mongodb: an accumulated Docker MCP Toolkit server instance (MongoDB MCP Server, stdio transport). docs/guides/docker-and-mcp.md section 2 documents exactly this accumulation and sanctions cleaning with `docker ps -q --filter label=docker-mcp=true | xargs -r docker rm -f`. Stateless by construction: no volumes, no published ports, restart=no; the gateway recreates a server container on demand. Created 2026-07-31; removal loses nothing.",
+      "reviewed": "2026-08-01"
+    },
+    {
+      "name": "interesting_northcutt",
+      "image": "mcp/mongodb@sha256:6ab64d0ba27f23c88d206f75a393a6fc2930b16600f6d5d826e3f65020683005",
+      "reason": "Identical evidence to nervous_dhawan: labels docker-mcp=true, docker-mcp-name=mongodb mark it as an accumulated Docker MCP Toolkit MongoDB server instance, the class docs/guides/docker-and-mcp.md section 2 explicitly describes as orphan-prone with a sanctioned cleanup command. No volumes, no published ports, restart=no, stdio transport; recreated on demand by the gateway. Created 2026-07-31; removal loses nothing.",
+      "reviewed": "2026-08-01"
+    }
+  ]
+}

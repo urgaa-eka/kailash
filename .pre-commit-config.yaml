@@ -1,4 +1,16 @@
 repos:
+  - repo: local
+    hooks:
+      - id: critical-path-confirm
+        name: Deployment critical path confirmation
+        # Staged filenames arrive as arguments; the gate matches them against
+        # scripts/verify/repo_state.py's CRITICAL_PATHS (single source of
+        # truth) and refuses without CONFIRM_CRITICAL_PATH=1 in the
+        # environment. See scripts/verify/commit_gate.py for why a token and
+        # not a prompt.
+        entry: python -m scripts.verify.commit_gate
+        language: system
+        stages: [pre-commit]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
