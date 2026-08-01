@@ -1,0 +1,243 @@
+# Kailash — Staging overlay (spec task 12.3, Requirements 8.1, 8.2)
+#
+# Applied ON TOP of docker-compose.yml, never alone:
+#
+#   docker compose -p kailash-staging \
+#     -f docker-compose.yml -f deploy/staging/docker-compose.staging.yml \
+#     --profile kailash-ai --env-file deploy/staging/.env.staging \
+#     up -d --build <the 14 services in docs/records/profiled-services-scope.md>
+#
+# Verify the merged model without starting anything:
+#
+#   docker compose -p kailash-staging \
+#     -f docker-compose.yml -f deploy/staging/docker-compose.staging.yml \
+#     --profile kailash-ai --env-file deploy/staging/.env.staging config
+#
+# Topology: Option D from the design — a second compose project on the SAME
+# host as production, confirmed viable by the H1 verdict in
+# docs/records/container-health-diagnosis.md (## Host resource assessment:
+# memory 41% of 7.65 GiB, CPU 3% of 8 cores, 915 GiB free disk). Task 12.1
+# records the operator's confirmation in
+# docs/records/staging-topology-decision.md.
+#
+# What this overlay changes, and only this:
+#   - container_name: every service, `kailash-staging-*`. Two compose projects
+#     cannot share a container name, and every service in the base file pins
+#     one, so every service is overridden here — which is also what makes the
+#     service-parity rule in scripts/verify/workflow_gate.py meaningful: a
+#     service added to docker-compose.yml and forgotten here fails that gate
+#     instead of colliding with production at `up` time.
+#   - ports: every published port offset by +1000, bound to 127.0.0.1
+#     (backend 9000, platform services 9101-9109, company 9110, frontend
+#     4000). `!override` because compose MERGES port lists by appending: a
+#     plain override would publish the production port AND the staging one,
+#     which is the collision this file exists to prevent. `!override` needs
+#     compose >= v2.24; the host runs Docker 29.x.
+#   - credentials: every credential site re-pinned to the STAGING_* variable
+#     names with the same `:?` strictness as the base file (Requirement 8.3,
+#     task 12.4). The base file's own ${POSTGRES_PASSWORD:?} etc. still
+#     interpolate at parse time, so the env file / environment must also
+#     define the unprefixed names — deploy/staging/.env.staging.example maps
+#     them through: POSTGRES_PASSWORD=${STAGING_POSTGRES_PASSWORD}.
+#   - deploy.resources.limits: hard cpu/memory ceilings per service. Option
+#     D's resource-contention risk is mitigated explicitly, not hoped away.
+#     These are ceilings, not reservations; the sum (~4.2 GiB) fits the ~4.5
+#     GiB the H1 record measures free. A staging OOM-kill under these limits
+#     is a finding to tune, not a reason to remove them.
+#
+# What this overlay deliberately does NOT change:
+#   - volumes: compose namespaces them by project, so kailash-staging_*
+#     volumes are created fresh. Staging is therefore the ONLY environment
+#     that exercises the docker-entrypoint-initdb.d first-boot path in
+#     database/postgres_init.sql and database/mongodb_init.js. Any schema,
+#     index or extension applied to production by hand and never added to
+#     those scripts will be ABSENT from staging. That divergence is a defect
+#     for the init scripts to absorb; surfacing it on an ordinary Tuesday
+#     rather than during disaster recovery is a benefit of this design.
+#   - data: staging receives NO copy of production data.
+#   - networks: the project prefix isolates kailash-staging_kailash-network
+#     from production's network automatically.
+#   - profiles: inherited from the base file, so the same `--profile
+#     kailash-ai` selects the same service set in both environments.
+
+services:
+  frontend:
+    # Not part of the staging runtime set (docs/records/profiled-services-scope.md:
+    # the Firebase `staging` channel serves the SPA, matching production's
+    # topology). Overridden anyway so an un-scoped `up` cannot collide with
+    # production on the name or on port 3000.
+    container_name: kailash-staging-frontend
+    ports: !override
+      - "127.0.0.1:4000:80"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+
+  backend:
+    container_name: kailash-staging-backend
+    ports: !override
+      - "127.0.0.1:9000:8000"
+    environment:
+      - REDIS_URL=redis://:${STAGING_REDIS_PASSWORD:?STAGING_REDIS_PASSWORD must be set}@redis:6379/0
+      - POSTGRES_URL=postgresql+asyncpg://kailash:${STAGING_POSTGRES_PASSWORD:?STAGING_POSTGRES_PASSWORD must be set}@postgres:5432/kailash
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+
+  mongo:
+    container_name: kailash-staging-mongo
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  postgres:
+    container_name: kailash-staging-postgres
+    environment:
+      POSTGRES_PASSWORD: ${STAGING_POSTGRES_PASSWORD:?STAGING_POSTGRES_PASSWORD must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 384M
+
+  redis:
+    container_name: kailash-staging-redis
+    # `command` and `healthcheck.test` are single-value in compose merging, so
+    # these REPLACE the base values (no !override needed). Kept byte-for-byte
+    # identical to the base apart from the credential variable name.
+    command: redis-server --requirepass ${STAGING_REDIS_PASSWORD:?STAGING_REDIS_PASSWORD must be set}
+      --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${STAGING_REDIS_PASSWORD:?STAGING_REDIS_PASSWORD must be set}", "ping"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 320M
+
+  company:
+    container_name: kailash-staging-company
+    ports: !override
+      - "127.0.0.1:9110:8110"
+    environment:
+      - COMPANY_DB_URL=postgresql://kailash:${STAGING_POSTGRES_PASSWORD:?STAGING_POSTGRES_PASSWORD must be set}@postgres:5432/kailash
+      - PLATFORM_INTERNAL_TOKEN=${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  document-ai:
+    container_name: kailash-staging-document-ai
+    ports: !override
+      - "127.0.0.1:9101:8101"
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 224M
+
+  forecasting:
+    container_name: kailash-staging-forecasting
+    ports: !override
+      - "127.0.0.1:9102:8102"
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 224M
+
+  anomaly:
+    container_name: kailash-staging-anomaly
+    ports: !override
+      - "127.0.0.1:9103:8103"
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 224M
+
+  rag:
+    container_name: kailash-staging-rag
+    ports: !override
+      - "127.0.0.1:9104:8104"
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 224M
+
+  vision-gateway:
+    container_name: kailash-staging-vision-gateway
+    ports: !override
+      - "127.0.0.1:9105:8105"
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 224M
+
+  speech:
+    container_name: kailash-staging-speech
+    ports: !override
+      - "127.0.0.1:9106:8106"
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 224M
+
+  model-registry:
+    container_name: kailash-staging-model-registry
+    ports: !override
+      - "127.0.0.1:9107:8107"
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 224M
+
+  knowledge-graph:
+    container_name: kailash-staging-knowledge-graph
+    ports: !override
+      - "127.0.0.1:9108:8108"
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 224M
+
+  automobile-llm:
+    container_name: kailash-staging-automobile-llm
+    ports: !override
+      - "127.0.0.1:9109:8109"
+    environment:
+      PLATFORM_INTERNAL_TOKEN: ${STAGING_PLATFORM_INTERNAL_TOKEN:?STAGING_PLATFORM_INTERNAL_TOKEN must be set}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 224M

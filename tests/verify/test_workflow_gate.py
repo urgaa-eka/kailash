@@ -1,12 +1,14 @@
-"""Workflow topology, over synthetic graphs.
+"""Workflow topology, over synthetic graphs -- and over the real ones.
 
-Deliberately not asserted against the real workflow files: spec task 12.9 does
-that once the staging jobs exist. Asserting now would fail for work that has
-not been scheduled, and a check that is red for a known reason gets ignored.
+The synthetic corpus isolates each rule; `test_real_workflows_are_gated`
+(spec task 12.9) then asserts the actual `.github/workflows/*.yml` files pass
+under --require-staging, now that task 12.6 added the staging jobs. That test
+is what makes Requirement 8.8 a checked property instead of a review habit.
 """
 from __future__ import annotations
 
 import textwrap
+from argparse import Namespace
 from pathlib import Path
 
 import pytest
@@ -17,6 +19,7 @@ from scripts.verify import workflow_gate as wg
 from scripts.verify.common import Exit, Report
 
 FIXTURES = Path(__file__).parent / "fixtures" / "workflows"
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _graph(yaml_text: str, tmp_path: Path, name: str = "w.yml") -> wg.Graph:
@@ -219,11 +222,145 @@ class TestStagingOrdering:
         assert report.exit_code() is Exit.OK, report.render()
 
     def test_staging_not_required_by_default(self, tmp_path):
-        """Those jobs do not exist yet. Requiring them now would make the
-        check red for unscheduled work, and a check that is red for a known
-        reason stops being read."""
+        """Default mode stays usable on a checkout without the staging jobs;
+        ci.yml passes --require-staging (spec task 12.9), so the enforced
+        mode is the one CI actually runs."""
         report = _check(GOOD, tmp_path)
         assert report.exit_code() is Exit.OK
+
+
+class TestEnvironmentIsolation:
+    """Property 16: isolated by name, identical by shape (spec task 12.7)."""
+
+    def test_shared_secret_name_is_reported(self):
+        g = wg.load_graph(FIXTURES / "shared_secret.yml")
+        report = Report()
+        wg.check_graph(g, report, require_staging=True)
+        assert report.exit_code() is Exit.FAILED
+        rendered = report.render()
+        assert "shared-environment-secret" in rendered
+        assert "VULTR_SSH_KEY" in rendered and "VULTR_HOST" in rendered
+        # The fixture is otherwise fully gated, so the shared names are the
+        # only findings -- a second rule firing would mean the fixture no
+        # longer isolates this one.
+        assert {f.rule for f in report.findings} == {"shared-environment-secret"}
+
+    def test_disjoint_secret_names_pass(self, tmp_path):
+        report = _check("""
+            jobs:
+              deploy-staging:
+                steps:
+                  - uses: appleboy/ssh-action@v1
+                    with: {key: "${{ secrets.STAGING_VULTR_SSH_KEY }}"}
+              verify-staging:
+                needs: deploy-staging
+                steps: [{run: python -m scripts.verify.deployment_check --env staging}]
+              deploy:
+                needs: verify-staging
+                steps:
+                  - uses: appleboy/ssh-action@v1
+                    with: {key: "${{ secrets.VULTR_SSH_KEY }}"}
+              verify-production:
+                needs: deploy
+                steps: [{run: python -m scripts.verify.deployment_check --env production}]
+            """, tmp_path)
+        assert "shared-environment-secret" not in report.render()
+
+    def test_github_token_is_not_an_environment_credential(self, tmp_path):
+        """The runner issues GITHUB_TOKEN per run; both environments carry it
+        by construction, so it cannot be evidence of shared credentials."""
+        report = _check("""
+            jobs:
+              deploy-staging:
+                steps:
+                  - uses: FirebaseExtended/action-hosting-deploy@v0
+                    with: {repoToken: "${{ secrets.GITHUB_TOKEN }}"}
+              verify-staging:
+                needs: deploy-staging
+                steps: [{run: python -m scripts.verify.deployment_check --env staging}]
+              deploy:
+                needs: verify-staging
+                steps:
+                  - uses: FirebaseExtended/action-hosting-deploy@v0
+                    with: {repoToken: "${{ secrets.GITHUB_TOKEN }}"}
+              verify-production:
+                needs: deploy
+                steps: [{run: python -m scripts.verify.deployment_check --env production}]
+            """, tmp_path)
+        assert "shared-environment-secret" not in report.render()
+
+    def test_overlapping_hostname_is_reported(self):
+        report = Report()
+        wg.check_hostname_isolation(
+            {"staging.example.com", "api.example.com"},
+            {"example.com", "api.example.com"}, report)
+        assert report.exit_code() is Exit.FAILED
+        assert "shared-environment-hostname" in report.render()
+        assert "api.example.com" in report.render()
+
+    def test_disjoint_hostnames_pass(self):
+        report = Report()
+        wg.check_hostname_isolation(
+            {"staging.example.com"}, {"example.com"}, report)
+        assert report.exit_code() is Exit.OK
+
+    def test_normalisation_defeats_case_and_trailing_dot(self):
+        """`HTTPS://Staging.X.COM.` and `https://staging.x.com` are one host;
+        treating them as two would certify isolation DNS does not provide."""
+        assert wg.normalise_host("HTTPS://Staging.X.COM./path") == "staging.x.com"
+
+    def test_real_environment_hostnames_are_disjoint(self):
+        hosts = wg.environment_hostnames()
+        report = Report()
+        wg.check_hostname_isolation(hosts["staging"], hosts["production"], report)
+        assert report.exit_code() is Exit.OK, report.render()
+
+    @pytest.mark.parametrize("production, staging, missing", [
+        ({"backend", "redis"}, {"backend"}, "redis missing from staging"),
+        ({"backend"}, {"backend", "redis"}, "redis only in staging"),
+    ])
+    def test_service_in_one_set_only_is_reported(self, production, staging, missing):
+        report = Report()
+        wg.check_service_parity(production, staging, report, path="overlay.yml")
+        assert report.exit_code() is Exit.FAILED
+        assert "service-parity" in report.render()
+        assert missing in report.render()
+
+    def test_identical_service_sets_pass(self):
+        report = Report()
+        wg.check_service_parity({"backend", "redis"}, {"backend", "redis"}, report)
+        assert report.exit_code() is Exit.OK
+
+    def test_real_overlay_covers_the_real_compose_file(self):
+        """Also proves the loader tolerates the `!override` merge tags the
+        overlay needs for its port lists."""
+        base = wg.compose_services(
+            (REPO_ROOT / "docker-compose.yml").read_text(encoding="utf-8"))
+        overlay = wg.compose_services(
+            (REPO_ROOT / wg.STAGING_OVERLAY).read_text(encoding="utf-8"))
+        assert base and overlay == base
+
+    def test_missing_overlay_is_a_finding_only_when_staging_is_required(self, tmp_repo):
+        tmp_repo.workflow("ci", "jobs:\n  lint:\n    steps: [{run: ruff check .}]\n")
+        tmp_repo.compose("services:\n  backend: {}\n")
+        strict = wg.build_report(Namespace(root=tmp_repo.root, require_staging=True))
+        assert strict.exit_code() is Exit.FAILED
+        assert "service-parity" in strict.render()
+        lax = wg.build_report(Namespace(root=tmp_repo.root, require_staging=False))
+        assert lax.exit_code() is Exit.OK
+
+
+def test_real_workflows_are_gated():
+    """Spec task 12.9: the actual workflows, under the mode ci.yml runs.
+
+    Every production deploy job must reach preflight, ci-gate, deploy-staging
+    and verify-staging through `needs`; nothing in the gating set may mask a
+    failure; the environments must be isolated by name and identical in
+    compose shape. This is what makes Requirement 8.8 a checked property
+    instead of a review habit.
+    """
+    report = wg.build_report(Namespace(root=REPO_ROOT, require_staging=True))
+    assert report.exit_code() is Exit.OK, report.render()
 
 
 class TestMalformedGraphs:
@@ -322,3 +459,32 @@ def test_property_deploy_needs_both_gate_and_verifier(gated, verified, tmp_path_
     report = Report()
     wg.check_graph(_graph(text, tmp), report)
     assert (report.exit_code() is Exit.OK) == (gated and verified)
+
+
+_HOSTS = st.sets(st.sampled_from(
+    ["a.example.com", "b.example.com", "c.example.com", "d.example.com"]),
+    max_size=4)
+
+
+@given(staging=_HOSTS, production=_HOSTS)
+def test_property_hostname_isolation_fails_iff_sets_overlap(staging, production):
+    """Property 16, hostname clause: a finding exactly when a normalised
+    hostname is shared, and the findings name exactly the shared hosts."""
+    report = Report()
+    wg.check_hostname_isolation(staging, production, report)
+    assert bool(report.findings) == bool(staging & production)
+    assert {f.observed for f in report.findings} == staging & production
+
+
+_SERVICES = st.sets(st.sampled_from(["backend", "mongo", "postgres", "redis"]),
+                    max_size=4)
+
+
+@given(production=_SERVICES, staging=_SERVICES)
+def test_property_service_parity_fails_iff_sets_differ(production, staging):
+    """Property 16, shape clause: identical sets pass; any difference, in
+    either direction, is a finding per differing service."""
+    report = Report()
+    wg.check_service_parity(production, staging, report)
+    assert bool(report.findings) == (production != staging)
+    assert len(report.findings) == len(production ^ staging)

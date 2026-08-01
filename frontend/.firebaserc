@@ -1,6 +1,7 @@
 {
   "projects": {
     "default": "kailash-29111",
-    "production": "kailash-29111"
+    "production": "kailash-29111",
+    "staging": "kailash-29111"
   }
 }

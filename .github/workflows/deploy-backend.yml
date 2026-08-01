@@ -69,10 +69,111 @@ jobs:
           pip install pytest pytest-asyncio
           pytest tests -q
 
+  # Brings up the kailash-staging compose project on the VPS first (spec
+  # tasks 12.3/12.6, Requirements 8.2, 8.4). Same compose file, same profile,
+  # same 14 services as production; the overlay changes only container names,
+  # ports (+1000 on 127.0.0.1) and resource ceilings, and re-pins every
+  # credential site to the STAGING_* names.
+  deploy-staging:
+    name: Deploy staging stack
+    runs-on: ubuntu-latest
+    needs: [preflight, ci-gate, test]
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    # Requirement 8.3: the staging credential set, declared under names
+    # disjoint from production's (POSTGRES_PASSWORD -> STAGING_POSTGRES_PASSWORD
+    # and so on). This env block is the declaration Requirement 8.3 says the
+    # verification reads, and workflow_gate.py asserts the disjointness.
+    env:
+      STAGING_POSTGRES_PASSWORD: ${{ secrets.STAGING_POSTGRES_PASSWORD }}
+      STAGING_REDIS_PASSWORD: ${{ secrets.STAGING_REDIS_PASSWORD }}
+      STAGING_PLATFORM_INTERNAL_TOKEN: ${{ secrets.STAGING_PLATFORM_INTERNAL_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record staged commit
+        run: echo "Deploying \`${{ github.sha }}\` to the kailash-staging compose project." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy staging via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_VULTR_HOST }}
+          username: ${{ secrets.STAGING_VULTR_USER }}
+          key: ${{ secrets.STAGING_VULTR_SSH_KEY }}
+          port: ${{ secrets.STAGING_VULTR_SSH_PORT || 22 }}
+          script_stop: true
+          envs: STAGING_POSTGRES_PASSWORD,STAGING_REDIS_PASSWORD,STAGING_PLATFORM_INTERNAL_TOKEN
+          script: |
+            cd /opt/kailash
+
+            # Same checkout production deploys from; both jobs in this run
+            # reset to the same origin/main commit, staging first.
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+
+            # The staging service set is production's, by requirement (8.2):
+            # the kailash-ai profile's 15 services minus `frontend`, decided
+            # in docs/records/profiled-services-scope.md. Keep in step with
+            # PROD_SERVICES below and in deploy/vultr/deploy.sh.
+            STAGING_SERVICES="backend mongo postgres redis company document-ai forecasting anomaly rag vision-gateway speech model-registry knowledge-graph automobile-llm"
+
+            GIT_COMMIT="$(git rev-parse HEAD)"
+            export GIT_COMMIT
+
+            # docker-compose.yml's own ${VAR:?} sites interpolate at parse
+            # time, so the unprefixed names must exist too; the overlay
+            # re-pins every credential site to the STAGING_* names, so these
+            # exports are what the staging containers actually receive.
+            export POSTGRES_PASSWORD="$STAGING_POSTGRES_PASSWORD"
+            export REDIS_PASSWORD="$STAGING_REDIS_PASSWORD"
+            export PLATFORM_INTERNAL_TOKEN="$STAGING_PLATFORM_INTERNAL_TOKEN"
+
+            # -p kailash-staging namespaces containers, volumes and networks;
+            # fresh kailash-staging_* volumes exercise the initdb first-boot
+            # path (see the overlay header). $STAGING_SERVICES deliberately
+            # unquoted: compose takes the names as separate arguments.
+            docker compose -p kailash-staging \
+              -f docker-compose.yml -f deploy/staging/docker-compose.staging.yml \
+              --profile kailash-ai up -d --build --remove-orphans $STAGING_SERVICES
+
+            # Wait and health check on the offset staging port.
+            sleep 15
+            curl -sf http://127.0.0.1:9000/api/health || {
+              echo "Staging health check failed!"
+              docker compose -p kailash-staging \
+                -f docker-compose.yml -f deploy/staging/docker-compose.staging.yml \
+                logs --tail=50 backend
+              exit 1
+            }
+
+            echo "✅ Staging deployment successful!"
+            docker compose -p kailash-staging \
+              -f docker-compose.yml -f deploy/staging/docker-compose.staging.yml \
+              --profile kailash-ai ps
+
+  # Confirms staging serves what was just deployed, BEFORE the production
+  # deploy becomes reachable. A failure here makes Actions skip every job
+  # that `needs` it — Requirements 8.7/8.8 held by the dependency graph
+  # rather than by in-job conditionals.
+  verify-staging:
+    name: Verify staging
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: python -m scripts.verify.deployment_check --env staging
+
   deploy:
     name: Deploy to Vultr VPS
     runs-on: ubuntu-latest
-    needs: [preflight, ci-gate, test]
+    # Production is reachable only through green staging verification (spec
+    # task 12.6, Requirement 8.8); workflow_gate.py --require-staging asserts
+    # these edges by reachability.
+    needs: [preflight, ci-gate, test, deploy-staging, verify-staging]
     if: github.ref == 'refs/heads/main'
     environment: production
 

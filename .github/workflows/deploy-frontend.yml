@@ -37,10 +37,97 @@ jobs:
     name: CI gate
     uses: ./.github/workflows/ci.yml
 
+  # Deploys the same commit to the named Firebase `staging` channel first
+  # (spec tasks 12.2/12.6, Requirements 8.1, 8.4). A named channel keeps the
+  # stable hostname https://kailash-29111--staging.web.app; only unnamed
+  # channels get hash suffixes. `expires: 30d` is refreshed by every staging
+  # deploy, so an abandoned staging URL lapses instead of silently serving an
+  # ancient build (expiry decision recorded in docs/runbooks/staging.md).
+  deploy-staging:
+    name: Deploy staging channel
+    runs-on: ubuntu-latest
+    needs: [preflight, ci-gate]
+    environment: staging
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record staged commit
+        run: echo "Deploying \`${{ github.sha }}\` to Firebase Hosting channel \`staging\`." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile || yarn install
+
+      # Same build configuration as production apart from the environment
+      # identity: the staging bundle calls the staging API, or the staging
+      # check would be exercising production's backend (Requirement 8.6).
+      - name: Build for staging
+        run: yarn build
+        env:
+          REACT_APP_BACKEND_URL: ${{ vars.STAGING_BACKEND_URL || 'https://staging-api.kailash-ai.in' }}
+          REACT_APP_ENV: staging
+          REACT_APP_DOMAIN: staging.kailash-ai.com
+          REACT_APP_APP_NAME: Kailash
+          GENERATE_SOURCEMAP: 'false'
+          CI: false
+
+      # verify-staging compares the served HTML against *this* build's
+      # manifest, same reasoning as the production artifact below.
+      - name: Upload staging asset manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: asset-manifest-staging
+          path: frontend/build/asset-manifest.json
+          if-no-files-found: error
+
+      - name: Deploy to the staging channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          # STAGING_-prefixed by Requirement 8.3: the staging and production
+          # secret-name sets are disjoint, and workflow_gate.py checks that.
+          firebaseServiceAccount: ${{ secrets.STAGING_FIREBASE_SERVICE_ACCOUNT }}
+          channelId: staging
+          expires: 30d
+          projectId: kailash-29111
+          entryPoint: frontend
+
+  # Confirms staging actually serves what was just deployed, BEFORE anything
+  # touches production. Its exit code is the job's exit code; a failure here
+  # makes GitHub Actions skip every job that `needs` it, which is how
+  # Requirements 8.7/8.8 hold through the dependency graph rather than
+  # through in-job conditionals.
+  verify-staging:
+    name: Verify staging
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - uses: actions/download-artifact@v4
+        with:
+          name: asset-manifest-staging
+          path: artifact
+      - run: python -m scripts.verify.deployment_check --env staging --manifest artifact/asset-manifest.json
+
   build-and-deploy:
     name: Build & Deploy to Firebase
     runs-on: ubuntu-latest
-    needs: [preflight, ci-gate]
+    # Production is reachable only through green staging verification (spec
+    # task 12.6, Requirement 8.8). deploy-staging is named alongside
+    # verify-staging so a skipped verification cannot be mistaken for a green
+    # one, and workflow_gate.py --require-staging asserts both edges.
+    needs: [preflight, ci-gate, deploy-staging, verify-staging]
     defaults:
       run:
         working-directory: frontend

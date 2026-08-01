@@ -52,8 +52,12 @@ jobs:
         with: { python-version: "3.11" }
       - run: python -m scripts.verify.secret_scan
 
-  # Default mode only. --require-staging asserts the staging edges, which do
-  # not exist yet; spec task 12.9 turns that on once task 12.6 adds them.
+  # --require-staging (spec task 12.9): task 12.6 added deploy-staging and
+  # verify-staging to both deploy workflows, so production deploy jobs must
+  # now have both as transitive `needs`, staging and production hostname and
+  # secret-name sets must be disjoint, and the compose service sets must be
+  # identical. No step here masks a non-zero exit; a gate that cannot fail
+  # is not a gate.
   workflow-gate:
     name: Workflow gate topology
     runs-on: ubuntu-latest
@@ -63,7 +67,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - run: pip install pyyaml
-      - run: python -m scripts.verify.workflow_gate
+      - run: python -m scripts.verify.workflow_gate --require-staging
 
   lint:
     name: Lint (ruff)

@@ -226,6 +226,7 @@ class TestFixtureCorpus:
         "deploy_without_verify.yml",
         "cycle.yml",
         "orphan.yml",
+        "shared_secret.yml",
     ]
 
     @pytest.mark.parametrize("name", CAPTURES)
