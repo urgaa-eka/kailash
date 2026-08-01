@@ -19,6 +19,8 @@ import json
 from pathlib import Path
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from scripts.verify import health_diagnose as hd
 from scripts.verify.common import Exit, Unavailable
@@ -268,7 +270,7 @@ def test_declared_start_period_absent_is_zero_not_missing(repo, fake_executor):
     """postgres and redis declare no start period today, and treating absence
     as "skip" would hide exactly the case Requirement 1.6 covers."""
     fixture = load_fixture("inspect_healthy.json")
-    assert "StartPeriod" not in fixture["effective"]
+    fixture["effective"].pop("StartPeriod")
     script_all(fake_executor, {"kailash-postgres": fixture})
 
     evidence = hd.collect(repo, fake_executor, clock=fake_clock())
@@ -394,3 +396,140 @@ def test_missing_compose_file_is_unavailable(tmp_path, fake_executor):
     script_host(fake_executor)
     with pytest.raises(Unavailable):
         hd.collect(tmp_path, fake_executor, clock=fake_clock())
+
+
+# --------------------------------------------------------------------------
+# The start-period rule (task 4.3, Requirement 1.6, Property 2)
+# --------------------------------------------------------------------------
+# The healthy fixture starts at 09:59:52 and first succeeds at 10:00:00.412,
+# so its measured first success is 8.412s against a declared 10s start period.
+
+def _healthy_with_start_period(nanoseconds: int | None) -> dict:
+    fixture = load_fixture("inspect_healthy.json")
+    if nanoseconds is None:
+        fixture["effective"].pop("StartPeriod")
+    else:
+        fixture["effective"]["StartPeriod"] = nanoseconds
+    return fixture
+
+
+def test_absent_start_period_is_zero_and_measured_startup_is_a_finding(repo, fake_executor):
+    """`postgres` and `redis` declare no start period today (hypothesis H4).
+    Absence is zero, not a skip: a healthy container is still reported when a
+    marginally slower restart would boot it into a failing streak."""
+    script_all(fake_executor, {"kailash-postgres": _healthy_with_start_period(None)})
+    args = argparse.Namespace(root=repo, json=False, emit_record=None,
+                              evidence=repo / "evidence.json", execute=fake_executor)
+    report = hd.build_report(args)
+
+    assert report.exit_code() == Exit.FAILED
+    [finding] = [f for f in report.findings if f.rule == "start-period"]
+    assert finding.path == "kailash-postgres"
+    assert "start_period 0s" in finding.observed
+    assert "8.4" in finding.observed
+
+
+def test_start_period_equal_to_the_measured_first_success_passes(tmp_path, fake_executor):
+    # A single-service compose, so the report is green in its entirety: the
+    # boundary case must pass the whole check, not merely avoid this rule.
+    (tmp_path / "docker-compose.yml").write_text(
+        "services:\n"
+        "  postgres:\n"
+        "    container_name: kailash-postgres\n"
+        "    healthcheck:\n"
+        '      test: ["CMD-SHELL", "pg_isready -U kailash"]\n',
+        encoding="utf-8")
+    script_all(fake_executor,
+               {"kailash-postgres": _healthy_with_start_period(8_412_000_000)})
+    args = argparse.Namespace(root=tmp_path, json=False, emit_record=None,
+                              evidence=tmp_path / "evidence.json", execute=fake_executor)
+    report = hd.build_report(args)
+
+    assert not [f for f in report.findings if f.rule == "start-period"]
+    assert report.exit_code() == Exit.OK
+
+
+def test_truncated_log_window_yields_no_measurement_and_no_finding(repo, fake_executor):
+    """Docker keeps the last five attempts. A container started hours before
+    its earliest retained attempt has an unobservable first success; guessing
+    from the window would fail every long-running healthy container."""
+    fixture = _healthy_with_start_period(None)
+    fixture["state"]["StartedAt"] = "2026-01-05T04:00:00.000000000Z"
+    script_all(fake_executor, {"kailash-postgres": fixture})
+    args = argparse.Namespace(root=repo, json=False, emit_record=None,
+                              evidence=repo / "evidence.json", execute=fake_executor)
+    report = hd.build_report(args)
+
+    assert not [f for f in report.findings if f.rule == "start-period"]
+    written = json.loads((repo / "evidence.json").read_text(encoding="utf-8"))
+    [postgres] = [c for c in written["containers"] if c["name"] == "kailash-postgres"]
+    assert postgres["measured_first_success_seconds"] is None
+
+
+def test_the_measurement_is_written_into_the_evidence_file(repo, fake_executor):
+    script_all(fake_executor, {"kailash-postgres": load_fixture("inspect_healthy.json")})
+    args = argparse.Namespace(root=repo, json=False, emit_record=None,
+                              evidence=repo / "evidence.json", execute=fake_executor)
+    hd.build_report(args)
+
+    written = json.loads((repo / "evidence.json").read_text(encoding="utf-8"))
+    [postgres] = [c for c in written["containers"] if c["name"] == "kailash-postgres"]
+    assert postgres["measured_first_success_seconds"] == pytest.approx(8.412)
+
+
+_container_strategy = st.fixed_dictionaries({
+    "health_status": st.sampled_from(["healthy", "unhealthy", "starting", None]),
+    "present": st.booleans(),
+    "failing_streak": st.one_of(st.none(), st.integers(min_value=0, max_value=9)),
+    "effective_test": st.sampled_from([
+        None,
+        ["CMD-SHELL", "curl -f http://localhost/health"],
+        ["CMD", "redis-cli", "ping"],
+        ["NONE"],
+    ]),
+    "probe_log": st.lists(st.fixed_dictionaries({
+        "exit_code": st.sampled_from([0, 1, 137, None]),
+        "output": st.sampled_from(["", "connection refused", "HTTPError 404"]),
+        "start": st.just("2026-01-05T10:00:00.000000000Z"),
+        "end": st.just("2026-01-05T10:00:00.400000000Z"),
+        "duration_seconds": st.just(0.4),
+    }), max_size=3),
+})
+
+
+@given(st.lists(_container_strategy, max_size=6))
+def test_property_1_exactly_one_attributed_entry_per_non_healthy_container(containers):
+    """Property 1: whatever shape the capture takes, every container not
+    reporting `healthy` yields exactly one record entry, and its attribution
+    is never empty."""
+    for i, container in enumerate(containers):
+        container["name"] = f"kailash-c{i}"
+    evidence = {"host": {}, "containers": containers}
+    _, entries = hd.classify(evidence)
+
+    non_healthy = [c["name"] for c in containers
+                   if (c.get("health_status") or "").lower() != "healthy"]
+    assert sorted(e.name for e in entries) == sorted(non_healthy)
+    for entry in entries:
+        assert entry.name
+        assert entry.attribution.strip()
+        assert entry.attribution_rule.strip()
+        assert isinstance(entry.probe_output, str)
+        assert entry.probe_exit_code is None or isinstance(entry.probe_exit_code, int)
+
+
+@given(declared=st.floats(min_value=0, max_value=1e6, allow_nan=False),
+       measured=st.floats(min_value=0, max_value=1e6, allow_nan=False),
+       equal=st.booleans())
+def test_property_2_passes_iff_declared_covers_measured(declared, measured, equal):
+    """Property 2, including equality at the boundary via the `equal` draw."""
+    if equal:
+        declared = measured
+    evidence = {"containers": [{
+        "name": "kailash-postgres",
+        "health_status": "healthy",
+        "declared_start_period_seconds": declared,
+        "measured_first_success_seconds": measured,
+    }]}
+    findings = hd.start_period_findings(evidence)
+    assert bool(findings) == (declared < measured)

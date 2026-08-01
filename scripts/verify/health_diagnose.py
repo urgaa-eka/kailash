@@ -612,10 +612,12 @@ def build_report(args) -> Report:
         # reviewer checks the narrative against the evidence it came from.
         evidence = read_evidence(Path(source))
         evidence_path = Path(source)
+        annotate_first_success(evidence)
         report.notes.append(f"classified {evidence_path} without contacting Docker")
     else:
         evidence = collect(root, execute)
         evidence_path = Path(args.evidence) if args.evidence else root / EVIDENCE_PATH
+        annotate_first_success(evidence)
         write_evidence(evidence, evidence_path)
         report.notes.append(f"evidence written to {evidence_path}")
 
@@ -624,6 +626,9 @@ def build_report(args) -> Report:
 
     findings, entries = classify(evidence)
     for finding in findings:
+        report.add(finding)
+
+    for finding in start_period_findings(evidence):
         report.add(finding)
 
     denylist = load_denylist(root)
@@ -1548,6 +1553,92 @@ def diagnose(container: dict, host: dict | None = None) -> Entry:
         criterion=attribution.criterion,
         determined=attribution.determined,
     )
+
+
+# --------------------------------------------------------------------------
+# The start-period rule (task 4.3, Requirement 1.6, Property 2)
+# --------------------------------------------------------------------------
+
+def measured_first_success(container: dict) -> float | None:
+    """Seconds from container start to its first observed successful probe.
+
+    Docker retains only the last five probe attempts, so the earliest log
+    entry is not necessarily the container's first probe. The measurement is
+    trusted only when the window demonstrably reaches back to startup: the
+    earliest retained attempt must have begun within the declared start period
+    plus two probe intervals of `StartedAt`. A five-hour-old container whose
+    window holds five recent successes has an unobservable first success, and
+    a rule that guessed from it would fail every long-running healthy
+    container with a finding about its boot.
+    """
+    started = parse_docker_time(container.get("started_at"))
+    if started is None:
+        return None
+    attempts: list[tuple[datetime, datetime | None, object]] = []
+    for entry in container.get("probe_log") or []:
+        if not isinstance(entry, dict):
+            continue
+        t_start = parse_docker_time(entry.get("start"))
+        if t_start is None:
+            continue
+        attempts.append((t_start, parse_docker_time(entry.get("end")), entry.get("exit_code")))
+    if not attempts:
+        return None
+    attempts.sort(key=lambda a: a[0])
+
+    interval = container.get("declared_interval_seconds") or 30.0
+    declared = container.get("declared_start_period_seconds") or 0.0
+    if (attempts[0][0] - started).total_seconds() > declared + 2 * interval:
+        return None
+
+    success = next((a for a in attempts if a[2] == 0), None)
+    if success is None:
+        return None
+    when = success[1] or success[0]
+    seconds = (when - started).total_seconds()
+    return seconds if seconds >= 0 else None
+
+
+def annotate_first_success(evidence: dict) -> None:
+    """Fill `measured_first_success_seconds` where it is derivable.
+
+    Idempotent: a value already present (a committed capture re-classified via
+    `--from-evidence`) is left alone.
+    """
+    for container in evidence.get("containers") or []:
+        if (isinstance(container, dict)
+                and container.get("measured_first_success_seconds") is None):
+            container["measured_first_success_seconds"] = measured_first_success(container)
+
+
+def start_period_findings(evidence: dict) -> list[Finding]:
+    """Declared start period must cover the measured startup, per container.
+
+    Evaluated for every container with a measurement, healthy ones included: a
+    healthy container whose first success landed after its declared start
+    period boots straight into a failing streak on any restart that is
+    marginally slower than this one was. An absent start period is zero, not a
+    skip -- `postgres` and `redis` declare none today, which is exactly the
+    case Requirement 1.6 covers (hypothesis H4).
+    """
+    findings: list[Finding] = []
+    for container in evidence.get("containers") or []:
+        if not isinstance(container, dict):
+            continue
+        measured = container.get("measured_first_success_seconds")
+        if not isinstance(measured, int | float):
+            continue
+        declared = container.get("declared_start_period_seconds") or 0.0
+        if declared < measured:
+            findings.append(Finding(
+                rule="start-period",
+                path=container.get("name") or "<unnamed>",
+                observed=f"start_period {declared:g}s, first success at {measured:.1f}s",
+                expected=f"start_period >= {measured:.1f}s",
+                message="a restart marginally slower than this boot marks the "
+                        "container unhealthy before it finishes starting",
+            ))
+    return findings
 
 
 def is_healthy(container: dict) -> bool:

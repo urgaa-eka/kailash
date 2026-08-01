@@ -244,13 +244,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - name: Audit build definitions
+        # Static COPY/ADD resolution across all nine SERVICE values. Fails in
+        # seconds on a path error that would otherwise surface minutes into a
+        # layer build.
+        run: python -m scripts.verify.build_audit
       - name: Build images
         # docker-compose.yml uses `${VAR:?...}` for its credentials, which every
         # compose subcommand honours -- `build` and `config` included. These are
         # throwaway values that only satisfy interpolation; nothing is started
         # here, so they never reach a running container.
+        #
+        # --profile kailash-ai: without it the profile-gated services are inert
+        # and this job built 3 images while claiming to sanity-check the build.
+        # The full profile builds all 15 -- one more than production runs
+        # (docs/records/profiled-services-scope.md excludes `frontend` from the
+        # VPS), because CI's question is "does every tracked build file build",
+        # not "what does production run".
         env:
           POSTGRES_PASSWORD: ci-build-placeholder
           REDIS_PASSWORD: ci-build-placeholder
           PLATFORM_INTERNAL_TOKEN: ci-build-placeholder
-        run: docker compose -f docker-compose.yml build --pull
+        run: docker compose -f docker-compose.yml --profile kailash-ai build --pull

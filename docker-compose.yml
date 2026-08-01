@@ -39,6 +39,18 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:80"
+    # BusyBox wget ships in nginx:alpine (confirmed via `which wget` in the
+    # running container). --spider proves the server answers requests, which
+    # `nginx -t` (config syntax only) does not. 127.0.0.1, not localhost:
+    # /etc/hosts maps localhost to ::1 first, BusyBox wget tries only that
+    # address, and nginx.conf's `listen 80` binds IPv4 alone -- probed via
+    # localhost this container is unhealthy while serving perfectly.
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       - backend
     networks:

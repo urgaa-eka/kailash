@@ -4,7 +4,9 @@ Three rules:
 
 1. Status and content type per endpoint, without following redirects.
    Following them would let a 301 to an unrelated host pass as 200 -- which is
-   not hypothetical here: kailash-ai.in 301s to a different domain.
+   not hypothetical here: the legacy `.in` web hosts 301 to kailash-ai.com by
+   design, and only refusing to follow lets this check tell "serves the SPA"
+   from "redirects to something that does".
 2. Asset-manifest containment: every hashed asset the served HTML references
    must appear in the manifest from the deploying build. Containment, not
    equality -- the manifest legitimately lists lazy chunks the entry HTML
@@ -46,24 +48,40 @@ class Endpoint:
     parse_assets: bool = False
 
 
+# The web hostnames are `.com`, established by observation of the live
+# deployment on 2026-08-01, not by the original spec (which assumed `.in`):
+# kailash-ai.com serves the SPA 200 text/html from Firebase Hosting, and BOTH
+# `.in` hosts 301 to it -- a deliberate, human-configured redirect. The API
+# hostname stays `.in` because that is what the shipped bundle calls
+# (frontend/.env.production REACT_APP_BACKEND_URL). Evidence and the operator
+# actions this implies: docs/records/production-domain.md.
 ENVIRONMENTS: dict[str, tuple[Endpoint, ...]] = {
     "production": (
-        Endpoint("https://kailash-ai.in/", (200,), "text/html",
+        Endpoint("https://kailash-ai.com/", (200,), "text/html",
                  check_certificate=True, parse_assets=True),
-        Endpoint("https://www.kailash-ai.in/", (200, 301, 308),
+        Endpoint("https://www.kailash-ai.com/", (200, 301, 308),
                  check_certificate=True),
         Endpoint("https://api.kailash-ai.in/api/health", (200,),
                  check_certificate=True),
     ),
     "staging": (
-        Endpoint("https://staging.kailash-ai.in/", (200,), "text/html",
+        Endpoint("https://staging.kailash-ai.com/", (200,), "text/html",
                  check_certificate=True, parse_assets=True),
-        Endpoint("https://www.staging.kailash-ai.in/", (200, 301, 308),
+        Endpoint("https://www.staging.kailash-ai.com/", (200, 301, 308),
                  check_certificate=True),
         Endpoint("https://staging-api.kailash-ai.in/api/health", (200,),
                  check_certificate=True),
     ),
 }
+
+# The `.in` web hosts remain user-facing entry points for as long as links to
+# them exist, so production verification asserts they still redirect (and only
+# redirect: a 200 here would mean split-brain hosting) and that their
+# certificates are not about to lapse.
+LEGACY_REDIRECTS: tuple[Endpoint, ...] = (
+    Endpoint("https://kailash-ai.in/", (301, 308), check_certificate=True),
+    Endpoint("https://www.kailash-ai.in/", (301, 308), check_certificate=True),
+)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -175,7 +193,10 @@ def build_report(args) -> Report:
     report = Report()
     if manifest is None:
         report.notes.append("no --manifest given; asset containment not checked")
-    for ep in ENVIRONMENTS[args.env]:
+    endpoints = ENVIRONMENTS[args.env]
+    if args.env == "production":
+        endpoints = endpoints + LEGACY_REDIRECTS
+    for ep in endpoints:
         check_endpoint(ep, report, manifest)
     return report
 

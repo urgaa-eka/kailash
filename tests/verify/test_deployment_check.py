@@ -34,6 +34,23 @@ class TestEnvironmentTables:
         200 -- not hypothetical: kailash-ai.in 301s to another domain."""
         assert dc._NoRedirect().redirect_request(None, None, 301, "", {}, "x") is None
 
+    def test_production_topology_matches_the_observed_deployment(self):
+        """Web on `.com` (live evidence, 2026-08-01: kailash-ai.com serves the
+        SPA and both `.in` hosts 301 to it), API on `.in` (what the shipped
+        bundle's REACT_APP_BACKEND_URL calls). Recorded in
+        docs/records/production-domain.md; change that record before this."""
+        prod = dc.ENVIRONMENTS["production"]
+        assert prod[0].url == "https://kailash-ai.com/"
+        assert prod[2].url == "https://api.kailash-ai.in/api/health"
+
+    def test_legacy_hosts_may_only_redirect(self):
+        """A 200 from a legacy `.in` web host would mean split-brain hosting:
+        two origins serving rival copies of the SPA."""
+        assert dc.LEGACY_REDIRECTS
+        for ep in dc.LEGACY_REDIRECTS:
+            assert 200 not in ep.allowed_statuses
+            assert ep.check_certificate
+
 
 class TestStatusAndContentType:
     def test_expected_status_passes(self, local_http_server):

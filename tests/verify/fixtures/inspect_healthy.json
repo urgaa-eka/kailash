@@ -17,6 +17,7 @@
     "Test": ["CMD-SHELL", "pg_isready -U kailash"],
     "Interval": 30000000000,
     "Timeout": 10000000000,
+    "StartPeriod": 10000000000,
     "Retries": 3
   },
   "state": {
