@@ -2,3 +2,4 @@
 # Pinned so a check's own test suite cannot change behaviour under it.
 pytest==8.4.2
 hypothesis==6.140.3
+pyyaml==6.0.3

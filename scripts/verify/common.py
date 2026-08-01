@@ -219,7 +219,10 @@ def load_corpus(root: Path) -> Corpus:
 # Shared, because every check that scans the corpus eventually scans its own
 # source and tests -- the negative fixtures are, by construction, the thing
 # being looked for.
-SUPPRESSION = re.compile(r"secret-scan:\s*allow(?:\s+(?P<reason>[^\n>*]*))?")
+# `verify: allow` is the general form; `secret-scan: allow` is the original
+# spelling and stays accepted, since 40-odd markers already use it.
+SUPPRESSION = re.compile(
+    r"(?:secret-scan|verify):\s*allow(?:\s+(?P<reason>[^\n>*]*))?")
 
 
 def suppression_on(lines: list[str], idx: int) -> str | None:
