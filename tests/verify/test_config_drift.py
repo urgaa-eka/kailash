@@ -53,6 +53,37 @@ class TestFirebaseProjectId:
                      ".github/workflows/deploy-frontend.yml", "backend/.env.example"):
             assert path in out
 
+    def test_a_second_declaration_in_the_workflow_is_drift(self, tmp_repo, capsys):
+        """The staging channel deploys from a second step in this same file. A
+        first-match extractor reads the live step, reports agreement, and lets
+        the staging step name any project at all."""
+        _minimal(tmp_repo)
+        tmp_repo.write(".github/workflows/deploy-frontend.yml",
+                       "jobs:\n  deploy-live:\n    steps:\n"
+                       "      - uses: FirebaseExtended/action-hosting-deploy@v0\n"
+                       "        with:\n"
+                       "          channelId: live\n"
+                       f"          projectId: {GOOD}\n"
+                       "  deploy-staging:\n    steps:\n"
+                       "      - uses: FirebaseExtended/action-hosting-deploy@v0\n"
+                       "        with:\n"
+                       "          channelId: staging\n"
+                       "          projectId: kailash-38268\n")
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert ".github/workflows/deploy-frontend.yml" in out
+        assert "kailash-38268" in out
+
+    def test_a_duplicate_dotenv_declaration_is_drift(self, tmp_repo, capsys):
+        """Two values for one key: which one the build honours is not something
+        a reader of the file can tell, so the ambiguity is itself the defect."""
+        _minimal(tmp_repo)
+        tmp_repo.env_production(GOOD, extra="REACT_APP_FIREBASE_PROJECT_ID=kailash-38268\n")
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert "frontend/.env.production" in out
+        assert "kailash-38268" in out
+
 
 class TestRepoSlug:
     def test_matching_slug_passes(self, tmp_repo, capsys):
@@ -79,6 +110,22 @@ class TestRepoSlug:
         _minimal(tmp_repo, url=f"git@github.com:{SLUG}.git")
         rc, _ = _run(tmp_repo.root, capsys)
         assert rc == int(Exit.OK)
+
+    def test_suppression_cannot_discharge_the_required_source(self, tmp_repo, capsys):
+        """A wrong slug in deploy.sh behind `verify: allow` is a vacuous pass in
+        the one file that runs git reset --hard and git clean -fd. Requirement
+        9.2 is an exact-match obligation there, so the marker is refused."""
+        _minimal(tmp_repo)
+        tmp_repo.write("deploy/vultr/deploy.sh",
+                       "#!/usr/bin/env bash\n"
+                       "# verify: allow legacy remote kept for reference\n"
+                       'REPO_URL="https://github.com/flywithvvk/kailash.git"\n'  # secret-scan: allow negative fixture for the slug rule
+                       "git reset --hard origin/main\n")
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert "deploy/vultr/deploy.sh" in out
+        assert "flywithvvk/kailash" in out  # secret-scan: allow negative fixture for the slug rule
+        assert "suppression ignored" in out
 
 
 class TestFirebaseAppIdentity:
@@ -141,8 +188,14 @@ class _StubCorpus:
     st.one_of(st.none(), st.sampled_from([GOOD, "kailash-38268", "other"])),
     min_size=4, max_size=4))
 def test_property_agreement_iff_all_present_and_equal(values):
-    """No findings iff all four are present and identical to the expected
-    value, and every participating path appears in the output otherwise."""
+    """Feature: production-readiness, Property 7.
+
+    No findings iff all four are present and identical to the expected value;
+    on any disagreement every participating path appears in the rendered output
+    together with the value found in it.
+
+    **Validates: Requirements 3.1, 3.7**
+    """
     import json as _json
     paths = ["frontend/.firebaserc", "frontend/.env.production",
              ".github/workflows/deploy-frontend.yml", "backend/.env.example"]
@@ -163,6 +216,8 @@ def test_property_agreement_iff_all_present_and_equal(values):
 
     if not all_good:
         rendered = report.render()
+        # Every participant, not only the disagreeing ones: whoever fixes the
+        # drift needs to see which value the other files carry.
         for path, value in zip(paths, values):
-            if value != GOOD:
-                assert path in rendered
+            assert path in rendered
+            assert (value if value is not None else "<absent>") in rendered

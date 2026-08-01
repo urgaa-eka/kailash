@@ -288,6 +288,27 @@ Go to: `https://github.com/urgaa-eka/kailash/settings/secrets/actions`
 | `VULTR_USER` | Backend deploy |
 | `VULTR_SSH_KEY` | Backend deploy |
 
+### Staging (Requirement 8.3 — names only, values never in this repository)
+
+The staging credential set exists under names **disjoint** from production's;
+`scripts/verify/workflow_gate.py` verifies the disjointness from the workflow
+declarations. Carry these in the GitHub Environment `staging` (and the
+production set in the Environment `production`, which can additionally
+require a reviewer):
+
+| Secret | For |
+|--------|-----|
+| `STAGING_FIREBASE_SERVICE_ACCOUNT` | Frontend staging channel deploy |
+| `STAGING_VULTR_HOST` | Backend staging deploy (same VPS under Option D; distinct declaration) |
+| `STAGING_VULTR_USER` | Backend staging deploy |
+| `STAGING_VULTR_SSH_KEY` | Backend staging deploy |
+| `STAGING_VULTR_SSH_PORT` | Backend staging deploy (optional; defaults to 22) |
+| `STAGING_POSTGRES_PASSWORD` | Staging compose credentials (`deploy/staging/docker-compose.staging.yml`) |
+| `STAGING_REDIS_PASSWORD` | Staging compose credentials |
+| `STAGING_PLATFORM_INTERNAL_TOKEN` | Staging compose credentials |
+
+Operational detail: `docs/runbooks/staging.md`.
+
 ---
 
 ## 5. Backend Environment Variables

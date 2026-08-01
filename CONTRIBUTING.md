@@ -51,7 +51,27 @@ Examples:
 ### JavaScript (frontend)
 
 - Node.js 18+, Yarn 1.x
-- `cd frontend && yarn install`
+
+Yarn is pinned by the `packageManager` field in `frontend/package.json` and is
+provisioned by Corepack, which ships with Node.
+Run both commands once before any frontend command:
+
+```bash
+corepack enable
+corepack prepare yarn@1.22.22 --activate
+```
+
+`corepack enable` writes the `yarn` shim next to the Node binary, so on Windows
+it needs an elevated shell — run it from a PowerShell started with
+`Start-Process powershell -Verb RunAs`.
+Until the shim exists, invoke yarn as `corepack yarn <args>`.
+
+Do not install yarn globally through npm, and do not regenerate the lockfile
+with npm: `frontend/yarn.lock` is what `frontend/Dockerfile` and
+`deploy-frontend.yml` install from, so replacing it changes the deployed
+artifact.
+
+- `cd frontend && yarn install --frozen-lockfile`
 - Build: `yarn build`
 
 ### Pre-flight checklist before pushing

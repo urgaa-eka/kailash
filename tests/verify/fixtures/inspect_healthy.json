@@ -1,0 +1,30 @@
+{
+  "name": "kailash-postgres",
+  "probe_source": "compose",
+  "health": {
+    "Status": "healthy",
+    "FailingStreak": 0,
+    "Log": [
+      {
+        "Start": "2026-01-05T10:00:00.100000000Z",
+        "End": "2026-01-05T10:00:00.412000000Z",
+        "ExitCode": 0,
+        "Output": "/var/run/postgresql:5432 - accepting connections\n"
+      }
+    ]
+  },
+  "effective": {
+    "Test": ["CMD-SHELL", "pg_isready -U kailash"],
+    "Interval": 30000000000,
+    "Timeout": 10000000000,
+    "StartPeriod": 10000000000,
+    "Retries": 3
+  },
+  "state": {
+    "Status": "running",
+    "Running": true,
+    "ExitCode": 0,
+    "StartedAt": "2026-01-05T09:59:52.000000000Z"
+  },
+  "restarts": 0
+}

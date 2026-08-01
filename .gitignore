@@ -117,6 +117,7 @@ agenthub/agents/youtube/db
 *.env.*
 !.env.example
 !*.env.example
+!*.env.*.example
 !frontend/.env.production
 !frontend/.env.staging
 !frontend/.env.development

@@ -1,0 +1,46 @@
+name: deploy-frontend (fully gated, must pass)
+on:
+  push:
+    branches: [main]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.config_drift
+      - run: python -m scripts.verify.secret_scan
+      - run: python -m scripts.verify.repo_state
+
+  ci-gate:
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
+
+  deploy-staging:
+    needs: [preflight, ci-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          channelId: staging
+          projectId: kailash-38268
+
+  verify-staging:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env staging
+
+  deploy-production:
+    needs: [preflight, ci-gate, deploy-staging, verify-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          channelId: live
+          projectId: kailash-38268
+
+  verify-production:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env production

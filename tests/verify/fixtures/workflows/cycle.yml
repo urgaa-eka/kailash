@@ -1,0 +1,23 @@
+name: needs cycle, so reachability must terminate rather than recurse
+on:
+  push:
+    branches: [main]
+
+jobs:
+  preflight:
+    needs: verify-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.config_drift
+
+  deploy-staging:
+    needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker compose -p kailash-staging up -d
+
+  verify-staging:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env staging

@@ -11,7 +11,10 @@ separate systems.
 docker compose --profile kailash-ai up -d --build
 ```
 
-Brings up 13 containers:
+Brings up 15 containers. `POSTGRES_PASSWORD`, `REDIS_PASSWORD` and
+`PLATFORM_INTERNAL_TOKEN` must be set in the environment first: compose
+declares them `${VAR:?}` (required, no default), so every subcommand —
+`up`, `build`, `config`, `ps` — refuses to parse without them.
 
 | Service | Port (loopback) | Notes |
 |---|---|---|
@@ -34,14 +37,25 @@ docker exec -i kailash-postgres psql -U kailash -d kailash \
   -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
 ```
 
-**Redis requires a password** (`REDIS_PASSWORD`, default
-`kailash_redis_2026`). Connect with  <!-- secret-scan: allow documents the credential incident being remediated -->
+**Redis requires a password** (`REDIS_PASSWORD` — required, no default;
+the published default it once shipped with was rotated out and is
+denylisted). Connect with
 `docker exec kailash-redis redis-cli -a "$REDIS_PASSWORD" ping`.
 
-**Images.** The 9 platform services build from one generic
-`backend/services/Dockerfile.service` (`SERVICE` + `PORT` build args) —
-the per-service Dockerfiles still reference pre-consolidation paths
-(`platform/`, `services/`) and cannot build as-is.
+**Images.** The 9 platform services build from **one generic build file,
+`backend/services/Dockerfile.service`** — this is the mechanism the CI
+pipeline actually executes, not a per-service Dockerfile. Each service in
+`docker-compose.yml` extends the `x-platform-service` YAML anchor and
+passes two build args, `SERVICE` and `PORT`; the Dockerfile copies
+`backend/services/${SERVICE}/` and bakes in a `HEALTHCHECK` probing
+`http://localhost:${PORT}/health`. The nine per-service
+`backend/services/<service>/Dockerfile` files were **removed**: they
+copied from pre-consolidation paths (`platform/`, `services/<service>/`)
+that no longer exist, no compose service referenced them, and two
+definitions of the same image is drift by construction.
+`scripts/verify/build_audit.py` fails CI if one is reintroduced.
+`backend/services/company/Dockerfile` remains — it uses current paths and
+compose references it.
 
 ## 2. Docker MCP profile — the stack as AI tools
 
@@ -56,7 +70,7 @@ docker mcp profile create --name kailash-ai \
 # Connection details (config = plain values, secrets = credentials)
 docker mcp profile config kailash_ai --set redis.host=host.docker.internal --set redis.port=6379
 docker mcp secret set "mongodb.connection_string=mongodb://host.docker.internal:27017/kailash"
-docker mcp secret set "redis.password=kailash_redis_2026"  <!-- secret-scan: allow documents the credential incident being remediated -->
+docker mcp secret set "redis.password=<your REDIS_PASSWORD>"
 
 # Connect a client (writes the gateway entry into the client's config)
 docker mcp client connect --global --profile kailash_ai claude-code

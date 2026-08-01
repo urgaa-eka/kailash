@@ -1,0 +1,20 @@
+name: orphan jobs and a needs edge naming a job that does not exist
+on:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ruff check .
+
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "no needs, nothing needs it"
+
+  deploy-production:
+    needs: [preflight, ci-gate, deploy-staging, verify-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - run: firebase hosting:clone kailash-38268:live@v1 kailash-38268:live

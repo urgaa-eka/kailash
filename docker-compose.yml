@@ -39,6 +39,18 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:80"
+    # BusyBox wget ships in nginx:alpine (confirmed via `which wget` in the
+    # running container). --spider proves the server answers requests, which
+    # `nginx -t` (config syntax only) does not. 127.0.0.1, not localhost:
+    # /etc/hosts maps localhost to ::1 first, BusyBox wget tries only that
+    # address, and nginx.conf's `listen 80` binds IPv4 alone -- probed via
+    # localhost this container is unhealthy while serving perfectly.
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       - backend
     networks:
@@ -181,6 +193,11 @@ services:
     environment:
       - MONGO_URL=mongodb://mongo:27017
       - DATABASE_NAME=kailash
+      # The deployed commit, exported by deploy/vultr/deploy.sh and the
+      # deploy-backend.yml SSH step so /api/health reports what is running
+      # (Requirement 6.6). A `:-` default rather than `:?` because "unknown"
+      # is a safe value for a non-credential, not a masked failure.
+      - GIT_COMMIT=${GIT_COMMIT:-unknown}
       - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
       - POSTGRES_URL=postgresql+asyncpg://kailash:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/kailash
     depends_on:
@@ -247,6 +264,12 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      # Absent start_period is zero: a cold boot with volume init that takes
+      # ~90s of failing probes lands in `unhealthy` before first accepting a
+      # connection (hypothesis H4, Requirement 1.6). 30s covers the measured
+      # single-digit warm boot with margin; the start-period rule in
+      # scripts/verify/health_diagnose.py verifies it against each fresh boot.
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -268,6 +291,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      # See the postgres note: absence is zero, not "not applicable" (H4).
+      start_period: 10s
     logging:
       driver: "json-file"
       options:
