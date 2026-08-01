@@ -107,7 +107,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   switches to the non-root `appuser` without creating that directory —
   every run died with `PermissionError: [Errno 13] ... '/var/log/kailash'`.
   The Dockerfile now creates and chowns the log directory before dropping
-  privileges.
+  privileges, and `error_handler.py` no longer raises when the directory is
+  not writable — it falls back to stdout-only logging. The `mkdir` runs at
+  import, so raising there made the app unimportable on any CI runner or
+  non-root process outside the container; `KAILASH_LOG_DIR` overrides the
+  location.
 - **`deploy.sh` and `setup-vps.sh` pointed at the wrong repository**
   (`flywithvvk/kailash`, not `urgaa-eka/kailash`), so the VPS deploy fetched and
   hard-reset against a repo that is not this one. `README.md`'s CI badge had the

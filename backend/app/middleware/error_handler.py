@@ -13,19 +13,35 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
-# Create logs directory
-log_dir = Path("/var/log/kailash") if os.name != "nt" else Path("./logs")
-log_dir.mkdir(exist_ok=True, parents=True)
+# Log directory. The image creates and chowns /var/log/kailash before dropping
+# privileges; KAILASH_LOG_DIR overrides it elsewhere.
+log_dir = Path(
+    os.environ.get(
+        "KAILASH_LOG_DIR",
+        "./logs" if os.name == "nt" else "/var/log/kailash",
+    )
+)
 
-# Configure production logging
+# File logging is best-effort. This runs at import, so raising here makes the
+# whole app unimportable anywhere the directory is not writable -- a CI runner,
+# a local test run, any non-root process outside the container. Log to stdout in
+# that case rather than refusing to load.
 logging_file = log_dir / "kailash_production.log"
+_handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
+try:
+    log_dir.mkdir(exist_ok=True, parents=True)
+    _handlers.insert(0, logging.FileHandler(logging_file))
+except OSError as exc:
+    print(
+        f"kailash: file logging disabled, {log_dir} is not writable ({exc}); "
+        "logging to stdout only",
+        file=sys.stderr,
+    )
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s | %(levelname)-8s | %(name)-s | %(message)s',
-    handlers=[
-        logging.FileHandler(logging_file),
-        logging.StreamHandler(sys.stdout)
-    ]
+    handlers=_handlers,
 )
 
 logger = logging.getLogger("kailash")
