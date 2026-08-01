@@ -10,10 +10,10 @@ class UserRegister(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "email": "vivek@Kailash.com",
-                "kailash_code": "<REDACTED_kailash_code>",
-                "full_name": "Vivek Kumar",
-                "password": "<REDACTED_PASSWORD>"
+                "email": "you@example.com",
+                "kailash_code": "<your-kailash-code>",
+                "full_name": "Your Name",
+                "password": "<your-password>"
             }
         }
 
@@ -24,8 +24,8 @@ class UserLogin(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "login_id": "KAILASH001",
-                "password": "Kailash@2026"
+                "login_id": "<your-kailash-code-or-email>",
+                "password": "<your-password>"
             }
         }
 

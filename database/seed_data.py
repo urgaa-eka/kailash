@@ -22,6 +22,12 @@ from app.models.user import User
 from app.models.department import Department, SubAgent
 from app.models.activity import Activity
 
+# Password for the seeded admin. No default on purpose: a literal here is
+# published in this repository, and this script grants is_admin=True. Export
+# SEED_ADMIN_PASSWORD before running, and use a value that is not in use
+# anywhere else.
+SEED_ADMIN_PASSWORD = os.environ.get("SEED_ADMIN_PASSWORD", "")
+
 # Department data sourced from frontend/src/data/departmentsData.js
 # (regenerated 2026-07-31: the prior copy of this literal in this file had
 # every 'B', 'F', '0' and '1' character stripped by a broken redaction pass
@@ -347,6 +353,12 @@ async def seed_database():
 
         print("Starting database seeding...")
 
+        if not SEED_ADMIN_PASSWORD:
+            raise SystemExit(
+                "SEED_ADMIN_PASSWORD is not set. Export it before seeding; "
+                "this script creates an is_admin=True account."
+            )
+
         # 1. Seed default user
         print("\nSeeding users...")
         existing_user = await db.users.find_one({"kailash_code": "<REDACTED_kailash_code>"})
@@ -355,7 +367,7 @@ async def seed_database():
                 email="vivek@Kailash.com",
                 kailash_code="<REDACTED_kailash_code>",
                 full_name="Vivek Kumar",
-                hashed_password=get_password_hash("<REDACTED_PASSWORD>"),
+                hashed_password=get_password_hash(SEED_ADMIN_PASSWORD),
                 is_active=True,
                 is_admin=True
             )
@@ -401,9 +413,9 @@ async def seed_database():
         print(f"   Users: {user_count}")
         print(f"   Departments: {dept_count}")
         print(f"   Activities: {activity_count}")
-        print("\nDefault Login Credentials:")
-        print("   Kailash Code: <REDACTED_kailash_code>")
-        print("   Decode: <REDACTED_PASSWORD>")
+        # Credentials are not echoed: this ran as a deploy step whose output
+        # lands in logs, and the password came from SEED_ADMIN_PASSWORD.
+        print("\nAdmin seeded. Sign in with the SEED_ADMIN_PASSWORD value.")
         print("\n✨ Backend is ready for use!")
 
     except Exception as e:
