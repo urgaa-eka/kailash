@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, Depends
+from fastapi import Depends, FastAPI
 from pydantic import BaseModel, Field
 
 from backend.shared import ApiResponse, require_internal_token
 
-from .service import Doc, STORE, embed_batch
+from .service import STORE, Doc, embed_batch
 
 
 class UpsertDoc(BaseModel):
@@ -32,7 +32,7 @@ def register(app: FastAPI) -> None:
     )
     async def upsert(req: UpsertRequest):
         vectors = await embed_batch([d.text for d in req.docs])
-        docs = [Doc(id=d.id, text=d.text, metadata=d.metadata, vector=v) for d, v in zip(req.docs, vectors)]
+        docs = [Doc(id=d.id, text=d.text, metadata=d.metadata, vector=v) for d, v in zip(req.docs, vectors, strict=False)]
         total = STORE.upsert(docs)
         return ApiResponse(data={"upserted": len(docs), "total": total})
 

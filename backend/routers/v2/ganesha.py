@@ -1,6 +1,6 @@
 """GANESHA v2.0 Backend Router - Analytics & Agent Management"""
+
 from fastapi import APIRouter, HTTPException
-from typing import Optional
 
 router = APIRouter(prefix="/ganesha", tags=["GANESHA v2.0"])
 
@@ -60,19 +60,19 @@ async def get_model_stats():
     """Get model usage statistics and cost analysis"""
     tier_dist = {"tier_1": 0, "tier_2": 0, "tier_3": 0}
     model_dist = {}
-    
+
     for agent in AGENTS:
         tier_dist[agent["tier"]] += 1
         model = agent["model"]
         model_dist[model] = model_dist.get(model, 0) + 1
-    
+
     # Calculate costs (1000 queries/agent, 500 input + 1000 output tokens)
     tier_costs = {
         "tier_1": tier_dist["tier_1"] * 1000 * (500 * 3.0 + 1000 * 15.0) / 1_000_000,
         "tier_2": tier_dist["tier_2"] * 1000 * (500 * 1.0 + 1000 * 5.0) / 1_000_000,
         "tier_3": 0.0
     }
-    
+
     return {
         "tier_distribution": tier_dist,
         "model_distribution": model_dist,
@@ -98,28 +98,28 @@ async def get_rag_stats():
     }
 
 @router.get("/agents")
-async def get_agents(product: Optional[str] = None, tier: Optional[str] = None):
+async def get_agents(product: str | None = None, tier: str | None = None):
     """List all agents with optional filtering"""
     filtered = AGENTS
-    
+
     if product:
         filtered = [a for a in filtered if a["product"] == product or a["product"] == "ALL"]
     if tier:
         filtered = [a for a in filtered if a["tier"] == tier]
-    
+
     summary = {
         "by_product": {},
         "by_tier": {"tier_1": 0, "tier_2": 0, "tier_3": 0},
         "by_model": {}
     }
-    
+
     for agent in AGENTS:
         prod = agent["product"]
         summary["by_product"][prod] = summary["by_product"].get(prod, 0) + 1
         summary["by_tier"][agent["tier"]] += 1
         model = agent["model"]
         summary["by_model"][model] = summary["by_model"].get(model, 0) + 1
-    
+
     return {
         "agents": filtered,
         "total_count": len(filtered),
@@ -132,7 +132,7 @@ async def get_agent(agent_id: str):
     agent = next((a for a in AGENTS if a["agent_id"] == agent_id), None)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    
+
     return {
         **agent,
         "pricing": MODEL_PRICING.get(agent["model"], {}),
@@ -146,8 +146,8 @@ async def get_agent(agent_id: str):
 @router.get("/stats")
 async def get_platform_stats():
     """Get general GANESHA platform statistics"""
-    products = list(set(a["product"] for a in AGENTS if a["product"] != "ALL"))
-    
+    products = list({a["product"] for a in AGENTS if a["product"] != "ALL"})
+
     return {
         "platform": "GANESHA v2.0",
         "version": "2.0.0",
@@ -171,7 +171,7 @@ async def preview_routing(query: str):
     """Preview agent routing for a query"""
     # Simple keyword-based routing
     query_lower = query.lower()
-    
+
     if "revenue" in query_lower or "profit" in query_lower:
         agent = next(a for a in AGENTS if a["agent_id"] == "U-AI-01")
     elif "price" in query_lower or "pricing" in query_lower:
@@ -180,7 +180,7 @@ async def preview_routing(query: str):
         agent = next(a for a in AGENTS if a["agent_id"] == "U-AI-06")
     else:
         agent = next(a for a in AGENTS if a["agent_id"] == "GANESHA")
-    
+
     return {
         "query": query,
         "routed_to": {

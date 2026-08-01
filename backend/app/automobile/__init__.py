@@ -3,9 +3,9 @@
 Uniform Pricing Engine with Market Data + GST Software Fusion
 """
 
-from .pricing_engine import pricing_engine
-from .market_data import market_data_collector
 from .gst_integration import gst_software_client
+from .market_data import market_data_collector
+from .pricing_engine import pricing_engine
 from .router import router
 
 __all__ = [

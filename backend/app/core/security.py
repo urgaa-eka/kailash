@@ -1,11 +1,14 @@
-from datetime import datetime, timedelta
-from typing import Optional
-from jose import JWTError, jwt
 import warnings
-# Suppress bcrypt version warning from passlib
-warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
-from passlib.context import CryptContext
+from datetime import datetime, timedelta
+
+from jose import JWTError, jwt
+
 from .config import settings
+
+# Suppress bcrypt version warning from passlib. This has to run before passlib
+# is imported, which is why that one import is not at the top of the file.
+warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
+from passlib.context import CryptContext  # noqa: E402
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -17,7 +20,7 @@ def get_password_hash(password: str) -> str:
     """Hash a password"""
     return pwd_context.hash(password)
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create JWT access token"""
     to_encode = data.copy()
     if expires_delta:
@@ -28,7 +31,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-def decode_access_token(token: str) -> Optional[dict]:
+def decode_access_token(token: str) -> dict | None:
     """Decode JWT access token"""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

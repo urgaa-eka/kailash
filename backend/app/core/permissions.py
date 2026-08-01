@@ -1,7 +1,8 @@
 from enum import Enum
-from typing import List, Dict
 from functools import wraps
+
 from fastapi import HTTPException, status
+
 
 class UserRole(str, Enum):
     SUPER_ADMIN = "super_admin"
@@ -27,7 +28,7 @@ class Permission(str, Enum):
     TASKS_CREATE = "tasks.create"
     TASKS_OWN = "tasks.own"
 
-ROLE_PERMISSIONS: Dict[UserRole, List[Permission]] = {
+ROLE_PERMISSIONS: dict[UserRole, list[Permission]] = {
     UserRole.SUPER_ADMIN: list(Permission),
     UserRole.ADMIN: [
         Permission.DEPARTMENTS_VIEW,
@@ -82,14 +83,14 @@ def require_permission(permission: Permission):
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Authentication required"
                 )
-            
+
             user_role = current_user.get("role", "viewer")
             if not has_permission(user_role, permission):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"Permission denied: {permission.value}"
                 )
-            
+
             return await func(*args, current_user=current_user, **kwargs)
         return wrapper
     return decorator

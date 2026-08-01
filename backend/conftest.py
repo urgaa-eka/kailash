@@ -2,10 +2,10 @@
 Pytest configuration for test suite
 Configures test database and fixtures
 """
-import pytest
 import asyncio
+
+import pytest
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.core.config import settings
 
 # Test database configuration
 TEST_MONGO_URL = "mongodb://localhost:27017"
@@ -23,7 +23,7 @@ async def test_db():
     """Setup test database"""
     client = AsyncIOMotorClient(TEST_MONGO_URL)
     db = client[TEST_DB_NAME]
-    
+
     # Create test user
     await db.users.insert_one({
         "kailash_code": "<REDACTED_kailash_code>",
@@ -32,7 +32,7 @@ async def test_db():
         "role": "admin",
         "two_factor_enabled": False
     })
-    
+
     # Create test departments
     departments = [
         {"name": "GANESHA", "description": "AI Orchestrator"},
@@ -45,9 +45,9 @@ async def test_db():
         {"name": "KAMADEVA", "description": "Marketing"}
     ]
     await db.departments.insert_many(departments)
-    
+
     yield db
-    
+
     # Cleanup
     await client.drop_database(TEST_DB_NAME)
     client.close()

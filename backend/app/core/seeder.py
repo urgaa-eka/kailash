@@ -9,10 +9,13 @@ import logging
 import os
 import warnings
 from datetime import datetime
-# Suppress bcrypt version warning from passlib
-warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
-from passlib.context import CryptContext
+
 from motor.motor_asyncio import AsyncIOMotorClient
+
+# Suppress bcrypt version warning from passlib. This has to run before passlib
+# is imported, which is why that one import is not at the top of the file.
+warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
+from passlib.context import CryptContext  # noqa: E402
 
 logger = logging.getLogger("kailash.seeder")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -72,11 +75,11 @@ DEPARTMENTS = [
 
 async def seed_database(db):
     """Seed the database with initial data if empty
-    
+
     This is designed to handle permission-restricted environments like Atlas.
     If the user doesn't have permissions, seeding is gracefully skipped.
     """
-    
+
     try:
         # Bootstrap an admin only into a database that has no users at all.
         # There is no "recreate it if missing" branch on purpose: that made the
@@ -122,7 +125,7 @@ async def seed_database(db):
                 logger.info(f"✅ Added {len(missing_depts)} missing departments")
             else:
                 logger.info("All departments already exist")
-        
+
         # Ensure indexes exist
         try:
             await db.users.create_index("kailash_code", unique=True)
@@ -131,7 +134,7 @@ async def seed_database(db):
             logger.info("Database indexes created")
         except Exception as e:
             logger.info(f"Index creation skipped (may already exist): {e}")
-            
+
     except Exception as e:
         error_str = str(e).lower()
         if "not authorized" in error_str or "unauthorized" in error_str:
@@ -144,17 +147,17 @@ async def run_seeder(mongo_url: str, database_name: str):
     try:
         client = AsyncIOMotorClient(mongo_url)
         db = client[database_name]
-        
+
         # Verify connection
         await client.admin.command('ping')
         logger.info(f"📡 Connected to MongoDB database: {database_name}")
-        
+
         # Run seeding
         await seed_database(db)
-        
+
         client.close()
         logger.info("✅ Database seeding completed")
-        
+
     except Exception as e:
         logger.error(f"❌ Seeding failed: {e}")
         raise
@@ -162,12 +165,13 @@ async def run_seeder(mongo_url: str, database_name: str):
 if __name__ == "__main__":
     # For manual testing
     import os
+
     from dotenv import load_dotenv
     load_dotenv()
-    
+
     logging.basicConfig(level=logging.INFO)
-    
+
     mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
     db_name = os.environ.get("DATABASE_NAME", "kailash")
-    
+
     asyncio.run(run_seeder(mongo_url, db_name))

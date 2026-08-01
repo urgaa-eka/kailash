@@ -3,14 +3,15 @@ KAILASH Error Handler
 Centralized error handling with structured logging
 Domain: kailash-ai.in
 """
-from fastapi import Request, HTTPException
-from fastapi.responses import JSONResponse
 import logging
-import traceback
 import os
 import sys
+import traceback
 from datetime import datetime
 from pathlib import Path
+
+from fastapi import HTTPException, Request
+from fastapi.responses import JSONResponse
 
 # Create logs directory
 log_dir = Path("/var/log/kailash") if os.name != "nt" else Path("./logs")
@@ -32,16 +33,16 @@ logger = logging.getLogger("kailash")
 
 class ErrorHandler:
     """Centralized error handling for KAILASH"""
-    
+
     ADMIN_EMAILS = ["Connect@go4garage.in", "cto@go4garage.in"]
     EMERGENCY_CONTACT = "89389"
     SUPPORT_EMAIL = "cto@go4garage.in"
-    
+
     @staticmethod
     async def handle_exception(request: Request, exc: Exception) -> JSONResponse:
         """Global exception handler"""
         error_id = f"{int(datetime.now().timestamp())}"
-        
+
         # Log comprehensive error details
         logger.error(f"""
 ╔═══════════════════════════════════════════════════════════════╗
@@ -61,7 +62,7 @@ Admin: {', '.join(ErrorHandler.ADMIN_EMAILS)}
 Emergency: {ErrorHandler.EMERGENCY_CONTACT}
 ╚═══════════════════════════════════════════════════════════════╝
         """)
-        
+
         # Return safe error to user
         if isinstance(exc, HTTPException):
             return JSONResponse(
@@ -72,7 +73,7 @@ Emergency: {ErrorHandler.EMERGENCY_CONTACT}
                     "timestamp": datetime.now().isoformat()
                 }
             )
-        
+
         # Generic error for unexpected exceptions
         return JSONResponse(
             status_code=500,
@@ -84,7 +85,7 @@ Emergency: {ErrorHandler.EMERGENCY_CONTACT}
                 "timestamp": datetime.now().isoformat()
             }
         )
-    
+
     @staticmethod
     def log_request(request: Request, response_time: float, status_code: int):
         """Log API requests with performance metrics"""
@@ -94,28 +95,28 @@ Emergency: {ErrorHandler.EMERGENCY_CONTACT}
             f"Time: {response_time:.3f}s | "
             f"IP: {request.client.host if request.client else 'Unknown'}"
         )
-        
+
         if response_time > 1.0:
             logger.warning(f"SLOW REQUEST: {log_entry}")
         else:
             logger.info(log_entry)
-    
+
     @staticmethod
     def log_authentication(kailash_code: str, ip: str, success: bool, device_info: str = ""):
         """Log authentication attempts"""
         status = "SUCCESS" if success else "AILED"
         log_level = logging.INFO if success else logging.WARNING
-        
+
         logger.log(
             log_level,
             f"AUTH {status}: {kailash_code} from {ip} | Device: {device_info}"
         )
-    
+
     @staticmethod
     def log_security_event(event_type: str, details: dict, severity: str = "WARNING"):
         """Log security events"""
         log_level = getattr(logging, severity.upper(), logging.WARNING)
-        
+
         message = f"""
 ╔═══════════════════════════════════════════════════════════════╗
 ║  SECURITY EVENT: {event_type}                                ║

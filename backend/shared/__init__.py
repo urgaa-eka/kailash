@@ -3,12 +3,12 @@
 Re-exports the public surface that every service should use so the contract
 stays uniform across the fleet.
 """
-from .schemas import ApiResponse, ErrorDetail, HealthResponse, PageInfo
+from .app import build_app
 from .auth import require_internal_token
 from .config import BaseServiceSettings
+from .errors import NotFoundError, PlatformError, UpstreamError, ValidationError
 from .logging import configure_logging, get_logger
-from .errors import PlatformError, NotFoundError, ValidationError, UpstreamError
-from .app import build_app
+from .schemas import ApiResponse, ErrorDetail, HealthResponse, PageInfo
 
 __all__ = [
     "ApiResponse",

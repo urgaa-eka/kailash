@@ -1,11 +1,11 @@
 """Live Data API endpoints for real-time external API connections."""
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from typing import Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, BackgroundTasks, Depends
 
 from ..api.deps import get_current_user
-from ..services.live_api_connector import get_connector
 from ..core.mongodb import MongoD
+from ..services.live_api_connector import get_connector
 
 router = APIRouter(prefix="/api/live-data", tags=["Live Data"])
 
@@ -82,20 +82,20 @@ async def refresh_all_live_data(
     current_user: dict = Depends(get_current_user)
 ):
     """Trigger a refresh of all live data sources and store in database."""
-    
+
     async def refresh_and_store():
         connector = get_connector()
         db = MongoD.get_database()
-        
+
         departments = [
-            "lakshmi", "vishwakarma", "indra", "surya", "agni", 
+            "lakshmi", "vishwakarma", "indra", "surya", "agni",
             "tvashta", "kartikeya", "kubera", "yama"
         ]
-        
+
         for dept in departments:
             try:
                 data = await connector.fetch_department_live_data(dept)
-                
+
                 # Store in database
                 await db.live_data_cache.update_one(
                     {"department": dept},
@@ -103,16 +103,16 @@ async def refresh_all_live_data(
                         "$set": {
                             "department": dept,
                             "data": data,
-                            "last_updated": datetime.now(timezone.utc).isoformat()
+                            "last_updated": datetime.now(UTC).isoformat()
                         }
                     },
                     upsert=True
                 )
             except Exception as e:
                 print(f"Error refreshing {dept}: {e}")
-    
+
     background_tasks.add_task(refresh_and_store)
-    
+
     return {
         "status": "success",
         "message": "Live data refresh started in background"
@@ -126,16 +126,16 @@ async def get_cached_live_data(
 ):
     """Get cached live data for a department."""
     db = MongoD.get_database()
-    
+
     cached = await db.live_data_cache.find_one(
         {"department": department_name.lower()},
         {"_id": 0}
     )
-    
+
     if not cached:
         # Fetch fresh if not cached
         connector = get_connector()
         data = await connector.fetch_department_live_data(department_name)
         return {"data": data, "cached": False}
-    
+
     return {"data": cached.get("data"), "cached": True, "last_updated": cached.get("last_updated")}

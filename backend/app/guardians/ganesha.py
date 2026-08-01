@@ -1,9 +1,10 @@
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
-from app.guardians import BaseGuardian
-from app.core.mongodb import MongoD
 import json
 import os
+from datetime import datetime, timedelta
+from typing import Any
+
+from app.core.mongodb import MongoD
+from app.guardians import BaseGuardian
 from dotenv import load_dotenv
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
@@ -13,7 +14,7 @@ load_dotenv(override=False)
 class GaneshaGuardian(BaseGuardian):
     """
     GANESHA - The AI Orchestrator & Command Center
-    
+
     Responsibilities:
     - Natural language command processing
     - Intent classification
@@ -21,16 +22,16 @@ class GaneshaGuardian(BaseGuardian):
     - Conversation management
     - Central AI coordination
     """
-    
+
     def __init__(self):
         super().__init__(
             name="GANESHA",
             domain="orchestration"
         )
-        self.active_conversations: Dict[str, Any] = {}
+        self.active_conversations: dict[str, Any] = {}
         self.request_count = 0
-        self.department_routes: Dict[str, int] = {}
-        
+        self.department_routes: dict[str, int] = {}
+
         # Initialize Emergent LLM for intent classification
         self.llm_api_key = os.getenv("EMERGENT_LLM_KEY", "")
         self.intent_classifier = None
@@ -39,7 +40,7 @@ class GaneshaGuardian(BaseGuardian):
                 api_key=self.llm_api_key,
                 session_id="ganesha-intent-classifier",
                 system_message="""You are an intent classifier for Kailash's department routing system.
-                
+
 Analyze user messages and determine which department should handle them. Respond ONLY with valid JSON.
 
 Available departments:
@@ -68,28 +69,28 @@ Response format (JSON only):
 {"department": "DEPARTMENT_NAME", "sub_task": "specific task", "confidence": 0.95}"""
             ).with_model("openai", "gpt-4o-mini")
 
-    async def monitor(self) -> Dict[str, Any]:
+    async def monitor(self) -> dict[str, Any]:
         """Monitor AI operations and conversation health"""
         db = MongoD.get_database()
-        
+
         # Get active conversation count
         active_count = await db.conversations.count_documents({
             "updated_at": {"$gte": datetime.utcnow() - timedelta(hours=1)}
         })
-        
+
         # Get department routing stats
         routing_stats = await self._get_routing_stats()
-        
+
         self.metrics = {
             "active_conversations": active_count,
             "total_requests": self.request_count,
             "routing_stats": routing_stats,
             "status": "operational"
         }
-        
+
         return self.metrics
 
-    async def _get_routing_stats(self) -> Dict[str, int]:
+    async def _get_routing_stats(self) -> dict[str, int]:
         """Get department routing statistics"""
         db = MongoD.get_database()
         pipeline = [
@@ -100,17 +101,17 @@ Response format (JSON only):
         results = await db.ganesha_commands.aggregate(pipeline).to_list(10)
         return {r["_id"]: r["count"] for r in results if r["_id"]}
 
-    async def classify_intent(self, message: str) -> Dict[str, Any]:
+    async def classify_intent(self, message: str) -> dict[str, Any]:
         """Classify user intent using Emergent LLM to route to correct department"""
         if not self.intent_classifier:
             # Fallback to simple keyword matching if LLM not available
             return await self._fallback_classification(message)
-        
+
         try:
             # Use Emergent LLM for classification
             user_message = UserMessage(text=f"Classify this user message: {message}")
             response = await self.intent_classifier.send_message(user_message)
-            
+
             # Parse JSON response
             try:
                 result = json.loads(response)
@@ -122,7 +123,7 @@ Response format (JSON only):
             except json.JSONDecodeError:
                 # If response is not valid JSON, try to extract department from text
                 response_lower = response.lower()
-                for dept in ["vishwakarma", "lakshmi", "surya", "saraswati", "vayu", 
+                for dept in ["vishwakarma", "lakshmi", "surya", "saraswati", "vayu",
                            "kubera", "indra", "yama", "varuna", "agni", "chandra",
                            "brihaspati", "vishnu", "brahma", "kartikeya", "durga",
                            "hanuman", "narada", "ashwini", "dharma"]:
@@ -132,18 +133,18 @@ Response format (JSON only):
                             "sub_task": "process request",
                             "confidence": 0.7
                         }
-            
+
             # If no department found, use fallback
             return await self._fallback_classification(message)
-            
+
         except Exception as e:
             print(f"LLM classification error: {str(e)}")
             return await self._fallback_classification(message)
-    
-    async def _fallback_classification(self, message: str) -> Dict[str, Any]:
+
+    async def _fallback_classification(self, message: str) -> dict[str, Any]:
         """Fallback keyword-based classification when LLM is unavailable"""
         message_lower = message.lower()
-        
+
         # Simple keyword matching
         keywords = {
             "VISHWAKARMA": ["code", "develop", "tech", "software", "api", "infrastructure"],
@@ -167,7 +168,7 @@ Response format (JSON only):
             "ASHWINI": ["health", "monitor", "diagnostic", "system"],
             "DHARMA": ["govern", "ethics", "principle", "guideline", "rule"]
         }
-        
+
         for dept, words in keywords.items():
             if any(word in message_lower for word in words):
                 return {
@@ -175,7 +176,7 @@ Response format (JSON only):
                     "sub_task": "process request",
                     "confidence": 0.6
                 }
-        
+
         # Default to GANESHA handling if no match
         return {
             "department": "GANESHA",
@@ -187,33 +188,33 @@ Response format (JSON only):
         self,
         user_id: str,
         message: str,
-        conversation_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        conversation_id: str | None = None
+    ) -> dict[str, Any]:
         """Main command processing pipeline"""
         self.request_count += 1
-        
+
         # Create or get conversation
         if not conversation_id:
             conversation_id = await self._create_conversation(user_id)
-        
+
         # Store user message
         await self._store_message(conversation_id, "user", message)
-        
+
         # Classify intent and determine department
         classification = await self.classify_intent(message)
         department_name = classification.get("department")
         confidence = classification.get("confidence", 0)
-        
+
         # Generate response
         response = await self._general_response(message, conversation_id)
-        
+
         # Store assistant message
         content = response.get("content", "")
         await self._store_message(conversation_id, "assistant", content)
-        
+
         # Log command
         await self._log_command(user_id, message, department_name, classification)
-        
+
         return {
             "conversation_id": conversation_id,
             "department": department_name,
@@ -251,11 +252,11 @@ Response format (JSON only):
             }
         )
 
-    async def _general_response(self, message: str, conversation_id: str) -> Dict[str, Any]:
+    async def _general_response(self, message: str, conversation_id: str) -> dict[str, Any]:
         """Generate general response"""
         return {"content": f"Received: {message[:50]}...", "department": "GANESHA"}
 
-    async def _log_command(self, user_id: str, message: str, department: Optional[str], classification: Dict):
+    async def _log_command(self, user_id: str, message: str, department: str | None, classification: dict):
         """Log command for analytics"""
         db = MongoD.get_database()
         await db.ganesha_commands.insert_one({
@@ -266,21 +267,21 @@ Response format (JSON only):
             "timestamp": datetime.utcnow()
         })
 
-    async def intervene(self, event: Dict[str, Any]) -> Dict[str, Any]:
+    async def intervene(self, event: dict[str, Any]) -> dict[str, Any]:
         """Handle intervention requests"""
         event_type = event.get("type")
-        
+
         if event_type == "reroute":
             return {"action": "rerouted", "details": event}
         elif event_type == "priority":
             return {"action": "prioritized", "details": event}
-        
+
         return {"action": "acknowledged", "event": event}
 
-    async def report(self) -> Dict[str, Any]:
+    async def report(self) -> dict[str, Any]:
         """Generate GANESHA status report"""
         await self.monitor()
-        
+
         return {
             "guardian": "GANESHA",
             "description": "AI Orchestrator",

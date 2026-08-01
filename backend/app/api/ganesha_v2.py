@@ -2,22 +2,21 @@
 GANESHA Orchestrator API v2.0
 Enhanced with RAG and C4 Agent Prompts
 """
+import asyncio
+import json
+import logging
+from datetime import datetime
+
+from app.agents.prompts import get_agent_prompt, list_all_agents, route_to_agent
+from app.api.deps import get_current_active_user
+from app.core.config import get_settings
+from app.core.mongodb import get_db
+from app.models.user import User
+from app.services.ganesha_orchestrator_v2 import get_orchestrator_v2
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import List, Dict, Optional
-from datetime import datetime
-from bson import ObjectId
-import json
-import asyncio
-import logging
-
-from app.api.deps import get_current_active_user
-from app.core.mongodb import get_db
-from app.services.ganesha_orchestrator_v2 import get_orchestrator_v2
-from app.core.config import get_settings
-from app.models.user import User
-from app.agents.prompts import list_all_agents, get_agent_prompt, route_to_agent
 
 router = APIRouter(prefix="/v2", tags=["GANESHA v2.0"])
 logger = logging.getLogger("kailash.ganesha.api.v2")
@@ -29,14 +28,14 @@ settings = get_settings()
 # =============================================================================
 class OrchestrateRequest(BaseModel):
     user_message: str
-    conversation_history: Optional[List[Dict]] = []
-    product_context: Optional[str] = None  # URGAA, GSTSAAS, IGNITION, ARJUN
+    conversation_history: list[dict] | None = []
+    product_context: str | None = None  # URGAA, GSTSAAS, IGNITION, ARJUN
 
 
 class DirectAgentRequest(BaseModel):
     agent_id: str
     query: str
-    context: Optional[Dict] = {}
+    context: dict | None = {}
 
 
 class QuickActionRequest(BaseModel):
@@ -53,16 +52,16 @@ async def orchestrate_request_v2(
 ):
     """
     Main orchestration endpoint v2.0
-    
+
     Features:
     - RAG knowledge retrieval from Pinecone
     - Intelligent routing to 35+ specialist agents
     - C4 system prompts for contextual responses
     - Real-time streaming response
     """
-    
+
     db = get_db()
-    
+
     # Get orchestrator with RAG
     orchestrator = get_orchestrator_v2(
         anthropic_key=settings.anthropic_api_key,
@@ -71,7 +70,7 @@ async def orchestrate_request_v2(
         emergent_url=getattr(settings, 'emergent_api_url', None),
         emergent_key=getattr(settings, 'emergent_api_key', None)
     )
-    
+
     # Build user context
     user_context = {
         'user_name': getattr(current_user, 'full_name', current_user.kailash_code),
@@ -80,7 +79,7 @@ async def orchestrate_request_v2(
         'organization': getattr(current_user, 'organization', 'Go4Garage'),
         'product': request.product_context or 'URGAA'
     }
-    
+
     # Store command in database
     command_doc = {
         'user_id': current_user.kailash_code,
@@ -90,16 +89,16 @@ async def orchestrate_request_v2(
         'status': 'processing',
         'version': '2.0'
     }
-    
+
     result = await db.ganesha_commands.insert_one(command_doc)
     command_id = str(result.inserted_id)
-    
+
     async def generate_stream():
         """Generate SSE stream with RAG-enhanced responses"""
-        
+
         agent_id = None
         rag_used = False
-        
+
         try:
             async for event in orchestrator.process_request(
                 user_message=request.user_message,
@@ -111,11 +110,11 @@ async def orchestrate_request_v2(
                     agent_id = event.get('agent_id')
                 if event.get('type') == 'rag_complete':
                     rag_used = True
-                
+
                 # Send event to client
                 yield f"data: {json.dumps(event)}\n\n"
                 await asyncio.sleep(0.02)
-            
+
             # Update command status
             await db.ganesha_commands.update_one(
                 {'_id': ObjectId(command_id)},
@@ -128,17 +127,17 @@ async def orchestrate_request_v2(
                     }
                 }
             )
-            
+
         except Exception as e:
             logger.error(f"Stream error: {str(e)}")
-            
+
             error_event = {
                 'type': 'error',
                 'message': str(e),
                 'timestamp': datetime.now().isoformat()
             }
             yield f"data: {json.dumps(error_event)}\n\n"
-            
+
             await db.ganesha_commands.update_one(
                 {'_id': ObjectId(command_id)},
                 {
@@ -149,7 +148,7 @@ async def orchestrate_request_v2(
                     }
                 }
             )
-    
+
     return StreamingResponse(
         generate_stream(),
         media_type="text/event-stream",
@@ -173,7 +172,7 @@ async def query_agent_directly(
     Query a specific agent directly
     Bypasses GANESHA routing for targeted queries
     """
-    
+
     # Verify agent exists
     agent_config = get_agent_prompt(request.agent_id)
     if not agent_config:
@@ -181,13 +180,13 @@ async def query_agent_directly(
             status_code=404,
             detail=f"Agent {request.agent_id} not found"
         )
-    
+
     orchestrator = get_orchestrator_v2(
         anthropic_key=settings.anthropic_api_key,
         pinecone_key=settings.PINECONE_API_KEY,
         pinecone_index=settings.PINECONE_INDEX
     )
-    
+
     user_context = {
         'user_name': getattr(current_user, 'full_name', current_user.kailash_code),
         'kailash_code': current_user.kailash_code,
@@ -196,13 +195,13 @@ async def query_agent_directly(
         'product': agent_config.get('product', 'URGAA'),
         **request.context
     }
-    
+
     response = await orchestrator.query_specialist(
         agent_id=request.agent_id,
         query=request.query,
         user_context=user_context
     )
-    
+
     return {
         'agent_id': request.agent_id,
         'agent_name': agent_config.get('name'),
@@ -217,20 +216,20 @@ async def query_agent_directly(
 # =============================================================================
 @router.get("/ganesha/agents")
 async def list_available_agents(
-    product: Optional[str] = Query(None, description="Filter by product"),
+    product: str | None = Query(None, description="Filter by product"),
     current_user: User = Depends(get_current_active_user)
 ):
     """
     List all available AI agents
-    
+
     Products: URGAA, GSTSAAS, IGNITION, ARJUN
     """
-    
+
     agents = list_all_agents()
-    
+
     if product:
         agents = [a for a in agents if a.get('product') == product or a.get('product') == 'ALL']
-    
+
     # Group by product
     grouped = {}
     for agent in agents:
@@ -238,7 +237,7 @@ async def list_available_agents(
         if prod not in grouped:
             grouped[prod] = []
         grouped[prod].append(agent)
-    
+
     return {
         'total_agents': len(agents),
         'agents': agents,
@@ -252,15 +251,15 @@ async def get_agent_details(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get detailed information about a specific agent"""
-    
+
     agent_config = get_agent_prompt(agent_id)
-    
+
     if not agent_config:
         raise HTTPException(
             status_code=404,
             detail=f"Agent {agent_id} not found"
         )
-    
+
     return {
         'agent_id': agent_id,
         'name': agent_config.get('name'),
@@ -276,17 +275,17 @@ async def get_agent_details(
 @router.post("/ganesha/route/preview")
 async def preview_routing(
     query: str = Query(..., description="Query to route"),
-    product: Optional[str] = Query(None, description="Product context"),
+    product: str | None = Query(None, description="Product context"),
     current_user: User = Depends(get_current_active_user)
 ):
     """
     Preview which agent would handle a query
     Useful for debugging and understanding routing
     """
-    
+
     agent_id = route_to_agent(query, product)
     agent_config = get_agent_prompt(agent_id)
-    
+
     return {
         'query': query,
         'product_context': product,
@@ -307,15 +306,15 @@ async def get_rag_statistics(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get RAG knowledge base statistics"""
-    
+
     orchestrator = get_orchestrator_v2(
         anthropic_key=settings.anthropic_api_key,
         pinecone_key=settings.PINECONE_API_KEY,
         pinecone_index=settings.PINECONE_INDEX
     )
-    
+
     stats = orchestrator.get_rag_stats()
-    
+
     return {
         'index': settings.PINECONE_INDEX,
         'stats': stats,
@@ -331,15 +330,15 @@ async def get_model_statistics(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get C5 multi-model usage statistics"""
-    
+
     orchestrator = get_orchestrator_v2(
         anthropic_key=settings.anthropic_api_key,
         pinecone_key=settings.PINECONE_API_KEY,
         pinecone_index=settings.PINECONE_INDEX
     )
-    
+
     stats = orchestrator.get_model_usage_stats()
-    
+
     return {
         'session_usage': stats.get('session_usage', {}),
         'model_distribution': stats.get('model_distribution', {}),
@@ -354,9 +353,9 @@ async def get_model_configuration(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get C5 model configuration for all agents"""
-    
+
     from app.agents.c5_multimodel_strategy import AGENT_MODEL_MAP, MODELS
-    
+
     config = []
     for agent_id, model_key in AGENT_MODEL_MAP.items():
         model_config = MODELS.get(model_key, {})
@@ -367,7 +366,7 @@ async def get_model_configuration(
             'primary_model': model_config.primary if hasattr(model_config, 'primary') else model_key,
             'fallback': model_config.fallback if hasattr(model_config, 'fallback') else None
         })
-    
+
     return {
         'agent_count': len(config),
         'configuration': config
@@ -383,7 +382,7 @@ async def quick_action_v2(
     current_user: User = Depends(get_current_active_user)
 ):
     """Handle quick action buttons"""
-    
+
     action_messages = {
         'status': 'Show me the current system status and key metrics',
         'review': 'Review recent activities and highlight any issues',
@@ -393,12 +392,12 @@ async def quick_action_v2(
         'revenue': 'Give me a revenue summary for this month',
         'alerts': 'Show me active alerts that need attention'
     }
-    
+
     message = action_messages.get(request.action)
-    
+
     if not message:
         raise HTTPException(status_code=400, detail="Invalid action")
-    
+
     return {
         'action': request.action,
         'message': message,
@@ -412,30 +411,30 @@ async def quick_action_v2(
 @router.get("/ganesha/history")
 async def get_conversation_history_v2(
     limit: int = Query(20, le=100),
-    product: Optional[str] = None,
+    product: str | None = None,
     current_user: User = Depends(get_current_active_user)
 ):
     """Get user's conversation history with enhanced metadata"""
-    
+
     db = get_db()
-    
+
     query_filter = {'user_id': current_user.kailash_code}
     if product:
         query_filter['product_context'] = product
-    
+
     commands = await db.ganesha_commands.find(
         query_filter,
         sort=[('created_at', -1)],
         limit=limit
     ).to_list(limit)
-    
+
     for cmd in commands:
         cmd['_id'] = str(cmd['_id'])
-    
+
     # Calculate stats
     total = len(commands)
     rag_used_count = sum(1 for c in commands if c.get('rag_used'))
-    
+
     return {
         'commands': commands,
         'total': total,
@@ -451,24 +450,24 @@ async def get_orchestrator_stats_v2(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get comprehensive usage statistics"""
-    
+
     db = get_db()
-    
+
     # Basic counts
     total_commands = await db.ganesha_commands.count_documents({
         'user_id': current_user.kailash_code
     })
-    
+
     completed_commands = await db.ganesha_commands.count_documents({
         'user_id': current_user.kailash_code,
         'status': 'completed'
     })
-    
+
     rag_used = await db.ganesha_commands.count_documents({
         'user_id': current_user.kailash_code,
         'rag_used': True
     })
-    
+
     # Agent usage breakdown
     pipeline = [
         {'$match': {'user_id': current_user.kailash_code, 'agent_id': {'$exists': True}}},
@@ -476,9 +475,9 @@ async def get_orchestrator_stats_v2(
         {'$sort': {'count': -1}},
         {'$limit': 10}
     ]
-    
+
     agent_usage = await db.ganesha_commands.aggregate(pipeline).to_list(10)
-    
+
     return {
         'total_commands': total_commands,
         'completed_commands': completed_commands,

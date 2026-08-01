@@ -2,9 +2,9 @@
 Database Indexes Configuration
 Defines indexes for optimal query performance in production
 """
-from motor.motor_asyncio import AsyncIOMotorClient
-from .mongodb import MongoD
 import logging
+
+from .mongodb import MongoD
 
 logger = logging.getLogger("kailash")
 
@@ -12,7 +12,7 @@ async def create_indexes():
     """
     Create database indexes for optimal performance
     Called during application startup
-    
+
     Note: In production Atlas environments, index creation may be restricted.
     The application will continue to function without indexes, though with reduced performance.
     """
@@ -21,9 +21,9 @@ async def create_indexes():
         if MongoD.client is None:
             logger.warning("[WARN] MongoD not connected, skipping index creation")
             return
-        
+
         db = MongoD.get_database()
-        
+
         # Helper function to safely create index with permission error handling
         async def safe_create_index(collection, index_spec, **kwargs):
             try:
@@ -36,7 +36,7 @@ async def create_indexes():
                     return False
                 # Re-raise other errors
                 raise idx_error
-        
+
         # Tasks collection indexes
         success_count = 0
         if await safe_create_index(db.tasks, "status"):
@@ -49,7 +49,7 @@ async def create_indexes():
             success_count += 1
         if success_count > 0:
             logger.info(f"[OK] Created {success_count} indexes on tasks collection")
-        
+
         # GANESHA commands collection indexes
         success_count = 0
         if await safe_create_index(db.ganesha_commands, "user_id"):
@@ -60,7 +60,7 @@ async def create_indexes():
             success_count += 1
         if success_count > 0:
             logger.info(f"[OK] Created {success_count} indexes on ganesha_commands collection")
-        
+
         # Activities collection indexes
         success_count = 0
         if await safe_create_index(db.activities, "type"):
@@ -69,7 +69,7 @@ async def create_indexes():
             success_count += 1
         if success_count > 0:
             logger.info(f"[OK] Created {success_count} indexes on activities collection")
-        
+
         # Departments collection indexes
         success_count = 0
         if await safe_create_index(db.departments, "id", unique=True):
@@ -78,7 +78,7 @@ async def create_indexes():
             success_count += 1
         if success_count > 0:
             logger.info(f"[OK] Created {success_count} indexes on departments collection")
-        
+
         # Users collection indexes
         success_count = 0
         if await safe_create_index(db.users, "email", unique=True):
@@ -87,9 +87,9 @@ async def create_indexes():
             success_count += 1
         if success_count > 0:
             logger.info(f"[OK] Created {success_count} indexes on users collection")
-        
+
         logger.info("[OK] Database index creation completed (Atlas may manage indexes automatically)")
-        
+
     except Exception as e:
         # Don't crash the application if index creation fails
         # In managed Atlas environments, indexes may be pre-configured or restricted

@@ -1,10 +1,10 @@
+
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, Any
 
 from ..api.deps import get_current_active_user
-from ..models.user import User
-from ..guardians.shiv import shiv_guardian
 from ..guardians.parvati import parvati_guardian
+from ..guardians.shiv import shiv_guardian
+from ..models.user import User
 
 router = APIRouter(prefix="/guardians", tags=["Guardians"])
 
@@ -42,6 +42,6 @@ async def block_ip(ip: str, duration: int = 3, current_user: User = Depends(get_
     """Manually block an IP address"""
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
-    
+
     await shiv_guardian.intervene({"type": "brute_force", "ip": ip})
     return {"message": f"IP {ip} blocked for {duration} seconds"}

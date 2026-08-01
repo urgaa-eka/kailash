@@ -3,17 +3,17 @@ SHIV Auto-Rectification Engine
 Automatic charger issue resolution via OCPP commands
 """
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-from datetime import datetime, timezone, timedelta
 import asyncio
 import logging
+from datetime import UTC, datetime
 from uuid import uuid4
 
+from fastapi import APIRouter, BackgroundTasks, Depends
+from pydantic import BaseModel
+
 from ..api.deps import get_current_active_user
-from ..models.user import User
 from ..core.mongodb import get_db
+from ..models.user import User
 
 logger = logging.getLogger("kailash.shiv")
 
@@ -117,21 +117,21 @@ class ChargerHealth(BaseModel):
     charger_id: str
     status: str  # "Available", "Occupied", "Unavailable", "Faulted"
     last_heartbeat: datetime
-    error_codes: List[str] = []
-    temperature: Optional[float] = None
-    active_session_hours: Optional[float] = None
+    error_codes: list[str] = []
+    temperature: float | None = None
+    active_session_hours: float | None = None
     firmware_version: str = "1.0.0"
     connector_status: str = "Available"
-    location: Optional[str] = None
+    location: str | None = None
 
 class AutoRectifyResult(BaseModel):
     charger_id: str
     issue_type: str
     auto_fixed: bool
-    commands_sent: List[str]
+    commands_sent: list[str]
     attempts: int
     escalated: bool
-    resolution_time_seconds: Optional[float] = None
+    resolution_time_seconds: float | None = None
     message: str
 
 class AutoRectifyResponse(BaseModel):
@@ -141,7 +141,7 @@ class AutoRectifyResponse(BaseModel):
     auto_fixed: int
     escalated: int
     automation_success_rate: str
-    results: List[AutoRectifyResult]
+    results: list[AutoRectifyResult]
 
 # ============ CORE FUNCTIONS ============
 
@@ -150,69 +150,69 @@ async def send_ocpp_command(charger_id: str, command: str, params: dict = None) 
     # In production, this would call:
     # POST https://api.urgaa.in/ocpp/command
     # Body: { charger_id, command, params }
-    
+
     # Simulate network delay
     await asyncio.sleep(0.5)
-    
+
     # Simulate success rate based on command type
     import random
     success_rate = 0.85 if command in ["Reset", "TriggerMessage"] else 0.75
-    
+
     status = "Accepted" if random.random() < success_rate else "Rejected"
-    
+
     logger.info(f"OCPP Command: {command} -> {charger_id} = {status}")
-    
+
     return {
         "status": status,
         "command": command,
         "charger_id": charger_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "params": params or {}
     }
 
-async def detect_issues(charger: ChargerHealth) -> List[str]:
+async def detect_issues(charger: ChargerHealth) -> list[str]:
     """Detect issues based on charger health data"""
     issues = []
-    now = datetime.now(timezone.utc)
-    
+    now = datetime.now(UTC)
+
     # Make last_heartbeat timezone-aware if it isn't
     last_hb = charger.last_heartbeat
     if last_hb.tzinfo is None:
-        last_hb = last_hb.replace(tzinfo=timezone.utc)
-    
+        last_hb = last_hb.replace(tzinfo=UTC)
+
     # Check for no heartbeat (> 5 minutes)
     time_since_heartbeat = (now - last_hb).total_seconds()
     if time_since_heartbeat > 300:  # 5 minutes
         issues.append("no_heartbeat")
-    
+
     # Check for stuck session (> 6 hours)
     if charger.active_session_hours and charger.active_session_hours > 6:
         issues.append("stuck_session")
-    
+
     # Check for unavailable without error
     if charger.status == "Unavailable" and not charger.error_codes:
         issues.append("connector_unavailable")
-    
+
     # Check for faulted status
     if charger.status == "Faulted":
         issues.append("communication_error")
-    
+
     # Check for physical intervention needed
     for error in charger.error_codes:
         if error in REQUIRES_PHYSICAL:
             issues.append(f"physical_required:{error}")
-    
+
     return issues
 
 async def auto_rectify(charger_id: str, issue_type: str) -> AutoRectifyResult:
     """Attempt to auto-rectify an issue"""
-    
-    start_time = datetime.now(timezone.utc)
-    
+
+    start_time = datetime.now(UTC)
+
     # Check if this requires physical intervention
     if issue_type.startswith("physical_required:"):
         error_code = issue_type.split(":")[1]
-        
+
         # Log the escalation
         await log_auto_rectification(
             charger_id=charger_id,
@@ -223,7 +223,7 @@ async def auto_rectify(charger_id: str, issue_type: str) -> AutoRectifyResult:
             escalated=True,
             resolution_time=None
         )
-        
+
         return AutoRectifyResult(
             charger_id=charger_id,
             issue_type=issue_type,
@@ -234,7 +234,7 @@ async def auto_rectify(charger_id: str, issue_type: str) -> AutoRectifyResult:
             resolution_time_seconds=None,
             message=f"Issue '{error_code}' requires physical intervention. Technician dispatch initiated via GSTSAAS."
         )
-    
+
     # Get rectification rules
     rule = AUTO_RECTIFY_RULES.get(issue_type)
     if not rule:
@@ -248,20 +248,20 @@ async def auto_rectify(charger_id: str, issue_type: str) -> AutoRectifyResult:
             resolution_time_seconds=None,
             message=f"Unknown issue type: {issue_type}. Escalating to support team."
         )
-    
+
     # Try commands in sequence
     commands_sent = []
     for attempt in range(rule["max_attempts"]):
         for command in rule["commands"]:
             result = await send_ocpp_command(charger_id, command, OCPP_COMMANDS.get(command, {}))
             commands_sent.append(command)
-            
+
             if result["status"] == "Accepted":
                 # Wait and verify fix
                 await asyncio.sleep(2)
-                
-                resolution_time = (datetime.now(timezone.utc) - start_time).total_seconds()
-                
+
+                resolution_time = (datetime.now(UTC) - start_time).total_seconds()
+
                 # Log to database
                 await log_auto_rectification(
                     charger_id=charger_id,
@@ -271,7 +271,7 @@ async def auto_rectify(charger_id: str, issue_type: str) -> AutoRectifyResult:
                     attempts=attempt + 1,
                     resolution_time=resolution_time
                 )
-                
+
                 return AutoRectifyResult(
                     charger_id=charger_id,
                     issue_type=issue_type,
@@ -282,11 +282,11 @@ async def auto_rectify(charger_id: str, issue_type: str) -> AutoRectifyResult:
                     resolution_time_seconds=resolution_time,
                     message=f"✅ Issue auto-resolved using {command}. No human intervention needed."
                 )
-    
+
     # All attempts failed, escalate
     if rule["escalate_after"]:
         await create_maintenance_ticket(charger_id, issue_type, commands_sent)
-    
+
     await log_auto_rectification(
         charger_id=charger_id,
         issue_type=issue_type,
@@ -296,7 +296,7 @@ async def auto_rectify(charger_id: str, issue_type: str) -> AutoRectifyResult:
         escalated=rule["escalate_after"],
         resolution_time=None
     )
-    
+
     return AutoRectifyResult(
         charger_id=charger_id,
         issue_type=issue_type,
@@ -321,13 +321,13 @@ async def log_auto_rectification(**kwargs):
             "attempts": kwargs.get("attempts", 0),
             "escalated_to_physical": kwargs.get("escalated", False),
             "resolution_time_seconds": kwargs.get("resolution_time"),
-            "created_at": datetime.now(timezone.utc)
+            "created_at": datetime.now(UTC)
         }
         await db.auto_rectification_logs.insert_one(log_entry)
     except Exception as e:
         logger.error(f"Failed to log auto-rectification: {e}")
 
-async def create_maintenance_ticket(charger_id: str, issue_type: str, attempted_commands: List[str]):
+async def create_maintenance_ticket(charger_id: str, issue_type: str, attempted_commands: list[str]):
     """Create ticket in GSTSAAS for physical intervention (MOCKED)"""
     try:
         db = get_db()
@@ -339,7 +339,7 @@ async def create_maintenance_ticket(charger_id: str, issue_type: str, attempted_
             "status": "pending",
             "priority": "high",
             "source": "SHIV_AUTO_RECTIFICATION",
-            "created_at": datetime.now(timezone.utc)
+            "created_at": datetime.now(UTC)
         }
         await db.maintenance_tickets.insert_one(ticket)
         logger.info(f"Maintenance ticket created for {charger_id}: {issue_type}")
@@ -355,10 +355,10 @@ async def analyze_charger_health(
     current_user: User = Depends(get_current_active_user)
 ):
     """Analyze charger health and trigger auto-rectification if needed"""
-    
+
     # Detect issues
     issues = await detect_issues(charger)
-    
+
     if not issues:
         return AutoRectifyResponse(
             charger_id=charger.charger_id,
@@ -369,17 +369,17 @@ async def analyze_charger_health(
             automation_success_rate="N/A",
             results=[]
         )
-    
+
     # Process each issue
     results = []
     for issue in issues:
         result = await auto_rectify(charger.charger_id, issue)
         results.append(result)
-    
+
     # Calculate summary
     auto_fixed = sum(1 for r in results if r.auto_fixed)
     escalated = sum(1 for r in results if r.escalated)
-    
+
     return AutoRectifyResponse(
         charger_id=charger.charger_id,
         status="processed",
@@ -395,12 +395,12 @@ async def get_automation_stats(current_user: User = Depends(get_current_active_u
     """Get overall auto-rectification statistics"""
     try:
         db = get_db()
-        
+
         # Get counts from database
         total = await db.auto_rectification_logs.count_documents({})
         auto_fixed = await db.auto_rectification_logs.count_documents({"auto_fixed": True})
         escalated = await db.auto_rectification_logs.count_documents({"escalated_to_physical": True})
-        
+
         # Calculate averages
         pipeline = [
             {"$match": {"resolution_time_seconds": {"$ne": None}}},
@@ -408,7 +408,7 @@ async def get_automation_stats(current_user: User = Depends(get_current_active_u
         ]
         avg_result = await db.auto_rectification_logs.aggregate(pipeline).to_list(1)
         avg_time = avg_result[0]["avg_time"] if avg_result else 45
-        
+
     except Exception as e:
         logger.warning(f"Could not fetch stats from DB: {e}")
         # Return demo data if DB not available
@@ -416,7 +416,7 @@ async def get_automation_stats(current_user: User = Depends(get_current_active_u
         auto_fixed = 935
         escalated = 312
         avg_time = 45
-    
+
     return {
         "total_issues_detected": max(total, 1247),
         "auto_resolved": max(auto_fixed, 935),

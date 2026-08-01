@@ -1,13 +1,13 @@
 """Daily learning pipeline for gathering and processing intelligence."""
-import os
-import httpx
 import asyncio
-from datetime import datetime, timezone
 import json
-from typing import Dict, List
-from pathlib import Path
-from celery import shared_task
 import logging
+import os
+from datetime import UTC, datetime
+from pathlib import Path
+
+import httpx
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ DEPARTMENTS = {
 KNOWLEDGE_BASE_PATH = Path("/app/backend/knowledge")
 
 
-async def query_perplexity(query: str, api_key: str) -> Dict:
+async def query_perplexity(query: str, api_key: str) -> dict:
     """Query Perplexity API for real-time intelligence."""
     url = "https://api.perplexity.ai/chat/completions"
     headers = {
@@ -48,7 +48,7 @@ async def query_perplexity(query: str, api_key: str) -> Dict:
         "search_recency_filter": "day",
         "stream": False
     }
-    
+
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(url, headers=headers, json=payload)
@@ -69,21 +69,21 @@ async def process_with_llm(intelligence: str, department: str) -> str:
     # Using emergentintegrations for LLM processing
     try:
         from emergentintegrations.claude import ClaudeClient
-        
+
         emergent_key = os.getenv("EMERGENT_LLM_KEY")
         if not emergent_key:
             return intelligence  # Return raw if no key available
-        
+
         client = ClaudeClient(api_key=emergent_key)
-        
-        prompt = f"""Given the following market intelligence, extract and summarize only the insights 
+
+        prompt = f"""Given the following market intelligence, extract and summarize only the insights
 relevant to the {department.upper()} department. Be concise and focus on actionable insights.
 
 Intelligence:
 {intelligence}
 
 Provide a concise summary (max 300 words) of insights relevant to {department.upper()}."""
-        
+
         response = await client.generate_async(messages=[{"role": "user", "content": prompt}], max_tokens=500)
         return response.get("content", intelligence)
     except Exception as e:
@@ -91,7 +91,7 @@ Provide a concise summary (max 300 words) of insights relevant to {department.up
         return intelligence  # Fallback to raw intelligence
 
 
-async def gather_department_intelligence(department: str, scope: str, api_key: str) -> Dict:
+async def gather_department_intelligence(department: str, scope: str, api_key: str) -> dict:
     """Gather intelligence for a specific department."""
     # Define queries based on department
     queries = {
@@ -108,19 +108,19 @@ async def gather_department_intelligence(department: str, scope: str, api_key: s
         "varuna": "Latest in customer service, communication trends, and CRM technologies",
         "pragya": "Latest market research tools, competitive intelligence, and analytics trends"
     }
-    
+
     query = queries.get(department, f"Latest developments relevant to {department} operations")
-    
+
     logger.info(f"Gathering intelligence for {department}: {query}")
     raw_intelligence = await query_perplexity(query, api_key)
-    
+
     # Process with LLM to extract relevant insights
     processed_intelligence = await process_with_llm(raw_intelligence["content"], department)
-    
+
     return {
         "department": department,
         "scope": scope,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "query": query,
         "raw_intelligence": raw_intelligence["content"],
         "processed_intelligence": processed_intelligence,
@@ -129,26 +129,26 @@ async def gather_department_intelligence(department: str, scope: str, api_key: s
     }
 
 
-async def save_intelligence(intelligence: Dict, department: str, scope: str):
+async def save_intelligence(intelligence: dict, department: str, scope: str):
     """Save intelligence to post-data directory."""
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+
     # Create department-specific directory
     dept_dir = KNOWLEDGE_BASE_PATH / "post-data" / "department-specific" / scope / department
     dept_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Save to dated file
     file_path = dept_dir / f"{today}.json"
-    
+
     with open(file_path, "w") as f:
         json.dump(intelligence, f, indent=2)
-    
+
     logger.info(f"Saved intelligence for {department} to {file_path}")
-    
+
     # Also save to daily digest
     digest_dir = KNOWLEDGE_BASE_PATH / "post-data" / "daily-digest" / today
     digest_dir.mkdir(parents=True, exist_ok=True)
-    
+
     digest_file = digest_dir / f"{department}.json"
     with open(digest_file, "w") as f:
         json.dump(intelligence, f, indent=2)
@@ -157,14 +157,14 @@ async def save_intelligence(intelligence: Dict, department: str, scope: str):
 async def async_daily_learning_pipeline():
     """Async implementation of daily learning pipeline."""
     logger.info("Starting daily learning pipeline...")
-    
+
     api_key = os.getenv("PERPLEXITY_API_KEY")
     if not api_key:
         logger.error("PERPLEXITY_API_KEY not found in environment")
         return {"status": "error", "message": "Missing Perplexity API key"}
-    
+
     results = []
-    
+
     # Process internal departments
     for department in DEPARTMENTS["internal"]:
         try:
@@ -177,7 +177,7 @@ async def async_daily_learning_pipeline():
         except Exception as e:
             logger.error(f"Error processing {department}: {str(e)}")
             results.append({"department": department, "status": "error", "error": str(e)})
-    
+
     # Process external departments
     for department in DEPARTMENTS["external"]:
         try:
@@ -189,24 +189,24 @@ async def async_daily_learning_pipeline():
         except Exception as e:
             logger.error(f"Error processing {department}: {str(e)}")
             results.append({"department": department, "status": "error", "error": str(e)})
-    
+
     # Generate summary
     summary = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "total_departments": len(results),
         "successful": len([r for r in results if r["status"] == "success"]),
         "failed": len([r for r in results if r["status"] == "error"]),
         "results": results
     }
-    
+
     # Save summary
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
     summary_dir = KNOWLEDGE_BASE_PATH / "post-data" / "daily-digest" / today
     summary_dir.mkdir(parents=True, exist_ok=True)
-    
+
     with open(summary_dir / "summary.json", "w") as f:
         json.dump(summary, f, indent=2)
-    
+
     logger.info(f"Daily learning pipeline completed. Success: {summary['successful']}/{summary['total_departments']}")
     return summary
 
@@ -215,11 +215,11 @@ async def async_daily_learning_pipeline():
 def daily_learning_pipeline(self):
     """Celery task wrapper for daily learning pipeline."""
     logger.info("Daily learning pipeline task started")
-    
+
     # Run async function in sync context
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
+
     try:
         result = loop.run_until_complete(async_daily_learning_pipeline())
         return result

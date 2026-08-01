@@ -1,14 +1,16 @@
 """API endpoints for scheduler management and manual task triggers."""
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from typing import Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, BackgroundTasks, Depends
 
 from ..api.deps import get_current_user
-from ..services.scheduler import (
-    get_scheduler, get_scheduled_jobs, 
-    run_daily_learning, run_live_data_refresh
-)
 from ..core.mongodb import MongoD
+from ..services.scheduler import (
+    get_scheduled_jobs,
+    get_scheduler,
+    run_daily_learning,
+    run_live_data_refresh,
+)
 
 router = APIRouter(prefix="/api/scheduler", tags=["Scheduler & Automation"])
 
@@ -17,11 +19,11 @@ router = APIRouter(prefix="/api/scheduler", tags=["Scheduler & Automation"])
 async def get_scheduler_status(current_user: dict = Depends(get_current_user)):
     """Get scheduler status and scheduled jobs."""
     scheduler = get_scheduler()
-    
+
     return {
         "running": scheduler.running if scheduler else False,
         "jobs": get_scheduled_jobs(),
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(UTC).isoformat()
     }
 
 
@@ -31,7 +33,7 @@ async def trigger_daily_learning(
     current_user: dict = Depends(get_current_user)
 ):
     """Manually trigger the daily learning pipeline."""
-    
+
     async def run_task():
         result = await run_daily_learning()
         # Store result in database
@@ -39,16 +41,16 @@ async def trigger_daily_learning(
         await db.scheduler_runs.insert_one({
             "task": "daily_learning",
             "triggered_by": current_user.get("email", "manual"),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "result": result
         })
-    
+
     background_tasks.add_task(run_task)
-    
+
     return {
         "status": "started",
         "message": "Daily learning pipeline started in background",
-        "triggered_at": datetime.now(timezone.utc).isoformat()
+        "triggered_at": datetime.now(UTC).isoformat()
     }
 
 
@@ -58,7 +60,7 @@ async def trigger_live_data_refresh(
     current_user: dict = Depends(get_current_user)
 ):
     """Manually trigger live data refresh for all departments."""
-    
+
     async def run_task():
         result = await run_live_data_refresh()
         # Store result in database
@@ -66,16 +68,16 @@ async def trigger_live_data_refresh(
         await db.scheduler_runs.insert_one({
             "task": "live_data_refresh",
             "triggered_by": current_user.get("email", "manual"),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "result": result
         })
-    
+
     background_tasks.add_task(run_task)
-    
+
     return {
         "status": "started",
         "message": "Live data refresh started in background",
-        "triggered_at": datetime.now(timezone.utc).isoformat()
+        "triggered_at": datetime.now(UTC).isoformat()
     }
 
 
@@ -86,12 +88,12 @@ async def get_scheduler_history(
 ):
     """Get history of scheduler task runs."""
     db = MongoD.get_database()
-    
+
     runs = await db.scheduler_runs.find(
         {},
         {"_id": 0}
     ).sort("timestamp", -1).limit(limit).to_list(limit)
-    
+
     return {"runs": runs, "count": len(runs)}
 
 
@@ -99,8 +101,8 @@ async def get_scheduler_history(
 async def get_next_scheduled_runs(current_user: dict = Depends(get_current_user)):
     """Get next scheduled run times for all jobs."""
     jobs = get_scheduled_jobs()
-    
+
     return {
         "jobs": jobs,
-        "server_time": datetime.now(timezone.utc).isoformat()
+        "server_time": datetime.now(UTC).isoformat()
     }

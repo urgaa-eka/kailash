@@ -137,13 +137,16 @@ jobs:
           pip install -r /tmp/requirements.txt
           pip install emergentintegrations==0.1.0 \
             --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ || true
-      # No `|| true`: this step is allowed to fail the job.
-      - name: Backend smoke tests
+      # Runs backend/tests, not ../tests/backend. The latter is three probe
+      # scripts pointed at a decommissioned Emergent preview host; pytest
+      # collects exactly one of them and it passes without asserting anything.
+      # No `|| true`: both steps are allowed to fail the job.
+      - name: Import the app
+        run: python -c "import app.main"
+      - name: Backend tests
         run: |
-          if [ -d ../tests/backend ]; then
-            pip install pytest
-            PYTHONPATH=.. pytest ../tests/backend -q
-          fi
+          pip install pytest pytest-asyncio
+          pytest tests -q
 
   frontend:
     name: Kailash frontend

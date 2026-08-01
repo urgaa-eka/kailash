@@ -2,8 +2,9 @@
 Simple Health Check Endpoint
 Database-independent health check for Kubernetes liveness probes
 """
-from fastapi import APIRouter
 from datetime import datetime
+
+from fastapi import APIRouter
 
 router = APIRouter()
 

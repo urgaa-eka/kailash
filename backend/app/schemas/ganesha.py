@@ -1,12 +1,13 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+
+from pydantic import BaseModel
+
 
 class GaneshaCommandRequest(BaseModel):
     command: str
     priority: str = "medium"
-    deadline: Optional[datetime] = None
-    
+    deadline: datetime | None = None
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -21,10 +22,10 @@ class GaneshaCommandResponse(BaseModel):
     command: str
     priority: str
     processing_status: str
-    assigned_department: Optional[str]
-    ai_response: Optional[str]
+    assigned_department: str | None
+    ai_response: str | None
     task_ids: list = []
     created_at: datetime
-    
+
     class Config:
         from_attributes = True

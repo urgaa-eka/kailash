@@ -1,12 +1,13 @@
+
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+
 
 class UserRegister(BaseModel):
     email: EmailStr
     kailash_code: str
     full_name: str
     password: str
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -19,8 +20,8 @@ class UserRegister(BaseModel):
 
 class UserLogin(BaseModel):
     login_id: str
-    password: Optional[str] = None
-    
+    password: str | None = None
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -35,5 +36,5 @@ class Token(BaseModel):
     user: dict
 
 class TokenData(BaseModel):
-    user_id: Optional[str] = None
-    kailash_code: Optional[str] = None
+    user_id: str | None = None
+    kailash_code: str | None = None

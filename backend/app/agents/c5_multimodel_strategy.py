@@ -11,9 +11,9 @@ Strategy Tiers:
 Cost Optimization Target: 40% reduction while maintaining quality
 """
 
-from typing import Dict, Optional, Literal
 from dataclasses import dataclass
 from enum import Enum
+from typing import Literal
 
 
 class ModelTier(Enum):
@@ -51,7 +51,7 @@ class ModelConfig:
 # MODEL DEFINITIONS
 # =============================================================================
 
-MODELS: Dict[str, ModelConfig] = {
+MODELS: dict[str, ModelConfig] = {
     # Tier 1 - High Capability
     "claude-sonnet": ModelConfig(
         primary=LLMProvider.CLAUDE_SONNET.value,
@@ -73,7 +73,7 @@ MODELS: Dict[str, ModelConfig] = {
         cost_per_1k_output=0.015,
         capabilities=["complex_reasoning", "multimodal", "structured_output"]
     ),
-    
+
     # Tier 2 - Balanced
     "claude-haiku": ModelConfig(
         primary=LLMProvider.CLAUDE_HAIKU.value,
@@ -95,7 +95,7 @@ MODELS: Dict[str, ModelConfig] = {
         cost_per_1k_output=0.0006,
         capabilities=["fast_response", "cost_effective", "basic_reasoning"]
     ),
-    
+
     # Tier 3 - High Volume
     "gemini-flash": ModelConfig(
         primary=LLMProvider.GEMINI_FLASH.value,
@@ -114,12 +114,12 @@ MODELS: Dict[str, ModelConfig] = {
 # AGENT-TO-MODEL MAPPING
 # =============================================================================
 
-AGENT_MODEL_MAP: Dict[str, str] = {
+AGENT_MODEL_MAP: dict[str, str] = {
     # =========================================================================
     # GANESHA - Master Orchestrator
     # =========================================================================
     "GANESHA": "claude-sonnet",  # Needs complex routing logic
-    
+
     # =========================================================================
     # URGAA - EV Infrastructure (8 Agents)
     # =========================================================================
@@ -131,7 +131,7 @@ AGENT_MODEL_MAP: Dict[str, str] = {
     "U-AI-06": "claude-haiku",    # AGNI - Health Monitor (structured diagnostics)
     "U-AI-07": "claude-sonnet",   # SHIV - Auto-Rectify (complex decision-making)
     "U-AI-08": "claude-haiku",    # VISHWAKARMA - Troubleshoot (structured debugging)
-    
+
     # =========================================================================
     # GSTSAAS - Workshop Management (10 Agents)
     # =========================================================================
@@ -145,7 +145,7 @@ AGENT_MODEL_MAP: Dict[str, str] = {
     "G-AI-08": "claude-haiku",    # VAISRAVANA - Vendor Compare (structured comparison)
     "G-AI-09": "claude-haiku",    # ASHWINI - Repair Guide (technical, structured)
     "G-AI-10": "claude-haiku",    # GURU - Skill Gap (assessment, structured)
-    
+
     # =========================================================================
     # IGNITION - Consumer App (9 Agents)
     # =========================================================================
@@ -158,7 +158,7 @@ AGENT_MODEL_MAP: Dict[str, str] = {
     "I-AI-07": "claude-haiku",    # INDRA - Fleet Reporting (structured reports)
     "I-AI-08": "claude-haiku",    # YAMA - Fleet Health (diagnostics)
     "I-AI-09": "gpt-4o-mini",     # DHANA - Fleet Cost (financial calculations)
-    
+
     # =========================================================================
     # ARJUN - Training Platform (8 Agents)
     # =========================================================================
@@ -179,7 +179,7 @@ AGENT_MODEL_MAP: Dict[str, str] = {
 
 COMPLEXITY_KEYWORDS = {
     "high": [
-        "analyze", "strategy", "optimize", "predict", "recommend", 
+        "analyze", "strategy", "optimize", "predict", "recommend",
         "compare", "evaluate", "why", "how should", "what if",
         "forecast", "projection", "diagnosis", "root cause"
     ],
@@ -197,19 +197,19 @@ COMPLEXITY_KEYWORDS = {
 def classify_query_complexity(query: str) -> Literal["high", "medium", "low"]:
     """Classify query complexity based on keywords"""
     query_lower = query.lower()
-    
+
     for keyword in COMPLEXITY_KEYWORDS["high"]:
         if keyword in query_lower:
             return "high"
-    
+
     for keyword in COMPLEXITY_KEYWORDS["medium"]:
         if keyword in query_lower:
             return "medium"
-    
+
     return "low"
 
 
-def get_model_override(agent_id: str, query: str) -> Optional[str]:
+def get_model_override(agent_id: str, query: str) -> str | None:
     """
     Override model selection based on query complexity.
     High complexity queries get upgraded to Tier 1 regardless of default.
@@ -217,18 +217,18 @@ def get_model_override(agent_id: str, query: str) -> Optional[str]:
     complexity = classify_query_complexity(query)
     default_model = AGENT_MODEL_MAP.get(agent_id, "claude-haiku")
     default_config = MODELS.get(default_model)
-    
+
     if not default_config:
         return None
-    
+
     # Upgrade low-tier agents for complex queries
     if complexity == "high" and default_config.tier in [ModelTier.TIER_2, ModelTier.TIER_3]:
         return "claude-sonnet"
-    
+
     # Downgrade for simple queries on expensive models (cost optimization)
     if complexity == "low" and default_config.tier == ModelTier.TIER_1:
         return "claude-haiku"
-    
+
     return None
 
 
@@ -238,10 +238,10 @@ def get_model_override(agent_id: str, query: str) -> Optional[str]:
 
 def get_model_for_agent(agent_id: str, query: str = "") -> ModelConfig:
     """Get the appropriate model configuration for an agent"""
-    
+
     # Check for complexity-based override
     override = get_model_override(agent_id, query) if query else None
-    
+
     model_key = override or AGENT_MODEL_MAP.get(agent_id, "claude-haiku")
     return MODELS.get(model_key, MODELS["claude-haiku"])
 
@@ -270,36 +270,36 @@ def estimate_cost(agent_id: str, input_tokens: int, output_tokens: int) -> float
 # STATISTICS & REPORTING
 # =============================================================================
 
-def get_model_distribution() -> Dict[str, int]:
+def get_model_distribution() -> dict[str, int]:
     """Get count of agents per model"""
     distribution = {}
-    for agent_id, model_key in AGENT_MODEL_MAP.items():
+    for _agent_id, model_key in AGENT_MODEL_MAP.items():
         if model_key not in distribution:
             distribution[model_key] = 0
         distribution[model_key] += 1
     return distribution
 
 
-def get_tier_distribution() -> Dict[str, int]:
+def get_tier_distribution() -> dict[str, int]:
     """Get count of agents per tier"""
     distribution = {"tier_1": 0, "tier_2": 0, "tier_3": 0}
-    for agent_id, model_key in AGENT_MODEL_MAP.items():
+    for _agent_id, model_key in AGENT_MODEL_MAP.items():
         config = MODELS.get(model_key)
         if config:
             distribution[config.tier.value] += 1
     return distribution
 
 
-def estimate_monthly_cost(queries_per_agent: int = 1000, avg_input_tokens: int = 500, avg_output_tokens: int = 1000) -> Dict:
+def estimate_monthly_cost(queries_per_agent: int = 1000, avg_input_tokens: int = 500, avg_output_tokens: int = 1000) -> dict:
     """Estimate monthly cost across all agents"""
     total_cost = 0
     agent_costs = {}
-    
-    for agent_id in AGENT_MODEL_MAP.keys():
+
+    for agent_id in AGENT_MODEL_MAP:
         cost = estimate_cost(agent_id, avg_input_tokens * queries_per_agent, avg_output_tokens * queries_per_agent)
         agent_costs[agent_id] = cost
         total_cost += cost
-    
+
     return {
         "total_monthly_cost_usd": round(total_cost, 2),
         "per_agent_costs": agent_costs,

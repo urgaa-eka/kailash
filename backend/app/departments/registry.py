@@ -1,25 +1,25 @@
-from typing import Dict
-from .base_department import BaseDepartment
-from .vishwakarma import VishwakarmaDepartment
-from .lakshmi import LakshmiDepartment
-from .surya import SuryaDepartment
-from .saraswati import SaraswatiDepartment
-from .vayu import VayuDepartment
-from .kubera import KuberaDepartment
-from .indra import IndraDepartment
-from .yama import YamaDepartment
-from .varuna import VarunaDepartment
+
 from .agni import AgniDepartment
-from .chandra import ChandraDepartment
-from .brihaspati import BrihaspatiDepartment
-from .vishnu import VishnuDepartment
+from .ashwini import AshwiniDepartment
+from .base_department import BaseDepartment
 from .brahma import BrahmaDepartment
-from .kartikeya import KartikeyaDepartment
+from .brihaspati import BrihaspatiDepartment
+from .chandra import ChandraDepartment
+from .dharma import DharmaDepartment
 from .durga import DurgaDepartment
 from .hanuman import HanumanDepartment
+from .indra import IndraDepartment
+from .kartikeya import KartikeyaDepartment
+from .kubera import KuberaDepartment
+from .lakshmi import LakshmiDepartment
 from .narada import NaradaDepartment
-from .ashwini import AshwiniDepartment
-from .dharma import DharmaDepartment
+from .saraswati import SaraswatiDepartment
+from .surya import SuryaDepartment
+from .varuna import VarunaDepartment
+from .vayu import VayuDepartment
+from .vishnu import VishnuDepartment
+from .vishwakarma import VishwakarmaDepartment
+from .yama import YamaDepartment
 
 DEPARTMENT_CLASSES = {
     "VISHWAKARMA": VishwakarmaDepartment,
@@ -44,7 +44,7 @@ DEPARTMENT_CLASSES = {
     "DHARMA": DharmaDepartment,
 }
 
-DEPARTMENT_REGISTRY: Dict[str, BaseDepartment] = {}
+DEPARTMENT_REGISTRY: dict[str, BaseDepartment] = {}
 
 def initialize_departments():
     """Initialize all department instances"""
@@ -56,7 +56,7 @@ def get_department(name: str) -> BaseDepartment:
     """Get department by name"""
     return DEPARTMENT_REGISTRY.get(name.upper())
 
-def list_departments() -> Dict[str, Dict]:
+def list_departments() -> dict[str, dict]:
     """List all departments"""
     return {name: dept.get_status() for name, dept in DEPARTMENT_REGISTRY.items()}
 

@@ -1,7 +1,8 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
-from datetime import datetime
 import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, EmailStr, Field
+
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -12,15 +13,15 @@ class User(BaseModel):
     is_active: bool = True
     is_admin: bool = False
     role: str = "viewer"  # Role for RAC
-    
+
     # 2FA Fields
-    totp_secret: Optional[str] = None
+    totp_secret: str | None = None
     is_2fa_enabled: bool = False
-    backup_codes: List[str] = Field(default_factory=list)
-    
+    backup_codes: list[str] = Field(default_factory=list)
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     class Config:
         json_schema_extra = {
             "example": {

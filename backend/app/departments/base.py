@@ -1,34 +1,35 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List
 from datetime import datetime
+from typing import Any
+
 
 class BaseDepartment(ABC):
     """
     Abstract base class for all deity departments.
     All 20 departments must inherit from this class.
     """
-    
+
     def __init__(self, name: str, domain: str, description: str):
         self.name = name
         self.domain = domain
         self.description = description
-        self.sub_agents: List[str] = []
+        self.sub_agents: list[str] = []
         self.system_prompt: str = ""
         self.status: str = "active"
         self.created_at = datetime.utcnow()
 
     @abstractmethod
-    async def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_task(self, task: dict[str, Any]) -> dict[str, Any]:
         """
         Process an incoming task. Must be implemented by all departments.
-        
+
         Args:
             task: Dictionary containing:
                 - message: User's request
                 - user_id: ID of requesting user
                 - conversation_id: Current conversation
                 - sub_task: Specific sub-task if identified
-        
+
         Returns:
             Dictionary with:
                 - content: Response text
@@ -37,16 +38,19 @@ class BaseDepartment(ABC):
         """
         pass
 
-    async def invoke_llm(self, prompt: str, task_type: str = "general") -> Dict[str, Any]:
-        """Invoke LLM with department-specific context"""
-        full_prompt = f"{self.system_prompt}\n\nTask: {prompt}"
+    async def invoke_llm(self, prompt: str, task_type: str = "general") -> dict[str, Any]:
+        """Invoke LLM with department-specific context.
+
+        Stub: returns a canned response without calling a model. Departments
+        that need a real completion use invoke_ai() instead.
+        """
         return {"content": f"Response from {self.name}"}
 
-    async def log_activity(self, action: str, details: Dict[str, Any]):
+    async def log_activity(self, action: str, details: dict[str, Any]):
         """Log department activity to MongoDB"""
         from app.core.mongodb import MongoD
         db = MongoD.get_database()
-        
+
         await db.department_logs.insert_one({
             "department": self.name,
             "action": action,
@@ -54,7 +58,7 @@ class BaseDepartment(ABC):
             "timestamp": datetime.utcnow()
         })
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get department status"""
         return {
             "name": self.name,

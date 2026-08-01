@@ -1,9 +1,9 @@
 """CRUD API for Gaps and Tasks Management."""
-from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from ..api.deps import get_current_user
 from ..core.mongodb import MongoD
@@ -21,11 +21,11 @@ class GapCreate(BaseModel):
 
 
 class GapUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    severity: Optional[str] = None
-    category: Optional[str] = None
-    resolved: Optional[bool] = None
+    title: str | None = None
+    description: str | None = None
+    severity: str | None = None
+    category: str | None = None
+    resolved: bool | None = None
 
 
 class GapResponse(BaseModel):
@@ -48,16 +48,16 @@ class TaskCreate(BaseModel):
     description: str
     assigned_to: str
     priority: str = Field(..., pattern="^(high|medium|low)$")
-    due_date: Optional[str] = None
+    due_date: str | None = None
 
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    assigned_to: Optional[str] = None
-    status: Optional[str] = None
-    priority: Optional[str] = None
-    due_date: Optional[str] = None
+    title: str | None = None
+    description: str | None = None
+    assigned_to: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    due_date: str | None = None
 
 
 class TaskResponse(BaseModel):
@@ -69,20 +69,20 @@ class TaskResponse(BaseModel):
     status: str
     priority: str
     created_at: str
-    due_date: Optional[str] = None
+    due_date: str | None = None
 
 
 # ============= GAP ENDPOINTS =============
-@router.get("/gaps", response_model=List[GapResponse])
+@router.get("/gaps", response_model=list[GapResponse])
 async def list_gaps(
-    department: Optional[str] = Query(None),
-    severity: Optional[str] = Query(None),
-    resolved: Optional[bool] = Query(None),
+    department: str | None = Query(None),
+    severity: str | None = Query(None),
+    resolved: bool | None = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
     """List all gaps with optional filters."""
     db = MongoD.get_database()
-    
+
     query = {}
     if department:
         query["department"] = department.lower()
@@ -90,7 +90,7 @@ async def list_gaps(
         query["severity"] = severity
     if resolved is not None:
         query["resolved"] = resolved
-    
+
     gaps = await db.department_gaps.find(query, {"_id": 0}).sort("detected_at", -1).to_list(100)
     return gaps
 
@@ -102,7 +102,7 @@ async def create_gap(
 ):
     """Create a new gap."""
     db = MongoD.get_database()
-    
+
     gap_doc = {
         "gap_id": f"gap_{uuid4().hex[:8]}",
         "department": gap.department.lower(),
@@ -110,14 +110,14 @@ async def create_gap(
         "description": gap.description,
         "severity": gap.severity,
         "category": gap.category,
-        "detected_at": datetime.now(timezone.utc).isoformat(),
+        "detected_at": datetime.now(UTC).isoformat(),
         "resolved": False,
         "alerted_to_ganesha": False,
         "alerted_to_parvati": False
     }
-    
+
     await db.department_gaps.insert_one(gap_doc)
-    
+
     # Auto-alert GANESHA for high/critical gaps
     if gap.severity in ["critical", "high"]:
         await db.department_gaps.update_one(
@@ -125,7 +125,7 @@ async def create_gap(
             {"$set": {"alerted_to_ganesha": True}}
         )
         gap_doc["alerted_to_ganesha"] = True
-        
+
         # Escalate critical to PARVATI
         if gap.severity == "critical":
             await db.department_gaps.update_one(
@@ -133,7 +133,7 @@ async def create_gap(
                 {"$set": {"alerted_to_parvati": True}}
             )
             gap_doc["alerted_to_parvati"] = True
-    
+
     return gap_doc
 
 
@@ -145,10 +145,10 @@ async def get_gap(
     """Get a specific gap by ID."""
     db = MongoD.get_database()
     gap = await db.department_gaps.find_one({"gap_id": gap_id}, {"_id": 0})
-    
+
     if not gap:
         raise HTTPException(status_code=404, detail="Gap not found")
-    
+
     return gap
 
 
@@ -160,20 +160,20 @@ async def update_gap(
 ):
     """Update a gap."""
     db = MongoD.get_database()
-    
+
     update_data = {k: v for k, v in gap_update.model_dump().items() if v is not None}
-    
+
     if not update_data:
         raise HTTPException(status_code=400, detail="No update data provided")
-    
+
     result = await db.department_gaps.update_one(
         {"gap_id": gap_id},
         {"$set": update_data}
     )
-    
+
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Gap not found")
-    
+
     gap = await db.department_gaps.find_one({"gap_id": gap_id}, {"_id": 0})
     return gap
 
@@ -185,26 +185,26 @@ async def delete_gap(
 ):
     """Delete a gap."""
     db = MongoD.get_database()
-    
+
     result = await db.department_gaps.delete_one({"gap_id": gap_id})
-    
+
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Gap not found")
-    
+
     return {"status": "success", "message": f"Gap {gap_id} deleted"}
 
 
 # ============= TASK ENDPOINTS =============
-@router.get("/tasks", response_model=List[TaskResponse])
+@router.get("/tasks", response_model=list[TaskResponse])
 async def list_tasks(
-    department: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    priority: Optional[str] = Query(None),
+    department: str | None = Query(None),
+    status: str | None = Query(None),
+    priority: str | None = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
     """List all tasks with optional filters."""
     db = MongoD.get_database()
-    
+
     query = {}
     if department:
         query["department"] = department.lower()
@@ -212,7 +212,7 @@ async def list_tasks(
         query["status"] = status
     if priority:
         query["priority"] = priority
-    
+
     tasks = await db.department_tasks.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
     return tasks
 
@@ -224,7 +224,7 @@ async def create_task(
 ):
     """Create a new task."""
     db = MongoD.get_database()
-    
+
     task_doc = {
         "task_id": f"task_{uuid4().hex[:8]}",
         "department": task.department.lower(),
@@ -233,10 +233,10 @@ async def create_task(
         "assigned_to": task.assigned_to,
         "status": "pending",
         "priority": task.priority,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "due_date": task.due_date
     }
-    
+
     await db.department_tasks.insert_one(task_doc)
     return task_doc
 
@@ -249,10 +249,10 @@ async def get_task(
     """Get a specific task by ID."""
     db = MongoD.get_database()
     task = await db.department_tasks.find_one({"task_id": task_id}, {"_id": 0})
-    
+
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     return task
 
 
@@ -264,20 +264,20 @@ async def update_task(
 ):
     """Update a task."""
     db = MongoD.get_database()
-    
+
     update_data = {k: v for k, v in task_update.model_dump().items() if v is not None}
-    
+
     if not update_data:
         raise HTTPException(status_code=400, detail="No update data provided")
-    
+
     result = await db.department_tasks.update_one(
         {"task_id": task_id},
         {"$set": update_data}
     )
-    
+
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     task = await db.department_tasks.find_one({"task_id": task_id}, {"_id": 0})
     return task
 
@@ -289,12 +289,12 @@ async def delete_task(
 ):
     """Delete a task."""
     db = MongoD.get_database()
-    
+
     result = await db.department_tasks.delete_one({"task_id": task_id})
-    
+
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     return {"status": "success", "message": f"Task {task_id} deleted"}
 
 
@@ -305,18 +305,18 @@ async def get_management_stats(
 ):
     """Get overall statistics for gaps and tasks."""
     db = MongoD.get_database()
-    
+
     # Gap stats
     total_gaps = await db.department_gaps.count_documents({})
     open_gaps = await db.department_gaps.count_documents({"resolved": False})
     critical_gaps = await db.department_gaps.count_documents({"severity": "critical", "resolved": False})
-    
+
     # Task stats
     total_tasks = await db.department_tasks.count_documents({})
     pending_tasks = await db.department_tasks.count_documents({"status": "pending"})
     in_progress_tasks = await db.department_tasks.count_documents({"status": "in_progress"})
     completed_tasks = await db.department_tasks.count_documents({"status": "completed"})
-    
+
     return {
         "gaps": {
             "total": total_gaps,

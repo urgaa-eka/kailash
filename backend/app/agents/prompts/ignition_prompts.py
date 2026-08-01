@@ -638,7 +638,7 @@ IGNITION_PROMPTS = {
 
 def get_ignition_prompt(agent_id: str) -> dict:
     """Get IGNITION agent prompt by ID"""
-    return IGNITION_PROMPTS.get(agent_id, None)
+    return IGNITION_PROMPTS.get(agent_id)
 
 
 def get_all_ignition_prompts() -> dict:

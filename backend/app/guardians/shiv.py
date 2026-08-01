@@ -1,26 +1,28 @@
-from typing import Dict, Any, List
 from datetime import datetime, timedelta
+from typing import Any
+
 from . import BaseGuardian
+
 
 class ShivGuardian(BaseGuardian):
     """SHIV - Security Guardian - PASSIVE OBSERVER MODE"""
-    
+
     def __init__(self):
         super().__init__("SHIV", "security")
         self.threat_threshold = 5
         self.blocked_ips = set()
-    
-    async def monitor(self) -> Dict[str, Any]:
+
+    async def monitor(self) -> dict[str, Any]:
         """Monitor security threats - PASSIVE OBSERVATION ONLY"""
         from ..core.database import get_mongo_db
-        
+
         threats = []
         db = await get_mongo_db()
-        
+
         if db is not None:
             brute_force = await self._check_brute_force(db)
             threats.extend(brute_force)
-        
+
         return {
             "guardian": "SHIV",
             "philosophy": "Third Eye - Passive Observer",
@@ -31,8 +33,8 @@ class ShivGuardian(BaseGuardian):
             "timestamp": datetime.utcnow().isoformat(),
             "note": "SHIV observes all but only intervenes on CRITICAL threats"
         }
-    
-    async def intervene(self, issue: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def intervene(self, issue: dict[str, Any]) -> dict[str, Any]:
         """Take security action - ONLY FOR CRITICAL THREATS"""
         # PASSIVE MODE: Only intervene on CRITICAL issues
         if issue.get("level") != "CRITICAL":
@@ -41,24 +43,24 @@ class ShivGuardian(BaseGuardian):
                 "success": True,
                 "note": "Non-critical issue logged, no intervention taken"
             }
-        
+
         action = None
-        
+
         if issue.get("type") == "brute_force":
             await self._block_ip(issue.get("ip"), 3600)
             action = f"Blocked IP: {issue.get('ip')}"
         elif issue.get("type") == "security_breach":
             action = "Security breach - CEO notified"
-        
+
         if action:
             await self._log_security_event(issue.get("type"), issue)
-        
+
         return {"action_taken": action, "success": True}
-    
-    async def report(self) -> Dict[str, Any]:
+
+    async def report(self) -> dict[str, Any]:
         """Generate security report - PASSIVE OBSERVATION"""
         from ..core.database import get_mongo_db
-        
+
         db = await get_mongo_db()
         incidents = 0
         if db is not None:
@@ -66,7 +68,7 @@ class ShivGuardian(BaseGuardian):
             incidents = await db.security_logs.count_documents({
                 "timestamp": {"$gte": last_24h}
             })
-        
+
         return {
             "guardian": "SHIV",
             "philosophy": "Third Eye - Passive Observer",
@@ -77,8 +79,8 @@ class ShivGuardian(BaseGuardian):
             "threat_level": self._calculate_threat_level(incidents),
             "note": "SHIV observes and logs all anomalies, intervenes only on CRITICAL"
         }
-    
-    async def _check_brute_force(self, db) -> List[Dict]:
+
+    async def _check_brute_force(self, db) -> list[dict]:
         """Check for brute force attempts"""
         threshold_time = datetime.utcnow() - timedelta(minutes=30)
         try:
@@ -89,9 +91,9 @@ class ShivGuardian(BaseGuardian):
             ]
             results = await db.audit_logs.aggregate(pipeline).to_list(100)
             return [{"type": "brute_force", "ip": r["_id"], "attempts": r["count"]} for r in results]
-        except:
+        except Exception:
             return []
-    
+
     async def _block_ip(self, ip: str, duration: int):
         """Block an IP address (only for CRITICAL threats)"""
         self.blocked_ips.add(ip)
@@ -105,8 +107,8 @@ class ShivGuardian(BaseGuardian):
                 "expires_at": datetime.utcnow() + timedelta(seconds=duration),
                 "reason": "CRITICAL threat intervention"
             })
-    
-    async def _log_security_event(self, event_type: str, details: Dict):
+
+    async def _log_security_event(self, event_type: str, details: dict):
         """Log security event"""
         from ..core.database import get_mongo_db
         db = await get_mongo_db()
@@ -117,7 +119,7 @@ class ShivGuardian(BaseGuardian):
                 "details": details,
                 "timestamp": datetime.utcnow()
             })
-    
+
     def _calculate_threat_level(self, incidents: int) -> str:
         if incidents > 10:
             return "critical"

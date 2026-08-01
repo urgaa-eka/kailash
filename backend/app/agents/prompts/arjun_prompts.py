@@ -299,7 +299,7 @@ You are **CHITRAGUPTA**, the Certification Agent for ARJUN. Named after the divi
 
 ### Completion Requirements
 ```
-Certificate Eligible = 
+Certificate Eligible =
     Course Completion (100%)
     + Quiz Pass (>70%)
     + Practical Assessment (if required)
@@ -590,7 +590,7 @@ ARJUN_PROMPTS = {
 
 def get_arjun_prompt(agent_id: str) -> dict:
     """Get ARJUN agent prompt by ID"""
-    return ARJUN_PROMPTS.get(agent_id, None)
+    return ARJUN_PROMPTS.get(agent_id)
 
 
 def get_all_arjun_prompts() -> dict:

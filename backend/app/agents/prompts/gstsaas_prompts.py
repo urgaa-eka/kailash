@@ -952,7 +952,7 @@ GSTSAAS_PROMPTS = {
 
 def get_gstsaas_prompt(agent_id: str) -> dict:
     """Get GSTSAAS agent prompt by ID"""
-    return GSTSAAS_PROMPTS.get(agent_id, None)
+    return GSTSAAS_PROMPTS.get(agent_id)
 
 
 def get_all_gstsaas_prompts() -> dict:

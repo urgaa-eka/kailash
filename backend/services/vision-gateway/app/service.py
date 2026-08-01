@@ -66,9 +66,9 @@ async def call_openrouter(model: str, messages: list[dict]) -> dict:
             r.raise_for_status()
         return r.json()
     except httpx.HTTPStatusError as e:
-        raise UpstreamError(f"openrouter {e.response.status_code}: {e.response.text[:200]}")
+        raise UpstreamError(f"openrouter {e.response.status_code}: {e.response.text[:200]}") from e
     except Exception as e:
-        raise UpstreamError(f"openrouter call failed: {e}")
+        raise UpstreamError(f"openrouter call failed: {e}") from e
 
 
 def build_messages(prompt: str, image_url: str | None) -> list[dict]:
