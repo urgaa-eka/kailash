@@ -162,7 +162,7 @@ Let me connect you with [AGENT_NAME], our specialist for [SPECIALTY].
 
 When handling directly (general questions):
 ```
-🙏 Namaste! 
+🙏 Namaste!
 
 [DIRECT RESPONSE]
 

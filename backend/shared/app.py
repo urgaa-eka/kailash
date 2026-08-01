@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +17,6 @@ from .config import BaseServiceSettings
 from .errors import PlatformError
 from .logging import configure_logging, get_logger
 from .schemas import ApiResponse, ErrorDetail, HealthResponse
-
 
 _started_at = time.time()
 

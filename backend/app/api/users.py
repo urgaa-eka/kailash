@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List, Optional
-from pydantic import BaseModel, EmailStr
-from datetime import datetime
 import logging
 
-from ..models.user import User
-from ..core.mongodb import get_db
-from ..core.security import get_password_hash
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, EmailStr
+
 from ..api.deps import get_current_active_user
-from ..core.rbac import require_permission, UserRole, Permission
+from ..core.mongodb import get_db
+from ..core.rbac import Permission
+from ..core.security import get_password_hash
+from ..models.user import User
 
 router = APIRouter(prefix="/users", tags=["users"])
 logger = logging.getLogger("kailash.users")
@@ -24,10 +23,10 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    full_name: Optional[str] = None
-    password: Optional[str] = None
-    role: Optional[str] = None
-    is_2fa_enabled: Optional[bool] = None
+    full_name: str | None = None
+    password: str | None = None
+    role: str | None = None
+    is_2fa_enabled: bool | None = None
 
 
 class UserResponse(BaseModel):
@@ -39,7 +38,7 @@ class UserResponse(BaseModel):
     is_admin: bool
     is_active: bool
     is_2fa_enabled: bool
-    created_at: Optional[str] = None
+    created_at: str | None = None
 
 
 @router.get("/", response_model=dict)
@@ -50,20 +49,20 @@ async def list_users(
 ):
     """List all users (requires users.view permission)"""
     # Check permission manually
-    from ..core.rbac import has_permission, get_user_permissions
+    from ..core.rbac import get_user_permissions, has_permission
     user_permissions = get_user_permissions(current_user.role)
     if not has_permission(user_permissions, Permission.USERS_VIEW.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Permission 'users.view' required"
         )
-    
+
     try:
         db = get_db()
-        
+
         users_cursor = db.users.find().skip(skip).limit(limit)
         users_list = await users_cursor.to_list(length=limit)
-        
+
         # Format users for response
         formatted_users = []
         for user_dict in users_list:
@@ -78,9 +77,9 @@ async def list_users(
                 "is_2fa_enabled": user_dict.get("is_2fa_enabled", False),
                 "created_at": user_dict.get("created_at", "").isoformat() if hasattr(user_dict.get("created_at", ""), 'isoformat') else None
             })
-        
+
         total = await db.users.count_documents({})
-        
+
         return {
             "users": formatted_users,
             "total": total,
@@ -92,7 +91,7 @@ async def list_users(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve users"
-        )
+        ) from e
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -102,24 +101,24 @@ async def get_user(
 ):
     """Get user by ID (requires users.view permission)"""
     # Check permission
-    from ..core.rbac import has_permission, get_user_permissions
+    from ..core.rbac import get_user_permissions, has_permission
     user_permissions = get_user_permissions(current_user.role)
     if not has_permission(user_permissions, Permission.USERS_VIEW.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Permission 'users.view' required"
         )
-    
+
     try:
         db = get_db()
         user_dict = await db.users.find_one({"id": user_id})
-        
+
         if not user_dict:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
-        
+
         return UserResponse(
             id=user_dict.get("id"),
             email=user_dict.get("email"),
@@ -138,7 +137,7 @@ async def get_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve user"
-        )
+        ) from e
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -148,17 +147,17 @@ async def create_user(
 ):
     """Create new user (requires users.create permission)"""
     # Check permission
-    from ..core.rbac import has_permission, get_user_permissions
+    from ..core.rbac import get_user_permissions, has_permission
     user_permissions = get_user_permissions(current_user.role)
     if not has_permission(user_permissions, Permission.USERS_CREATE.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Permission 'users.create' required"
         )
-    
+
     try:
         db = get_db()
-        
+
         # Check if user already exists
         existing_email = await db.users.find_one({"email": user_data.email})
         if existing_email:
@@ -166,14 +165,14 @@ async def create_user(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
-        
+
         existing_code = await db.users.find_one({"kailash_code": user_data.kailash_code})
         if existing_code:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Kailash Code already registered"
             )
-        
+
         # Create new user
         new_user = User(
             email=user_data.email,
@@ -183,12 +182,12 @@ async def create_user(
             role=user_data.role,
             is_2fa_enabled=user_data.is_2fa_enabled
         )
-        
+
         user_dict = new_user.model_dump()
         await db.users.insert_one(user_dict)
-        
+
         logger.info(f"User created: {user_data.email} by {current_user.email}")
-        
+
         return UserResponse(
             id=new_user.id,
             email=new_user.email,
@@ -207,7 +206,7 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create user"
-        )
+        ) from e
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
@@ -218,17 +217,17 @@ async def update_user(
 ):
     """Update user (requires users.update permission)"""
     # Check permission
-    from ..core.rbac import has_permission, get_user_permissions
+    from ..core.rbac import get_user_permissions, has_permission
     user_permissions = get_user_permissions(current_user.role)
     if not has_permission(user_permissions, Permission.USERS_UPDATE.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Permission 'users.update' required"
         )
-    
+
     try:
         db = get_db()
-        
+
         # Check if user exists
         existing_user = await db.users.find_one({"id": user_id})
         if not existing_user:
@@ -236,7 +235,7 @@ async def update_user(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
-        
+
         # Prepare update data
         update_data = {}
         if user_data.full_name is not None:
@@ -247,24 +246,24 @@ async def update_user(
             update_data["role"] = user_data.role
         if user_data.is_2fa_enabled is not None:
             update_data["is_2fa_enabled"] = user_data.is_2fa_enabled
-        
+
         if not update_data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No fields to update"
             )
-        
+
         # Update user
         await db.users.update_one(
             {"id": user_id},
             {"$set": update_data}
         )
-        
+
         # Get updated user
         updated_user = await db.users.find_one({"id": user_id})
-        
+
         logger.info(f"User updated: {updated_user.get('email')} by {current_user.email}")
-        
+
         return UserResponse(
             id=updated_user.get("id"),
             email=updated_user.get("email"),
@@ -283,7 +282,7 @@ async def update_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update user"
-        )
+        ) from e
 
 
 @router.delete("/{user_id}")
@@ -293,17 +292,17 @@ async def delete_user(
 ):
     """Delete user (requires users.delete permission)"""
     # Check permission
-    from ..core.rbac import has_permission, get_user_permissions
+    from ..core.rbac import get_user_permissions, has_permission
     user_permissions = get_user_permissions(current_user.role)
     if not has_permission(user_permissions, Permission.USERS_DELETE.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Permission 'users.delete' required"
         )
-    
+
     try:
         db = get_db()
-        
+
         # Check if user exists
         existing_user = await db.users.find_one({"id": user_id})
         if not existing_user:
@@ -311,19 +310,19 @@ async def delete_user(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
-        
+
         # Prevent self-deletion
         if user_id == current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot delete your own account"
             )
-        
+
         # Delete user
         await db.users.delete_one({"id": user_id})
-        
+
         logger.info(f"User deleted: {existing_user.get('email')} by {current_user.email}")
-        
+
         return {
             "deleted": True,
             "id": user_id,
@@ -336,4 +335,4 @@ async def delete_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete user"
-        )
+        ) from e

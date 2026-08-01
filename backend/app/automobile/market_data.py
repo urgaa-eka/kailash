@@ -1,9 +1,10 @@
 """Market Data Collector for Automobile Pricing"""
 
-from typing import Dict, Any, List, Optional
-from datetime import datetime
-from ..core.mongodb import get_db
 import logging
+from datetime import datetime
+from typing import Any
+
+from ..core.mongodb import get_db
 
 logger = logging.getLogger("kailash.automobile")
 
@@ -14,14 +15,14 @@ class MarketDataCollector:
         self,
         service_type: str,
         vehicle_type: str,
-        region: Optional[str] = None
-    ) -> List[float]:
+        region: str | None = None
+    ) -> list[float]:
         """Get market prices for a service"""
         db = get_db()
         query = {"service_type": service_type, "vehicle_type": vehicle_type}
         if region:
             query["region"] = region
-        
+
         try:
             records = await db.market_prices.find(query).to_list(500)
             prices = [float(r["price"]) for r in records if "price" in r]
@@ -30,23 +31,23 @@ class MarketDataCollector:
             logger.error(f"Error fetching service prices: {str(e)}")
             return []
 
-    async def update_market_data(self, data: List[Dict[str, Any]]) -> Dict[str, int]:
+    async def update_market_data(self, data: list[dict[str, Any]]) -> dict[str, int]:
         """Bulk update market pricing data"""
         if not data:
             return {"inserted": 0, "message": "No data provided"}
-        
+
         db = get_db()
-        
+
         try:
             # Add timestamp to all records
             for item in data:
                 item["updated_at"] = datetime.utcnow()
                 if "created_at" not in item:
                     item["created_at"] = datetime.utcnow()
-            
+
             result = await db.market_prices.insert_many(data)
             logger.info(f"Inserted {len(result.inserted_ids)} market price records")
-            
+
             return {
                 "inserted": len(result.inserted_ids),
                 "message": f"Successfully inserted {len(result.inserted_ids)} records"
@@ -55,10 +56,10 @@ class MarketDataCollector:
             logger.error(f"Error updating market data: {str(e)}")
             return {"inserted": 0, "error": str(e)}
 
-    async def get_market_insights(self, vehicle_type: str) -> Dict[str, Any]:
+    async def get_market_insights(self, vehicle_type: str) -> dict[str, Any]:
         """Aggregated insights for vehicle type"""
         db = get_db()
-        
+
         try:
             pipeline = [
                 {"$match": {"vehicle_type": vehicle_type}},
@@ -72,9 +73,9 @@ class MarketDataCollector:
                 {"$sort": {"avg_price": -1}},
                 {"$limit": 100}
             ]
-            
+
             results = await db.market_prices.aggregate(pipeline).to_list(100)
-            
+
             # Format results
             services = [
                 {
@@ -86,7 +87,7 @@ class MarketDataCollector:
                 }
                 for r in results
             ]
-            
+
             return {
                 "vehicle_type": vehicle_type,
                 "services": services,
@@ -101,7 +102,7 @@ class MarketDataCollector:
                 "services": []
             }
 
-    async def add_sample_data(self) -> Dict[str, int]:
+    async def add_sample_data(self) -> dict[str, int]:
         """Add sample market data for testing"""
         sample_data = [
             {"service_type": "oil_change", "vehicle_type": "sedan", "price": 2500, "region": "north"},
@@ -113,7 +114,7 @@ class MarketDataCollector:
             {"service_type": "ac_service", "vehicle_type": "sedan", "price": 3500, "region": "south"},
             {"service_type": "battery_replacement", "vehicle_type": "sedan", "price": 5500, "region": "north"},
         ]
-        
+
         return await self.update_market_data(sample_data)
 
 market_data_collector = MarketDataCollector()

@@ -77,7 +77,9 @@ backend/
 │   ├── speech/             # ASR + TTS with Indic locales
 │   ├── model-registry/     # MLflow-shaped model registry
 │   ├── knowledge-graph/    # Typed graph with BFS lookup
-│   └── automobile-llm/     # Domain-pinned chat (the moat)
+│   ├── automobile-llm/     # Domain-pinned chat (the moat)
+│   └── company/            # Company segment: double-entry statutory ledger,
+│                           #   GST engine, reconciliation (PostgreSQL)
 ├── shared/                 # Shared library
 │   ├── app.py              # FastAPI build_app() factory
 │   ├── auth.py             # require_internal_token dependency

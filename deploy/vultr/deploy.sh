@@ -6,7 +6,7 @@
 set -euo pipefail
 
 APP_DIR="/opt/kailash"
-REPO_URL="https://github.com/flywithvvk/kailash.git"
+REPO_URL="https://github.com/urgaa-eka/kailash.git"
 BRANCH="${DEPLOY_BRANCH:-main}"
 COMPOSE_FILE="docker-compose.yml"
 

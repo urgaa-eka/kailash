@@ -1,43 +1,44 @@
 """Pricing Engine - Market + GST Software Data Fusion"""
 
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
-from ..core.mongodb import get_db
-import statistics
 import logging
+import statistics
+from datetime import datetime, timedelta
+from typing import Any
+
+from ..core.mongodb import get_db
 
 logger = logging.getLogger("kailash.automobile")
 
 class PricingEngine:
     """Uniform Pricing Calculator - Market + GST Software Data Fusion"""
-    
+
     def __init__(self):
-        self.cache: Dict[str, Any] = {}
+        self.cache: dict[str, Any] = {}
 
     async def calculate_uniform_price(
         self,
         service_type: str,
         vehicle_type: str,
-        region: Optional[str] = None
-    ) -> Dict[str, Any]:
+        region: str | None = None
+    ) -> dict[str, Any]:
         """Calculate uniform price from market + internal data"""
-        
+
         try:
             # Get market prices
             market_prices = await self._get_market_prices(service_type, vehicle_type, region)
-            
+
             # Get GST software prices (job cards)
             gst_prices = await self._get_gst_prices(service_type, vehicle_type)
-            
+
             all_prices = market_prices + gst_prices
-            
+
             if not all_prices:
                 return {
                     "error": "No pricing data available",
                     "service_type": service_type,
                     "vehicle_type": vehicle_type
                 }
-            
+
             result = {
                 "service_type": service_type,
                 "vehicle_type": vehicle_type,
@@ -53,14 +54,14 @@ class PricingEngine:
                 },
                 "calculated_at": datetime.utcnow().isoformat()
             }
-            
+
             # Store for history
             db = get_db()
             await db.pricing_history.insert_one(result.copy())
-            
+
             logger.info(f"Calculated uniform price for {service_type}/{vehicle_type}: ₹{result['uniform_price']}")
             return result
-            
+
         except Exception as e:
             logger.error(f"Error calculating uniform price: {str(e)}")
             return {
@@ -69,13 +70,13 @@ class PricingEngine:
                 "vehicle_type": vehicle_type
             }
 
-    async def _get_market_prices(self, service_type: str, vehicle_type: str, region: Optional[str]) -> List[float]:
+    async def _get_market_prices(self, service_type: str, vehicle_type: str, region: str | None) -> list[float]:
         """Get prices from market data"""
         db = get_db()
         query = {"service_type": service_type, "vehicle_type": vehicle_type}
         if region:
             query["region"] = region
-        
+
         try:
             records = await db.market_prices.find(query).to_list(500)
             prices = [float(r["price"]) for r in records if "price" in r and r["price"] > 0]
@@ -85,7 +86,7 @@ class PricingEngine:
             logger.error(f"Error fetching market prices: {str(e)}")
             return []
 
-    async def _get_gst_prices(self, service_type: str, vehicle_type: str) -> List[float]:
+    async def _get_gst_prices(self, service_type: str, vehicle_type: str) -> list[float]:
         """Get prices from GST software job cards (last 90 days)"""
         db = get_db()
         cutoff = datetime.utcnow() - timedelta(days=90)
@@ -94,7 +95,7 @@ class PricingEngine:
             "vehicle_type": vehicle_type,
             "created_at": {"$gte": cutoff}
         }
-        
+
         try:
             records = await db.job_cards.find(query).to_list(1000)
             prices = [float(r["total_amount"]) for r in records if "total_amount" in r and r["total_amount"] > 0]
@@ -104,7 +105,7 @@ class PricingEngine:
             logger.error(f"Error fetching GST prices: {str(e)}")
             return []
 
-    async def get_service_pricing_table(self, vehicle_type: str) -> List[Dict[str, Any]]:
+    async def get_service_pricing_table(self, vehicle_type: str) -> list[dict[str, Any]]:
         """Complete pricing table for vehicle type"""
         services = [
             "oil_change", "brake_service", "tire_rotation", "wheel_alignment",
@@ -112,38 +113,38 @@ class PricingEngine:
             "suspension_repair", "electrical_repair", "body_work", "painting",
             "full_service", "periodic_maintenance", "clutch_repair", "gear_repair"
         ]
-        
+
         table = []
         for service in services:
             price = await self.calculate_uniform_price(service, vehicle_type)
             if "error" not in price:
                 table.append(price)
-        
+
         logger.info(f"Generated pricing table for {vehicle_type}: {len(table)} services")
         return table
 
-    async def analyze_pricing_trends(self, service_type: str, days: int = 30) -> Dict[str, Any]:
+    async def analyze_pricing_trends(self, service_type: str, days: int = 30) -> dict[str, Any]:
         """Analyze pricing trends over time"""
         db = get_db()
         cutoff = datetime.utcnow() - timedelta(days=days)
-        
+
         try:
             prices = await db.pricing_history.find({
                 "service_type": service_type,
                 "calculated_at": {"$gte": cutoff.isoformat()}
             }).sort("calculated_at", 1).to_list(1000)
-            
+
             if len(prices) < 2:
                 return {
                     "error": "Insufficient data",
                     "service_type": service_type,
                     "message": "Need at least 2 data points"
                 }
-            
+
             values = [p["uniform_price"] for p in prices]
             first_price = values[0]
             last_price = values[-1]
-            
+
             return {
                 "service_type": service_type,
                 "period_days": days,

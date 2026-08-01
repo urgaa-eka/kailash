@@ -10,6 +10,14 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Runs the full CI workflow as a gate. Without this edge, ci.yml and this
+  # workflow were independent triggers on the same push, so lint, the service
+  # matrix, the company ledger suite and the compose build had no bearing on
+  # whether a deploy reached the VPS.
+  ci-gate:
+    name: CI gate
+    uses: ./.github/workflows/ci.yml
+
   test:
     name: Backend Tests
     runs-on: ubuntu-latest
@@ -24,27 +32,38 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
+      # emergentintegrations is not on public PyPI, so a plain
+      # `pip install -r requirements.txt` fails and this job never reaches its
+      # test step. Same carve-out the image build uses (see Dockerfile).
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          grep -vi '^emergentintegrations' requirements.txt > /tmp/requirements.txt
+          pip install -r /tmp/requirements.txt
+          pip install emergentintegrations==0.1.0 \
+            --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ || true
 
+      # Runs backend/tests, not ../tests/backend -- see the note in ci.yml.
+      # No `|| true`: a failing step must skip the deploy job below.
+      - name: Import the app
+        run: python -c "import app.main"
       - name: Run tests
         run: |
-          if [ -d ../tests/backend ]; then
-            pip install pytest
-            PYTHONPATH=.. pytest ../tests/backend -q || true
-          fi
+          pip install pytest pytest-asyncio
+          pytest tests -q
 
   deploy:
     name: Deploy to Vultr VPS
     runs-on: ubuntu-latest
-    needs: test
+    needs: [ci-gate, test]
     if: github.ref == 'refs/heads/main'
     environment: production
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Record deployed commit
+        run: echo "Deploying \`${{ github.sha }}\` to the Vultr VPS." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy to Vultr via SSH
         uses: appleboy/ssh-action@v1

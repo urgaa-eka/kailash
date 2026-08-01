@@ -3,20 +3,19 @@ Email Service for Kailash
 Uses AWS SES via SMTP for sending emails
 """
 
+import logging
+import os
 import smtplib
 import ssl
-import logging
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import Optional
-import os
+from email.mime.text import MIMEText
 
 logger = logging.getLogger("kailash.email")
 
 
 class EmailService:
     """AWS SES Email Service using SMTP"""
-    
+
     def __init__(self):
         self.smtp_host = os.environ.get("SMTP_HOST", "email-smtp.ap-south-1.amazonaws.com")
         self.smtp_port = int(os.environ.get("SMTP_PORT", "587"))
@@ -25,13 +24,13 @@ class EmailService:
         self.from_email = os.environ.get("SMTP_FROM_EMAIL", "noreply@kailash-ai.in")
         self.from_name = os.environ.get("SMTP_FROM_NAME", "KAILASH AI")
         self.frontend_url = os.environ.get("FRONTEND_URL", "https://kailash-ai.in")
-        
+
         # Check if email is configured
         self.is_configured = bool(self.smtp_username and self.smtp_password)
-        
+
         if not self.is_configured:
             logger.warning("Email service not configured. SMTP_USERNAME or SMTP_PASSWORD missing.")
-    
+
     def _create_reset_email_html(self, reset_link: str, user_name: str = "User") -> str:
         """Create HTML email template for password reset"""
         return f"""
@@ -54,7 +53,7 @@ class EmailService:
                                     <p style="margin: 8px 0 0; color: #8172AD; font-size: 14px; letter-spacing: 2px;">KAILASH "THE DEVINE AI"</p>
                                 </td>
                             </tr>
-                            
+
                             <!-- Content -->
                             <tr>
                                 <td style="padding: 40px;">
@@ -65,7 +64,7 @@ class EmailService:
                                     <p style="margin: 0 0 24px; color: #a0a0a0; font-size: 16px; line-height: 1.6;">
                                         We received a request to reset your password for your Kailash account. Click the button below to create a new password:
                                     </p>
-                                    
+
                                     <!-- CTA Button -->
                                     <table width="100%" cellpadding="0" cellspacing="0">
                                         <tr>
@@ -76,14 +75,14 @@ class EmailService:
                                             </td>
                                         </tr>
                                     </table>
-                                    
+
                                     <p style="margin: 24px 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
                                         This link will expire in <strong style="color: #DF8C4D;">1 hour</strong> for security reasons.
                                     </p>
                                     <p style="margin: 16px 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
                                         If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
                                     </p>
-                                    
+
                                     <!-- Link fallback -->
                                     <div style="margin-top: 32px; padding: 20px; background: rgba(129, 114, 173, 0.1); border-radius: 8px; border: 1px solid rgba(129, 114, 173, 0.2);">
                                         <p style="margin: 0 0 8px; color: #a0a0a0; font-size: 12px;">
@@ -95,7 +94,7 @@ class EmailService:
                                     </div>
                                 </td>
                             </tr>
-                            
+
                             <!-- Footer -->
                             <tr>
                                 <td style="padding: 24px 40px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(129, 114, 173, 0.2);">
@@ -114,7 +113,7 @@ class EmailService:
         </body>
         </html>
         """
-    
+
     def _create_reset_email_text(self, reset_link: str, user_name: str = "User") -> str:
         """Create plain text email for password reset"""
         return f"""
@@ -135,21 +134,21 @@ If you didn't request this password reset, you can safely ignore this email. You
 Go4Garage EV Charging Network | URGAA EV Charging
 © 2025 KAILASH AI. All rights reserved.
         """
-    
+
     async def send_password_reset_email(
-        self, 
-        to_email: str, 
-        reset_token: str, 
-        user_name: Optional[str] = None
+        self,
+        to_email: str,
+        reset_token: str,
+        user_name: str | None = None
     ) -> bool:
         """
         Send password reset email
-        
+
         Args:
             to_email: Recipient email address
             reset_token: The password reset token
             user_name: Optional user name for personalization
-            
+
         Returns:
             True if email sent successfully, False otherwise
         """
@@ -157,38 +156,38 @@ Go4Garage EV Charging Network | URGAA EV Charging
             logger.warning(f"Email not configured. Would send reset email to: {to_email}")
             # Return True in dev to not block the flow
             return True
-        
+
         try:
             # Build reset link
             reset_link = f"{self.frontend_url}/reset-password?token={reset_token}"
-            
+
             # Create message
             message = MIMEMultipart("alternative")
             message["Subject"] = "Password Reset - Kailash"
             message["From"] = f"{self.from_name} <{self.from_email}>"
             message["To"] = to_email
-            
+
             # Create both plain text and HTML versions
             text_content = self._create_reset_email_text(reset_link, user_name or "User")
             html_content = self._create_reset_email_html(reset_link, user_name or "User")
-            
+
             part1 = MIMEText(text_content, "plain")
             part2 = MIMEText(html_content, "html")
-            
+
             message.attach(part1)
             message.attach(part2)
-            
+
             # Send email via SMTP
             context = ssl.create_default_context()
-            
+
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
                 server.starttls(context=context)
                 server.login(self.smtp_username, self.smtp_password)
                 server.sendmail(self.from_email, to_email, message.as_string())
-            
+
             logger.info(f"Password reset email sent successfully to: {to_email}")
             return True
-            
+
         except smtplib.SMTPAuthenticationError as e:
             logger.error(f"SMTP authentication failed: {str(e)}")
             return False
@@ -198,13 +197,13 @@ Go4Garage EV Charging Network | URGAA EV Charging
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {str(e)}")
             return False
-    
+
     async def send_welcome_email(self, to_email: str, user_name: str) -> bool:
         """Send welcome email to new users"""
         if not self.is_configured:
             logger.warning(f"Email not configured. Would send welcome email to: {to_email}")
             return True
-        
+
         try:
             html_content = f"""
             <!DOCTYPE html>
@@ -237,23 +236,23 @@ Go4Garage EV Charging Network | URGAA EV Charging
             </body>
             </html>
             """
-            
+
             message = MIMEMultipart("alternative")
             message["Subject"] = "Welcome to Kailash"
             message["From"] = f"{self.from_name} <{self.from_email}>"
             message["To"] = to_email
-            
+
             message.attach(MIMEText(html_content, "html"))
-            
+
             context = ssl.create_default_context()
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
                 server.starttls(context=context)
                 server.login(self.smtp_username, self.smtp_password)
                 server.sendmail(self.from_email, to_email, message.as_string())
-            
+
             logger.info(f"Welcome email sent successfully to: {to_email}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send welcome email to {to_email}: {str(e)}")
             return False

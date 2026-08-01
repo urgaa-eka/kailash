@@ -72,7 +72,7 @@ def register_model(
             )
             c.commit()
         except sqlite3.IntegrityError:
-            raise ValidationError(f"{name}@{version} already registered")
+            raise ValidationError(f"{name}@{version} already registered") from None
     return get_model(name, version)
 
 

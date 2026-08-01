@@ -1,10 +1,10 @@
 """Department Intelligence with Gap Detection and Alerting System."""
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from pydantic import BaseModel
-from typing import Dict, List, Optional
-from datetime import datetime, timezone
 import json
+from datetime import UTC, datetime
 from pathlib import Path
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
 
 from ..api.deps import get_current_user
 from ..core.mongodb import MongoD
@@ -36,7 +36,7 @@ class DepartmentTask(BaseModel):
     status: str  # pending, in_progress, completed
     priority: str  # high, medium, low
     created_at: str
-    due_date: Optional[str] = None
+    due_date: str | None = None
 
 
 class SubAgent(BaseModel):
@@ -45,7 +45,7 @@ class SubAgent(BaseModel):
     department: str
     role: str
     status: str  # active, idle, offline
-    current_task: Optional[str] = None
+    current_task: str | None = None
 
 
 class DepartmentSummary(BaseModel):
@@ -53,12 +53,12 @@ class DepartmentSummary(BaseModel):
     scope: str
     description: str
     automation_rate: float
-    api_sources: List[Dict]
-    latest_intelligence: Optional[str] = None
-    gaps: List[DepartmentGap] = []
-    tasks: List[DepartmentTask] = []
-    sub_agents: List[SubAgent] = []
-    daily_tasks: List[str] = []
+    api_sources: list[dict]
+    latest_intelligence: str | None = None
+    gaps: list[DepartmentGap] = []
+    tasks: list[DepartmentTask] = []
+    sub_agents: list[SubAgent] = []
+    daily_tasks: list[str] = []
     last_updated: str
 
 
@@ -68,34 +68,34 @@ async def get_department_summary(
     current_user: dict = Depends(get_current_user)
 ) -> DepartmentSummary:
     """Get comprehensive department summary with intelligence, gaps, tasks, and agents."""
-    
+
     # Determine scope
     internal_depts = ["lakshmi", "vishwakarma", "agni", "indra", "vayu", "yama", "kubera",
                       "ashwini", "brihaspati", "chandra", "kartikeya", "marut", "narada",
                       "rudra", "tvashta"]
     external_depts = ["surya", "brahma", "saraswati", "varuna", "pragya"]
-    
+
     if department_name in internal_depts:
         scope = "internal"
     elif department_name in external_depts:
         scope = "external"
     else:
         raise HTTPException(status_code=404, detail="Department not found")
-    
+
     # Load API sources
     api_sources_file = KNOWLEDGE_BASE_PATH / "config" / "api_sources.json"
     api_sources = []
     if api_sources_file.exists():
-        with open(api_sources_file, "r") as f:
+        with open(api_sources_file) as f:
             all_sources = json.load(f)
             dept_sources = all_sources.get(scope, {}).get(department_name, {})
             api_sources = dept_sources.get("api_sources", [])
-    
+
     # Load domain expertise for description
     domain_file = KNOWLEDGE_BASE_PATH / "pre-data" / scope / department_name / "domain_expertise.md"
     description = ""
     if domain_file.exists():
-        with open(domain_file, "r") as f:
+        with open(domain_file) as f:
             content = f.read()
             # Extract first paragraph as description
             lines = content.split("\n")
@@ -103,24 +103,24 @@ async def get_department_summary(
                 if line.strip() and not line.startswith("#"):
                     description = line.strip()
                     break
-    
+
     # Load rules for automation rate
     rules_file = KNOWLEDGE_BASE_PATH / "pre-data" / scope / department_name / "rules.json"
     automation_rate = 0.0
     if rules_file.exists():
-        with open(rules_file, "r") as f:
+        with open(rules_file) as f:
             rules = json.load(f)
             automation_rate = rules.get("department_config", {}).get("automation_rate_target", 0.0)
-    
+
     # Load latest intelligence from post-data
     latest_intelligence = None
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
     intelligence_file = KNOWLEDGE_BASE_PATH / "post-data" / "daily-digest" / today / f"{department_name}.json"
     if intelligence_file.exists():
-        with open(intelligence_file, "r") as f:
+        with open(intelligence_file) as f:
             intel_data = json.load(f)
             latest_intelligence = intel_data.get("processed_intelligence", "")
-    
+
     # Load gaps from database
     db = MongoD.get_database()
     gaps_data = await db.department_gaps.find(
@@ -128,26 +128,26 @@ async def get_department_summary(
         {"_id": 0}
     ).to_list(100)
     gaps = [DepartmentGap(**gap) for gap in gaps_data] if gaps_data else []
-    
+
     # Load tasks from database
     tasks_data = await db.department_tasks.find(
         {"department": department_name},
         {"_id": 0}
     ).sort("created_at", -1).limit(10).to_list(100)
     tasks = [DepartmentTask(**task) for task in tasks_data] if tasks_data else []
-    
+
     # Load sub-agents from database
     agents_data = await db.sub_agents.find(
         {"department": department_name},
         {"_id": 0}
     ).to_list(100)
     sub_agents = [SubAgent(**agent) for agent in agents_data] if agents_data else []
-    
+
     # Generate daily tasks from SOP
     daily_tasks = []
     sop_file = KNOWLEDGE_BASE_PATH / "pre-data" / scope / department_name / "sop.md"
     if sop_file.exists():
-        with open(sop_file, "r") as f:
+        with open(sop_file) as f:
             sop_content = f.read()
             # Extract daily tasks from SOP (look for Morning/Daily sections)
             if "Morning" in sop_content or "Daily" in sop_content:
@@ -157,7 +157,7 @@ async def get_department_summary(
                     "Process pending items and requests",
                     "Update dashboards and reports"
                 ]
-    
+
     return DepartmentSummary(
         department=department_name.upper(),
         scope=scope,
@@ -169,7 +169,7 @@ async def get_department_summary(
         tasks=tasks,
         sub_agents=sub_agents,
         daily_tasks=daily_tasks,
-        last_updated=datetime.now(timezone.utc).isoformat()
+        last_updated=datetime.now(UTC).isoformat()
     )
 
 
@@ -180,11 +180,11 @@ async def detect_department_gaps(
     current_user: dict = Depends(get_current_user)
 ):
     """Run gap detection for department and alert GANESHA if gaps found."""
-    
+
     # This will run gap detection logic
     # For now, we'll create a sample gap for demonstration
     db = MongoD.get_database()
-    
+
     # Example gap detection logic
     gap_id = f"gap_{department_name}_{datetime.now().timestamp()}"
     gap = {
@@ -194,18 +194,18 @@ async def detect_department_gaps(
         "category": "api",
         "title": "API Source Update Required",
         "description": f"One or more API sources for {department_name} need authentication update",
-        "detected_at": datetime.now(timezone.utc).isoformat(),
+        "detected_at": datetime.now(UTC).isoformat(),
         "resolved": False,
         "alerted_to_ganesha": False,
         "alerted_to_parvati": False
     }
-    
+
     # Save gap to database
     await db.department_gaps.insert_one(gap)
-    
+
     # Alert GANESHA in background
     background_tasks.add_task(alert_ganesha, department_name, gap)
-    
+
     return {
         "status": "success",
         "message": f"Gap detection completed for {department_name}",
@@ -216,7 +216,7 @@ async def detect_department_gaps(
 async def alert_ganesha(department: str, gap: dict):
     """Alert GANESHA about detected gap."""
     db = MongoD.get_database()
-    
+
     # Create alert for GANESHA
     alert = {
         "type": "gap_detected",
@@ -225,18 +225,18 @@ async def alert_ganesha(department: str, gap: dict):
         "severity": gap["severity"],
         "title": gap["title"],
         "description": gap["description"],
-        "alerted_at": datetime.now(timezone.utc).isoformat(),
+        "alerted_at": datetime.now(UTC).isoformat(),
         "escalated_to_parvati": False
     }
-    
+
     await db.ganesha_alerts.insert_one(alert)
-    
+
     # Update gap to mark as alerted
     await db.department_gaps.update_one(
         {"gap_id": gap["gap_id"]},
         {"$set": {"alerted_to_ganesha": True}}
     )
-    
+
     # If severity is critical or high, escalate to PARVATI
     if gap["severity"] in ["critical", "high"]:
         await alert_parvati(department, gap, alert)
@@ -245,7 +245,7 @@ async def alert_ganesha(department: str, gap: dict):
 async def alert_parvati(department: str, gap: dict, ganesha_alert: dict):
     """Escalate alert to PARVATI for high-priority gaps."""
     db = MongoD.get_database()
-    
+
     # Create alert for PARVATI
     parvati_alert = {
         "type": "gap_escalation",
@@ -255,18 +255,18 @@ async def alert_parvati(department: str, gap: dict, ganesha_alert: dict):
         "title": f"[ESCALATED] {gap['title']}",
         "description": gap["description"],
         "escalated_from": "ganesha",
-        "alerted_at": datetime.now(timezone.utc).isoformat(),
+        "alerted_at": datetime.now(UTC).isoformat(),
         "requires_user_attention": True
     }
-    
+
     await db.parvati_alerts.insert_one(parvati_alert)
-    
+
     # Update gap and GANESHA alert
     await db.department_gaps.update_one(
         {"gap_id": gap["gap_id"]},
         {"$set": {"alerted_to_parvati": True}}
     )
-    
+
     await db.ganesha_alerts.update_one(
         {"type": "gap_detected", "gap_id": gap["gap_id"]},
         {"$set": {"escalated_to_parvati": True}}

@@ -1,15 +1,17 @@
 """
 Agent Test Suite - Validates all 36 agents across departments
 """
-import pytest
-from fastapi.testclient import TestClient
 import sys
 from pathlib import Path
 
+import pytest
+from fastapi.testclient import TestClient
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.main import app
 import os
+
+from app.main import app
 
 # Ensure MongoDB is initialized
 os.environ.setdefault("MONGO_URL", "mongodb://localhost:27017")
@@ -25,26 +27,26 @@ def auth_token():
     """Get authentication token using production credentials"""
     import time
     time.sleep(1)  # Wait for app startup
-    
+
     response = client.post("/api/auth/login", json={
         "kailash_code": "<REDACTED_kailash_code>",
         "password": "<REDACTED_PASSWORD>",
         "two_factor_code": "123456"
     })
-    
+
     if response.status_code != 200:
         print(f"Login failed: {response.status_code} - {response.text}")
         pytest.skip(f"Authentication failed: {response.text}")
-    
+
     data = response.json()
     if "access_token" not in data:
         pytest.skip(f"No access token in response: {data}")
-    
+
     return data["access_token"]
 
 class TestDepartmentEndpoints:
     """Test department API endpoints"""
-    
+
     def test_list_departments(self, auth_token):
         """Test listing all departments"""
         response = client.get(
@@ -54,7 +56,7 @@ class TestDepartmentEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert len(data) >= 20
-    
+
     def test_get_ganesha(self, auth_token):
         """Test GANESHA department"""
         response = client.get(
@@ -63,7 +65,7 @@ class TestDepartmentEndpoints:
         )
         assert response.status_code == 200
         assert response.json()["name"] == "GANESHA"
-    
+
     def test_get_vishwakarma(self, auth_token):
         """Test VISHWAKARMA department"""
         response = client.get(
@@ -75,7 +77,7 @@ class TestDepartmentEndpoints:
 
 class TestProductAgents:
     """Test product-specific agents"""
-    
+
     def test_urgaa_agent(self, auth_token):
         """Test SURYA (URGAA) agent"""
         response = client.get(
@@ -86,7 +88,7 @@ class TestProductAgents:
         data = response.json()
         assert data["department"] == "SURYA"
         assert "sub_agents" in data
-    
+
     def test_gstsaas_agent(self, auth_token):
         """Test TVASHTA (GSTSAAS) agent"""
         response = client.get(
@@ -95,7 +97,7 @@ class TestProductAgents:
         )
         assert response.status_code == 200
         assert response.json()["department"] == "TVASHTA"
-    
+
     def test_ignition_agent(self, auth_token):
         """Test KARTIKEYA (IGNITION) agent"""
         response = client.get(
@@ -107,7 +109,7 @@ class TestProductAgents:
 
 class TestInternalAgents:
     """Test internal department agents"""
-    
+
     def test_lakshmi_cfo(self, auth_token):
         """Test LAKSHMI (CFO) agent"""
         response = client.get(
@@ -116,7 +118,7 @@ class TestInternalAgents:
         )
         assert response.status_code == 200
         assert response.json()["name"] == "LAKSHMI"
-    
+
     def test_kubera_sales(self, auth_token):
         """Test KUBERA (Sales) agent"""
         response = client.get(
@@ -125,7 +127,7 @@ class TestInternalAgents:
         )
         assert response.status_code == 200
         assert response.json()["name"] == "KUBERA"
-    
+
     def test_kamadeva_marketing(self, auth_token):
         """Test KAMADEVA (Marketing) agent"""
         response = client.get(
@@ -137,13 +139,13 @@ class TestInternalAgents:
 
 class TestRoutingValidation:
     """Test task routing logic"""
-    
+
     def test_route_to_department(self, auth_token):
         """Test routing task to specific department"""
         # This would test the actual routing logic
         # Placeholder for now
         assert True
-    
+
     def test_priority_assignment(self, auth_token):
         """Test priority assignment logic"""
         assert True

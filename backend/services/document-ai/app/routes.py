@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI, UploadFile, File, Depends
+from fastapi import Depends, FastAPI, File, UploadFile
 from pydantic import BaseModel
 
 from backend.shared import ApiResponse, require_internal_token
 
-from .service import extract_pdf_text, validate_fields, VALIDATION_PROFILES
+from .service import VALIDATION_PROFILES, extract_pdf_text, validate_fields
 
 
 class ValidateRequest(BaseModel):

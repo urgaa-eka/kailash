@@ -4,18 +4,19 @@ The AI brain of Kailash - Routes queries to appropriate departments
 and uses multiple AI models based on query type.
 """
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Form
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-import os
 import logging
+import os
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pydantic import BaseModel
+
 from ..api.deps import get_current_active_user
-from ..models.user import User
 from ..core.mongodb import get_db
+from ..models.user import User
 
 # Voice transcription imports
 try:
@@ -44,19 +45,19 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 class GaneshaQuery(BaseModel):
     message: str
     model: str = "auto"  # "auto", "claude", "gpt4", "gemini", "perplexity"
-    conversation_id: Optional[str] = None
+    conversation_id: str | None = None
     include_level2: bool = True  # Include market intelligence
 
 class GaneshaResponse(BaseModel):
     response: str
     routed_to: str  # Department name
     scope: str  # "internal" or "external"
-    source_product: Optional[str] = None  # "URGAA", "GSTSAAS", etc.
-    models_used: List[str]
+    source_product: str | None = None  # "URGAA", "GSTSAAS", etc.
+    models_used: list[str]
     level: int  # 1 or 2
-    data_sources: List[str]
-    problems_addressed: List[str]
-    automation_percentage: Optional[int] = None
+    data_sources: list[str]
+    problems_addressed: list[str]
+    automation_percentage: int | None = None
 
 # ============ DEPARTMENT ROUTING ============
 
@@ -139,7 +140,7 @@ DEPARTMENT_ROUTING = {
             "data_sources": ["Test Reports", "Bug Tracker"]
         }
     },
-    
+
     # EXTERNAL DEPARTMENTS (Product Intelligence)
     "external": {
         "SURYA": {
@@ -213,7 +214,7 @@ DEPARTMENT_ROUTING = {
             "automation_percentage": 65
         }
     },
-    
+
     # GUARDIAN DEPARTMENTS
     "guardian": {
         "SHIV": {
@@ -237,7 +238,7 @@ DEPARTMENT_ROUTING = {
 def classify_query(message: str) -> dict:
     """Classify query and route to appropriate department"""
     message_lower = message.lower()
-    
+
     # Check external first (product-specific queries)
     for dept, config in DEPARTMENT_ROUTING["external"].items():
         if any(kw in message_lower for kw in config["keywords"]):
@@ -250,7 +251,7 @@ def classify_query(message: str) -> dict:
                 "problems_solved": config.get("problems_solved", []),
                 "automation_percentage": config.get("automation_percentage")
             }
-    
+
     # Check internal
     for dept, config in DEPARTMENT_ROUTING["internal"].items():
         if any(kw in message_lower for kw in config["keywords"]):
@@ -261,7 +262,7 @@ def classify_query(message: str) -> dict:
                 "display_name": config["display_name"],
                 "data_sources": config.get("data_sources", [])
             }
-    
+
     # Check guardians
     for dept, config in DEPARTMENT_ROUTING["guardian"].items():
         if any(kw in message_lower for kw in config["keywords"]):
@@ -270,7 +271,7 @@ def classify_query(message: str) -> dict:
                 "scope": "guardian",
                 "display_name": config["display_name"]
             }
-    
+
     # Default to GANESHA for general queries
     return {
         "department": "GANESHA",
@@ -289,25 +290,25 @@ def select_model(message: str, requested_model: str) -> tuple:
             "perplexity": ("openai", "gpt-4o")  # Fallback - perplexity not in Emergent
         }
         return model_map.get(requested_model, ("anthropic", "claude-4-sonnet-20250514"))
-    
+
     message_lower = message.lower()
-    
+
     # Real-time search needs - use Gemini (fast)
     if any(kw in message_lower for kw in ["latest", "current", "today", "news", "market", "trending"]):
         return ("gemini", "gemini-2.5-flash")
-    
+
     # Code-related - use Claude (best for reasoning)
     if any(kw in message_lower for kw in ["code", "function", "debug", "implement", "script", "api"]):
         return ("anthropic", "claude-4-sonnet-20250514")
-    
+
     # Structured data - use Gemini
     if any(kw in message_lower for kw in ["table", "spreadsheet", "json", "structured", "list"]):
         return ("gemini", "gemini-2.5-flash")
-    
+
     # Creative/general - use OpenAI
     if any(kw in message_lower for kw in ["write", "create", "generate", "draft", "compose"]):
         return ("openai", "gpt-4o")
-    
+
     # Default to Claude for reasoning/analysis
     return ("anthropic", "claude-4-sonnet-20250514")
 
@@ -315,27 +316,27 @@ def select_model(message: str, requested_model: str) -> tuple:
 
 async def call_ai_model(provider: str, model: str, prompt: str, system_prompt: str = None) -> str:
     """Call AI model using Emergent Integrations library"""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
     from dotenv import load_dotenv
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
     load_dotenv(override=False)
-    
+
     api_key = os.getenv("EMERGENT_LLM_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
-    
+
     try:
         chat = LlmChat(
             api_key=api_key,
             session_id=f"ganesha-{uuid4()}",
             system_message=system_prompt or "You are GANESHA, the AI Orchestrator for Kailash at Go4Garage. You help manage and coordinate all AI departments."
         ).with_model(provider, model)
-        
+
         user_message = UserMessage(text=prompt)
         response = await chat.send_message(user_message)
         return response
     except Exception as e:
         logger.error(f"AI model call failed: {e}")
-        raise HTTPException(status_code=500, detail=f"AI model call failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"AI model call failed: {str(e)}") from e
 
 # ============ MAIN ORCHESTRATION ENDPOINT ============
 
@@ -345,13 +346,13 @@ async def ganesha_query(
     current_user: User = Depends(get_current_active_user)
 ):
     """Main GANESHA orchestration endpoint"""
-    
+
     # 1. Classify the query
     routing = classify_query(query.message)
-    
+
     # 2. Select AI model
     provider, model_name = select_model(query.message, query.model)
-    
+
     # 3. Build context with data sources
     context = f"""
 You are {routing['department']}, the {routing.get('display_name', 'AI Department')} department of Kailash-AI at Go4Garage.
@@ -370,10 +371,10 @@ USER QUERY: {query.message}
 Provide a comprehensive, helpful response. Be specific with numbers and cite your data sources where applicable.
 Format your response in a clear, structured way.
 """
-    
+
     # 4. Call appropriate AI model
     models_used = [f"{provider}/{model_name}"]
-    
+
     try:
         response = await call_ai_model(provider, model_name, context)
     except Exception as e:
@@ -381,7 +382,7 @@ Format your response in a clear, structured way.
         # Fallback to Claude
         response = await call_ai_model("anthropic", "claude-4-sonnet-20250514", context)
         models_used = ["anthropic/claude-4-sonnet-20250514"]
-    
+
     # 5. If Level 2 requested for external queries, add market context
     if query.include_level2 and routing['scope'] == 'external':
         try:
@@ -391,7 +392,7 @@ Format your response in a clear, structured way.
             models_used.append("gemini/gemini-2.5-flash")
         except Exception as e:
             logger.warning(f"Market intelligence fetch failed: {e}")
-    
+
     # 6. Log conversation to database
     try:
         db = get_db()
@@ -403,11 +404,11 @@ Format your response in a clear, structured way.
             "routed_to": routing["department"],
             "scope": routing["scope"],
             "models_used": models_used,
-            "timestamp": datetime.now(timezone.utc)
+            "timestamp": datetime.now(UTC)
         })
     except Exception as e:
         logger.warning(f"Failed to log conversation: {e}")
-    
+
     return GaneshaResponse(
         response=response,
         routed_to=routing["department"],
@@ -428,16 +429,16 @@ async def process_document(
     current_user: User = Depends(get_current_active_user)
 ):
     """Process PDF/Image with OCR using AI Vision"""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
     from dotenv import load_dotenv
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
     load_dotenv(override=False)
-    
+
     api_key = os.getenv("EMERGENT_LLM_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY not configured")
-    
+
     contents = await file.read()
-    
+
     # Determine media type
     filename_lower = file.filename.lower()
     if filename_lower.endswith(".pdf"):
@@ -448,7 +449,7 @@ async def process_document(
         media_type = "image/jpeg"
     else:
         media_type = "image/png"  # Default
-    
+
     try:
         # Use Gemini for vision tasks
         chat = LlmChat(
@@ -456,14 +457,14 @@ async def process_document(
             session_id=f"ocr-{uuid4()}",
             system_message="You are a document analysis AI. Extract all text and data from documents accurately."
         ).with_model("gemini", "gemini-2.5-flash")
-        
+
         prompt = f"""Extract all text and data from this document. If it contains tables, preserve the structure.
 Return in markdown format with clear sections. File: {file.filename}"""
-        
+
         # For now, return a structured response (vision requires different API)
         user_message = UserMessage(text=f"[Document uploaded: {file.filename}] {prompt}")
         response = await chat.send_message(user_message)
-        
+
         return {
             "extracted_text": response,
             "file_name": file.filename,
@@ -472,7 +473,7 @@ Return in markdown format with clear sections. File: {file.filename}"""
         }
     except Exception as e:
         logger.error(f"OCR processing failed: {e}")
-        raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}") from e
 
 # ============ VOICE INPUT ENDPOINT ============
 
@@ -489,26 +490,26 @@ async def process_voice(
         # Read file contents
         contents = await file.read()
         file_size = len(contents)
-        
+
         # Check file size (max 25MB for Whisper)
         if file_size > 25 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="Audio file too large. Max 25MB allowed.")
-        
+
         # Get file extension
         filename = file.filename or "audio.webm"
         extension = filename.split('.')[-1].lower() if '.' in filename else 'webm'
-        
+
         # Supported formats
         supported_formats = ['mp3', 'wav', 'webm', 'm4a', 'ogg', 'flac', 'mp4', 'mpeg', 'mpga']
         if extension not in supported_formats:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"Unsupported audio format: {extension}. Supported: {', '.join(supported_formats)}"
             )
-        
+
         transcription = ""
         transcription_method = "none"
-        
+
         # Try Emergent Speech-to-Text transcription (preferred)
         if EMERGENT_STT_AVAILABLE and EMERGENT_LLM_KEY:
             try:
@@ -516,10 +517,10 @@ async def process_voice(
                 with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{extension}') as temp_file:
                     temp_file.write(contents)
                     temp_file_path = temp_file.name
-                
+
                 # Initialize Emergent STT client
                 stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
-                
+
                 # Transcribe using Whisper via Emergent
                 with open(temp_file_path, 'rb') as audio_file:
                     response = await stt.transcribe(
@@ -527,48 +528,48 @@ async def process_voice(
                         model="whisper-1",
                         response_format="json"
                     )
-                
+
                 transcription = response.text if hasattr(response, 'text') else str(response)
                 transcription_method = "whisper-1-emergent"
-                
+
                 # Clean up temp file
                 os.unlink(temp_file_path)
-                
+
                 logger.info(f"Voice transcription successful via Emergent: {len(transcription)} chars")
-                
+
             except Exception as e:
                 logger.error(f"Emergent STT transcription error: {str(e)}")
                 transcription = ""
                 transcription_method = "failed"
-        
+
         # Fallback to legacy OpenAI if Emergent failed
         elif OPENAI_AVAILABLE and EMERGENT_LLM_KEY and not transcription:
             try:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{extension}') as temp_file:
                     temp_file.write(contents)
                     temp_file_path = temp_file.name
-                
+
                 client = OpenAI(api_key=EMERGENT_LLM_KEY)
-                
+
                 with open(temp_file_path, 'rb') as audio_file:
                     transcript = client.audio.transcriptions.create(
                         model="whisper-1",
                         file=audio_file,
                         response_format="text"
                     )
-                
+
                 transcription = transcript if isinstance(transcript, str) else str(transcript)
                 transcription_method = "whisper-1-openai"
-                
+
                 os.unlink(temp_file_path)
-                
+
                 logger.info(f"Voice transcription successful via OpenAI: {len(transcription)} chars")
-                
+
             except Exception as e:
                 logger.error(f"OpenAI Whisper transcription error: {str(e)}")
                 transcription = ""
                 transcription_method = "failed"
-        
+
         # Fallback message if no transcription
         if not transcription:
             return {
@@ -580,18 +581,18 @@ async def process_voice(
                 "message": "Voice transcription is not available. Please type your message instead.",
                 "note": "Whisper API key may not be configured or there was an error."
             }
-        
+
         # Log voice interaction to database
         db = get_db()
         await db.voice_logs.insert_one({
             "user_id": str(current_user.id),
-            "timestamp": datetime.now(timezone.utc),
+            "timestamp": datetime.now(UTC),
             "file_name": filename,
             "file_size": file_size,
             "transcription_length": len(transcription),
             "method": transcription_method
         })
-        
+
         return {
             "transcription": transcription,
             "file_name": filename,
@@ -600,12 +601,12 @@ async def process_voice(
             "method": transcription_method,
             "message": "Voice successfully transcribed"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Voice processing error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Voice processing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Voice processing failed: {str(e)}") from e
 
 # ============ DEPARTMENT ROUTING INFO ============
 
@@ -617,8 +618,8 @@ async def get_routing_info(current_user: User = Depends(get_current_active_user)
         "external_departments": list(DEPARTMENT_ROUTING["external"].keys()),
         "guardian_departments": list(DEPARTMENT_ROUTING["guardian"].keys()),
         "total_departments": (
-            len(DEPARTMENT_ROUTING["internal"]) + 
-            len(DEPARTMENT_ROUTING["external"]) + 
+            len(DEPARTMENT_ROUTING["internal"]) +
+            len(DEPARTMENT_ROUTING["external"]) +
             len(DEPARTMENT_ROUTING["guardian"])
         ),
         "routing_logic": "Queries are routed based on keyword matching. External products take priority."
@@ -631,9 +632,9 @@ class DailyIntelligenceCreate(BaseModel):
     category: str  # market_data, competitor_intel, industry_news, financial_data
     title: str
     summary: str
-    data: Optional[Dict[str, Any]] = None
-    relevance_score: Optional[float] = 0.5
-    tags: Optional[List[str]] = []
+    data: dict[str, Any] | None = None
+    relevance_score: float | None = 0.5
+    tags: list[str] | None = []
 
 class DailyIntelligenceResponse(BaseModel):
     id: str
@@ -641,9 +642,9 @@ class DailyIntelligenceResponse(BaseModel):
     category: str
     title: str
     summary: str
-    data: Optional[Dict[str, Any]]
+    data: dict[str, Any] | None
     relevance_score: float
-    tags: List[str]
+    tags: list[str]
     created_at: str
     processed: bool
 
@@ -659,7 +660,7 @@ async def create_daily_intelligence(
     """
     try:
         db = get_db()
-        
+
         intel_doc = {
             "id": str(uuid4()),
             "source": intel.source.upper(),
@@ -669,14 +670,14 @@ async def create_daily_intelligence(
             "data": intel.data or {},
             "relevance_score": intel.relevance_score,
             "tags": intel.tags or [],
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "created_by": str(current_user.id),
             "processed": False,
             "processed_insights": None
         }
-        
+
         await db.daily_intelligence.insert_one(intel_doc)
-        
+
         return DailyIntelligenceResponse(
             id=intel_doc["id"],
             source=intel_doc["source"],
@@ -689,15 +690,15 @@ async def create_daily_intelligence(
             created_at=intel_doc["created_at"],
             processed=intel_doc["processed"]
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to store intelligence: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to store intelligence: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to store intelligence: {str(e)}") from e
 
 @router.get("/intelligence")
 async def get_daily_intelligence(
-    source: Optional[str] = None,
-    category: Optional[str] = None,
+    source: str | None = None,
+    category: str | None = None,
     limit: int = 20,
     current_user: User = Depends(get_current_active_user)
 ):
@@ -706,18 +707,18 @@ async def get_daily_intelligence(
     """
     try:
         db = get_db()
-        
+
         # Build query filter
         query = {}
         if source:
             query["source"] = source.upper()
         if category:
             query["category"] = category
-        
+
         # Get intelligence items
         cursor = db.daily_intelligence.find(query).sort("created_at", -1).limit(limit)
         items = await cursor.to_list(length=limit)
-        
+
         return {
             "items": [
                 {
@@ -739,10 +740,10 @@ async def get_daily_intelligence(
                 "category": category
             }
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to retrieve intelligence: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve intelligence: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve intelligence: {str(e)}") from e
 
 @router.get("/intelligence/summary")
 async def get_intelligence_summary(current_user: User = Depends(get_current_active_user)):
@@ -751,32 +752,32 @@ async def get_intelligence_summary(current_user: User = Depends(get_current_acti
     """
     try:
         db = get_db()
-        
+
         # Count by source
         source_counts = {}
         for source in ['URGAA', 'GSTSAAS', 'IGNITION', 'INTERNAL', 'EXTERNAL']:
             count = await db.daily_intelligence.count_documents({"source": source})
             source_counts[source] = count
-        
+
         # Count by category
         category_counts = {}
         for category in ['market_data', 'competitor_intel', 'industry_news', 'financial_data']:
             count = await db.daily_intelligence.count_documents({"category": category})
             category_counts[category] = count
-        
+
         # Total counts
         total_count = await db.daily_intelligence.count_documents({})
         processed_count = await db.daily_intelligence.count_documents({"processed": True})
-        
+
         return {
             "total_items": total_count,
             "processed_items": processed_count,
             "unprocessed_items": total_count - processed_count,
             "by_source": source_counts,
             "by_category": category_counts,
-            "last_updated": datetime.now(timezone.utc).isoformat()
+            "last_updated": datetime.now(UTC).isoformat()
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to get intelligence summary: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to get intelligence summary: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get intelligence summary: {str(e)}") from e

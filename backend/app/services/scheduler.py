@@ -3,13 +3,12 @@
 This provides a simpler alternative to Celery Beat that doesn't require Redis.
 It runs within the FastAPI application process.
 """
+import logging
+from datetime import UTC, datetime
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from datetime import datetime, timezone
-import logging
-import asyncio
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ def get_scheduler() -> AsyncIOScheduler:
 async def run_daily_learning():
     """Run the daily learning pipeline."""
     from ..tasks.daily_learning import async_daily_learning_pipeline
-    
+
     logger.info("🚀 Starting scheduled daily learning pipeline...")
     try:
         result = await async_daily_learning_pipeline()
@@ -41,19 +40,19 @@ async def run_daily_learning():
 
 async def run_live_data_refresh():
     """Refresh live API data for all departments."""
-    from .live_api_connector import get_connector
     from ..core.mongodb import MongoD
-    
+    from .live_api_connector import get_connector
+
     logger.info("🔄 Starting scheduled live data refresh...")
     try:
         connector = get_connector()
         db = MongoD.get_database()
-        
+
         departments = [
-            "lakshmi", "vishwakarma", "indra", "surya", "agni", 
+            "lakshmi", "vishwakarma", "indra", "surya", "agni",
             "tvashta", "kartikeya", "kubera", "yama"
         ]
-        
+
         success_count = 0
         for dept in departments:
             try:
@@ -64,7 +63,7 @@ async def run_live_data_refresh():
                         "$set": {
                             "department": dept,
                             "data": data,
-                            "last_updated": datetime.now(timezone.utc).isoformat()
+                            "last_updated": datetime.now(UTC).isoformat()
                         }
                     },
                     upsert=True
@@ -72,7 +71,7 @@ async def run_live_data_refresh():
                 success_count += 1
             except Exception as e:
                 logger.error(f"Error refreshing {dept}: {e}")
-        
+
         logger.info(f"✅ Live data refresh completed: {success_count}/{len(departments)} departments")
         return {"status": "success", "refreshed": success_count}
     except Exception as e:
@@ -84,12 +83,12 @@ def init_scheduler():
     """Initialize and start the scheduler with scheduled tasks."""
     global scheduler
     scheduler = get_scheduler()
-    
+
     # Skip if already running
     if scheduler.running:
         logger.info("Scheduler already running")
         return scheduler
-    
+
     # Daily learning pipeline - runs at 6:00 AM UTC
     scheduler.add_job(
         run_daily_learning,
@@ -98,7 +97,7 @@ def init_scheduler():
         name="Daily Intelligence Gathering",
         replace_existing=True
     )
-    
+
     # Live data refresh - runs every 4 hours
     scheduler.add_job(
         run_live_data_refresh,
@@ -107,13 +106,13 @@ def init_scheduler():
         name="Live API Data Refresh",
         replace_existing=True
     )
-    
+
     # Start the scheduler
     scheduler.start()
     logger.info("✅ APScheduler started with scheduled tasks")
     logger.info("   - Daily learning: 06:00 UTC")
     logger.info("   - Live data refresh: Every 4 hours")
-    
+
     return scheduler
 
 

@@ -1,5 +1,4 @@
 import os
-import tempfile
 
 from fastapi.testclient import TestClient
 
@@ -8,6 +7,7 @@ def _client(tmp_path):
     # Isolate the sqlite file per test run.
     os.environ["MODEL_REGISTRY_DB"] = str(tmp_path / "reg.db")
     from importlib import reload
+
     import app.service as svc  # noqa: WPS433
     reload(svc)
     import app.main as m

@@ -1,24 +1,42 @@
+import asyncio
+import logging
+import os
+import time
+from contextlib import asynccontextmanager
+from datetime import datetime
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-import time
-import logging
-import asyncio
-import os
-from datetime import datetime
 
+from .api import (
+    analytics,
+    auth,
+    conversations,
+    dashboard,
+    departments,
+    ganesha,
+    ganesha_multimodel,
+    ganesha_orchestrator,
+    ganesha_v2,
+    guardians,
+    rbac,
+    shiv_auto_rectify,
+    simple_health,
+    system_health,
+    tasks,
+    users,
+)
+from .automobile import router as automobile_router
 from .core.config import settings
-from .core.mongodb import MongoD
 from .core.database import db_manager
 from .core.db_indexes import create_indexes
-from .core.seeder import seed_database
 from .core.firebase import init_firebase
-from .middleware.security import security_middleware
-from .middleware.error_handler import error_handler
-from .api import auth, departments, tasks, ganesha, analytics, ganesha_orchestrator, simple_health, guardians, conversations, rbac, users
-from .api import ganesha_multimodel, shiv_auto_rectify, dashboard, ganesha_v2, system_health
+from .core.mongodb import MongoD
 from .core.performance import performance_monitoring_task
+from .core.seeder import seed_database
+from .middleware.error_handler import error_handler
+from .middleware.security import security_middleware
 
 logger = logging.getLogger("kailash")
 
@@ -38,24 +56,23 @@ except ImportError:
         except ImportError:
             logger.warning("⚠️ GANESHA v2 router not available - v2 endpoints disabled")
 
-from .automobile import router as automobile_router
 
 async def validate_database_permissions():
     """Validate MongoDB Atlas permissions on critical collections
-    
+
     This check ensures that the Atlas user has necessary permissions before the app
     accepts traffic. Without read access on 'users' collection, authentication will fail.
     """
     try:
         db = MongoD.get_database()
-        
+
         # Check if we're in a permission-restricted environment
         permission_check_enabled = os.getenv("SKIP_PERMISSION_CHECK", "false").lower() != "true"
-        
+
         if not permission_check_enabled:
             # Silently skip permission check when disabled
             return
-        
+
         # Test read permission on users collection (CRITICAL)
         try:
             await db.users.find_one({}, {"_id": 1})
@@ -89,15 +106,15 @@ async def validate_database_permissions():
                 logger.critical("")
                 logger.critical("=" * 80)
                 logger.critical("")
-                
+
                 # In production, this should fail startup
                 # But we'll allow it to continue for now with clear warnings
                 # Uncomment the line below to make it fail hard:
                 # raise RuntimeError("Database permission error - authentication will not work")
-                
+
             else:
                 raise
-        
+
         # Test write permission (NICE TO HAVE)
         try:
             test_doc = {"check": "startup_permission_test", "timestamp": datetime.utcnow()}
@@ -108,7 +125,7 @@ async def validate_database_permissions():
             if "not authorized" in str(e).lower():
                 logger.warning("⚠️ Database WRITE permissions limited - some features may not work")
                 logger.warning("   CRUD operations on collections may fail")
-                
+
     except Exception as e:
         logger.error(f"Permission validation error: {str(e)}")
         logger.warning("⚠️ Continuing startup - but database operations may fail")
@@ -120,70 +137,68 @@ async def lifespan(app: FastAPI):
     logger.info(" Starting Kailash...")
     logger.info("Environment: Production | Domain: kailash-ai.in")
     logger.info("Company: Go4Garage - URGAA EV Charging")
-    
-    startup_tasks = []
-    
+
     try:
         # MongoDB connection with extended timeout for Atlas
         logger.info("Connecting to MongoDB...")
         await asyncio.wait_for(MongoD.connect_db(), timeout=15.0)
         logger.info("✅ MongoDB connected")
-        
+
         # Database seeding (non-blocking)
         try:
             db = MongoD.get_database()
             await asyncio.wait_for(seed_database(db), timeout=10.0)
             logger.info("✅ Database seeded")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("⚠️ Database seeding timeout - continuing")
         except Exception as seed_error:
             logger.warning(f"⚠️ Database seeding skipped: {seed_error}")
-        
+
         # Validate database permissions (critical for production)
         try:
             await asyncio.wait_for(validate_database_permissions(), timeout=8.0)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("⚠️ Permission validation timeout")
-        
+
         # Create database indexes (non-blocking)
         try:
             await asyncio.wait_for(create_indexes(), timeout=15.0)
             logger.info("✅ Database indexes created")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("⚠️ Index creation timeout - will create lazily")
         except Exception as idx_error:
             logger.warning(f"⚠️ Index creation failed: {idx_error}")
-        
+
         # Additional database connections (optional)
         try:
             await asyncio.wait_for(db_manager.connect_all(), timeout=8.0)
             logger.info("✅ All databases connected")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("⚠️ Additional database connections timeout")
         except Exception as e:
             logger.warning(f"⚠️ Additional databases connection failed: {e}")
-        
+
         # Start background performance monitoring
         asyncio.create_task(performance_monitoring_task())
         logger.info("✅ Performance monitoring started")
-        
+
         # Initialize Firebase Admin SDK
         try:
             init_firebase()
         except Exception as fb_err:
             logger.warning(f"⚠️ Firebase init skipped: {fb_err}")
-        
+
         logger.info("✅ KAILASH started successfully")
-        
-    except asyncio.TimeoutError:
+
+    except TimeoutError:
         logger.error("❌ MongoDB connection timeout - continuing in degraded mode")
         logger.warning("⚠️ Application will continue without database")
     except Exception as e:
         logger.error(f"❌ Startup error: {str(e)} - continuing in degraded mode")
         logger.warning("⚠️ Application will continue with limited functionality")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("🛑 Shutting down KAILASH...")
     try:
@@ -229,7 +244,7 @@ async def add_security_headers(request: Request, call_next):
     response = await security_middleware.add_security_headers(request, call_next)
     # orce override Server header by rebuilding raw headers
     response.raw_headers = [
-        (k, v) for k, v in response.raw_headers 
+        (k, v) for k, v in response.raw_headers
         if k.lower() != b"server"
     ]
     response.raw_headers.append((b"server", b"KAILASH/."))
@@ -240,7 +255,7 @@ async def check_rate_limit(request: Request, call_next):
     """Rate limiting middleware - skip for health checks"""
     if request.url.path in ["/api/health", "/health", "/"]:
         return await call_next(request)
-    
+
     await security_middleware.rate_limit_check(request)
     return await call_next(request)
 
@@ -250,7 +265,7 @@ async def log_requests(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     duration = time.time() - start_time
-    
+
     error_handler.log_request(request, duration, response.status_code)
     return response
 
@@ -298,9 +313,9 @@ async def health_check():
                     timeout=1.0
                 )
                 db_healthy = True
-            except:
+            except Exception:
                 db_healthy = False
-        
+
         # Always return 200 OK for Kubernetes probes, even if DB is not ready
         # This prevents pod restarts during startup
         return {

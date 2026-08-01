@@ -1,7 +1,8 @@
 """Response envelope and shared data models."""
 from __future__ import annotations
 
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, Field
 
 T = TypeVar("T")
@@ -10,14 +11,14 @@ T = TypeVar("T")
 class ErrorDetail(BaseModel):
     code: str
     message: str
-    hint: Optional[str] = None
+    hint: str | None = None
 
 
 class ApiResponse(BaseModel, Generic[T]):
     ok: bool = True
-    data: Optional[T] = None
-    error: Optional[ErrorDetail] = None
-    request_id: Optional[str] = None
+    data: T | None = None
+    error: ErrorDetail | None = None
+    request_id: str | None = None
 
 
 class HealthResponse(BaseModel):

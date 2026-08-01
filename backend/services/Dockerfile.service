@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1.7
+# Generic platform-service image (post-consolidation paths).
+# Build from the REPO ROOT with the service name + port as args:
+#   docker build -f backend/services/Dockerfile.service \
+#     --build-arg SERVICE=forecasting --build-arg PORT=8102 .
+FROM python:3.11-slim
+ARG SERVICE
+ARG PORT=8100
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/srv PORT=${PORT} SERVICE=${SERVICE}
+WORKDIR /srv
+
+COPY backend/services/${SERVICE}/requirements.txt ./requirements.txt
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt python-multipart
+
+COPY backend/shared /srv/backend/shared
+COPY backend/services/${SERVICE}/app /srv/app
+RUN touch /srv/backend/__init__.py
+
+EXPOSE ${PORT}
+HEALTHCHECK --interval=30s --timeout=5s --retries=5 \
+  CMD python -c "import os,urllib.request,sys;sys.exit(0 if urllib.request.urlopen(f'http://localhost:{os.environ[\"PORT\"]}/health').status==200 else 1)"
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

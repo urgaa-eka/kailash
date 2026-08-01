@@ -1,0 +1,9 @@
+label,total_rate,cgst_rate,sgst_rate,igst_rate,cess_rate,effective_from,effective_to,example_hsn_sac,notes
+GST 0% (Nil),0.00,0.00,0.00,0.00,0.00,2025-09-22,,0401,"Nil-rated: fresh/unprocessed food, ~33 life-saving drugs, education material, individual life & health insurance"
+GST 5%,5.00,2.50,2.50,5.00,0.00,2025-09-22,,,"Daily essentials, agri goods, medical equipment, many processed foods"
+GST 18%,18.00,9.00,9.00,18.00,0.00,2025-09-22,,9983,"Standard rate: electronics, appliances, most manufactured goods, cement, MOST SERVICES (SAC 99xxxx)"
+GST 40%,40.00,20.00,20.00,40.00,0.00,2025-09-22,,,"Sin/luxury: aerated & sugary drinks, tobacco, motorcycles >350cc, premium vehicles, yachts, betting/gambling"
+GST 3% (Jewellery),3.00,1.50,1.50,3.00,0.00,2025-09-22,,7113,"Precious-metal jewellery & gemstone articles"
+GST 0.25% (Rough Diamond),0.25,0.125,0.125,0.25,0.00,2025-09-22,,7102,"Rough / industrial diamonds"
+GST 12% (Bricks),12.00,6.00,6.00,12.00,0.00,2025-09-22,,6901,"Specified bricks & tiles (composition-style slab retained)"
+GST 28% (Transitional),28.00,14.00,14.00,28.00,0.00,2025-09-22,,2403,"Pan masala & tobacco - transitional, pending final notification; cess may apply"

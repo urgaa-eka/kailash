@@ -17,15 +17,26 @@ on:
           - staging
 
 jobs:
+  # Runs the full CI workflow as a gate. Without this edge, ci.yml and this
+  # workflow were independent triggers on the same push, so a deploy could
+  # reach Firebase while CI was still running -- or after it had failed.
+  ci-gate:
+    name: CI gate
+    uses: ./.github/workflows/ci.yml
+
   build-and-deploy:
     name: Build & Deploy to Firebase
     runs-on: ubuntu-latest
+    needs: ci-gate
     defaults:
       run:
         working-directory: frontend
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Record deployed commit
+        run: echo "Deploying \`${{ github.sha }}\` to Firebase Hosting (live)." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-node@v4
         with:

@@ -13,8 +13,8 @@ from __future__ import annotations
 import hashlib
 import os
 import threading
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 import httpx
 import numpy as np
@@ -65,7 +65,7 @@ async def embed_batch(texts: list[str]) -> list[list[float]]:
         return [item["embedding"] for item in data["data"]]
     except Exception as e:
         log.warning("embed_fallback", extra={"event": "embed_fallback"})
-        raise UpstreamError(f"embedding provider failed: {e}")
+        raise UpstreamError(f"embedding provider failed: {e}") from e
 
 
 @dataclass

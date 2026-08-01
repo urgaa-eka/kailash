@@ -1,5 +1,7 @@
-from typing import Dict, Any
+from typing import Any
+
 from .base_department import BaseDepartment
+
 
 class NaradaDepartment(BaseDepartment):
     def __init__(self):
@@ -7,10 +9,10 @@ class NaradaDepartment(BaseDepartment):
         self.register_sub_agent("InternalMessenger", "Messenger", ["messaging", "communication"])
         self.register_sub_agent("AnnouncementManager", "Announcements", ["announcements", "broadcasts"])
         self.register_sub_agent("eedbackCollector", "eedback", ["feedback", "surveys"])
-    
+
     def get_system_prompt(self) -> str:
         return "You are NARADA, the Internal Communications Department. Announcements, updates, team coordination."
-    
-    async def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+
+    async def process_task(self, task: dict[str, Any]) -> dict[str, Any]:
         response = await self.invoke_ai([{"role": "user", "content": task.get("query", "")}])
         return {"response": response, "status": "completed"}

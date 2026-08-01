@@ -3,16 +3,16 @@ Executive Dashboard API
 Provides KPIs, Guardian status, and system overview for executives
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timezone, timedelta
 import logging
+from datetime import UTC, datetime, timedelta
+
+from fastapi import APIRouter, Depends
 
 from ..api.deps import get_current_active_user
-from ..models.user import User
 from ..core.mongodb import get_db
-from ..guardians.shiv import shiv_guardian
 from ..guardians.parvati import parvati_guardian
+from ..guardians.shiv import shiv_guardian
+from ..models.user import User
 
 logger = logging.getLogger("kailash.dashboard")
 
@@ -25,18 +25,18 @@ async def get_master_kpis(current_user: User = Depends(get_current_active_user))
     """Get master KPI cards for Executive Dashboard"""
     try:
         db = get_db()
-        
+
         # Get real counts from database where possible
         user_count = await db.users.count_documents({"is_active": True})
         task_count = await db.tasks.count_documents({"status": {"$ne": "completed"}}) if await db.list_collection_names() else 0
         dept_count = await db.departments.count_documents({})
-        
+
     except Exception as e:
         logger.warning(f"Could not fetch from DB: {e}")
         user_count = 45
         task_count = 127
         dept_count = 20
-    
+
     return {
         "company_health": {
             "value": 85,
@@ -82,14 +82,14 @@ async def get_master_kpis(current_user: User = Depends(get_current_active_user))
 @router.get("/executive")
 async def get_executive_dashboard(current_user: User = Depends(get_current_active_user)):
     """Get complete Executive Dashboard data"""
-    
+
     # Get KPIs
     kpis = await get_master_kpis(current_user)
-    
+
     # Get Guardian status
     shiv_status = await shiv_guardian.heartbeat()
     parvati_status = await parvati_guardian.heartbeat()
-    
+
     # Data sources summary
     data_sources = {
         "internal": [
@@ -106,7 +106,7 @@ async def get_executive_dashboard(current_user: User = Depends(get_current_activ
             {"source": "IGNITION", "type": "15,000 MAU", "status": "synced", "last_sync": "Real-time"}
         ]
     }
-    
+
     # Problems solved showcase
     problems_solved = [
         {
@@ -134,14 +134,14 @@ async def get_executive_dashboard(current_user: User = Depends(get_current_activ
             "savings": "3,000 users retained"
         }
     ]
-    
+
     # Department summary
     internal_departments = [
         "LAKSHMI", "VISHWAKARMA", "KUBERA", "CHANDRA", "BRIHASPATI",
         "VISHNU", "KARTIKEYA", "HANUMAN", "NARADA", "ASHWINI",
         "DURGA", "YAMA", "INDRA", "VAYU", "AGNI"
     ]
-    
+
     external_departments = [
         {"name": "SURYA", "product": "URGAA"},
         {"name": "VARUNA", "product": "GSTSAAS"},
@@ -149,7 +149,7 @@ async def get_executive_dashboard(current_user: User = Depends(get_current_activ
         {"name": "BRAHMA", "product": "IGNITION"},
         {"name": "PRAGYA", "product": "Cross-Product"}
     ]
-    
+
     return {
         "kpis": kpis,
         "guardians": {
@@ -177,7 +177,7 @@ async def get_executive_dashboard(current_user: User = Depends(get_current_activ
             "external": external_departments,
             "total": len(internal_departments) + len(external_departments)
         },
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(UTC).isoformat()
     }
 
 @router.get("/product-metrics")
@@ -224,7 +224,7 @@ async def get_active_alerts(current_user: User = Depends(get_current_active_user
                 "severity": "warning",
                 "source": "URGAA",
                 "message": "3 chargers showing intermittent connectivity",
-                "timestamp": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
+                "timestamp": (datetime.now(UTC) - timedelta(hours=2)).isoformat(),
                 "status": "monitoring"
             },
             {
@@ -232,7 +232,7 @@ async def get_active_alerts(current_user: User = Depends(get_current_active_user
                 "severity": "info",
                 "source": "GSTSAAS",
                 "message": "Inventory reorder suggested for 5 workshops",
-                "timestamp": (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat(),
+                "timestamp": (datetime.now(UTC) - timedelta(hours=5)).isoformat(),
                 "status": "acknowledged"
             },
             {
@@ -240,7 +240,7 @@ async def get_active_alerts(current_user: User = Depends(get_current_active_user
                 "severity": "success",
                 "source": "SHIV",
                 "message": "Security scan completed - No threats detected",
-                "timestamp": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),
+                "timestamp": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
                 "status": "resolved"
             }
         ],

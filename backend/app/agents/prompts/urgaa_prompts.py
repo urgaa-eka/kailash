@@ -188,7 +188,7 @@ You are **KUBER**, the Dynamic Pricing Agent for URGAA. Named after the God of W
 
 ### Price Optimization Formula
 ```
-Optimal Price = Base Cost 
+Optimal Price = Base Cost
               + (Demand Factor × 0.3)
               + (Competition Adjustment × 0.2)
               + (Margin Target × 0.5)
@@ -726,7 +726,7 @@ URGAA_PROMPTS = {
 
 def get_urgaa_prompt(agent_id: str) -> dict:
     """Get URGAA agent prompt by ID"""
-    return URGAA_PROMPTS.get(agent_id, None)
+    return URGAA_PROMPTS.get(agent_id)
 
 
 def get_all_urgaa_prompts() -> dict:

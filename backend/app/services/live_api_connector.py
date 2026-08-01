@@ -1,37 +1,36 @@
 """Live API Connector Service for real-time data from external sources."""
-import os
-import httpx
 import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
 import logging
-import json
+import os
+from datetime import UTC, datetime
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
 
 class LiveAPIConnector:
     """Service to connect to and fetch data from live external APIs."""
-    
+
     def __init__(self):
         self.client = httpx.AsyncClient(timeout=30.0)
-        
+
     async def close(self):
         await self.client.aclose()
-    
+
     # ============= RBI API =============
-    async def fetch_rbi_policy_data(self) -> Dict:
+    async def fetch_rbi_policy_data(self) -> dict:
         """Fetch RBI monetary policy and financial regulations data."""
         try:
             # RBI doesn't have a public API, so we use a proxy/scraper approach
             # For production, you'd want to use official RBI data feeds
             # Note: RBI RSS/feeds would be parsed here in production
-            
+
             # Simulated response based on typical RBI data structure
             # In production, this would parse actual RBI feeds/RSS
             return {
                 "source": "RBI",
-                "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "fetched_at": datetime.now(UTC).isoformat(),
                 "data": {
                     "repo_rate": 6.50,
                     "reverse_repo_rate": 3.35,
@@ -52,16 +51,16 @@ class LiveAPIConnector:
         except Exception as e:
             logger.error(f"RBI API error: {e}")
             return {"source": "RBI", "status": "error", "error": str(e)}
-    
+
     # ============= GST API =============
-    async def fetch_gst_updates(self, gstin: Optional[str] = None) -> Dict:
+    async def fetch_gst_updates(self, gstin: str | None = None) -> dict:
         """Fetch GST compliance updates and rates."""
         try:
             # GST portal doesn't have public API, would need official registration
             # Simulated response for demo
             return {
                 "source": "GST Portal",
-                "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "fetched_at": datetime.now(UTC).isoformat(),
                 "data": {
                     "current_rates": {
                         "standard": [0, 5, 12, 18, 28],
@@ -83,18 +82,18 @@ class LiveAPIConnector:
         except Exception as e:
             logger.error(f"GST API error: {e}")
             return {"source": "GST Portal", "status": "error", "error": str(e)}
-    
+
     # ============= STRIPE API =============
-    async def fetch_stripe_data(self) -> Dict:
+    async def fetch_stripe_data(self) -> dict:
         """Fetch Stripe payment analytics and transaction data."""
         try:
             stripe_key = os.getenv("STRIPE_SECRET_KEY")
-            
+
             if not stripe_key:
                 # Return mock data if no key
                 return {
                     "source": "Stripe",
-                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    "fetched_at": datetime.now(UTC).isoformat(),
                     "data": {
                         "balance": {"available": 125000, "pending": 15000, "currency": "INR"},
                         "transactions_today": 47,
@@ -108,20 +107,20 @@ class LiveAPIConnector:
                     "status": "success",
                     "mode": "mock"
                 }
-            
+
             # Real Stripe API call
             headers = {"Authorization": f"Bearer {stripe_key}"}
-            
+
             # Fetch balance
             balance_resp = await self.client.get(
                 "https://api.stripe.com/v1/balance",
                 headers=headers
             )
             balance_data = balance_resp.json() if balance_resp.status_code == 200 else {}
-            
+
             return {
                 "source": "Stripe",
-                "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "fetched_at": datetime.now(UTC).isoformat(),
                 "data": {
                     "balance": balance_data.get("available", [{}])[0] if balance_data else {},
                     "pending": balance_data.get("pending", [{}])[0] if balance_data else {},
@@ -132,18 +131,18 @@ class LiveAPIConnector:
         except Exception as e:
             logger.error(f"Stripe API error: {e}")
             return {"source": "Stripe", "status": "error", "error": str(e)}
-    
+
     # ============= WEATHER API (for SURYA/Energy forecasting) =============
-    async def fetch_weather_data(self, city: str = "Mumbai") -> Dict:
+    async def fetch_weather_data(self, city: str = "Mumbai") -> dict:
         """Fetch weather data for energy demand forecasting."""
         try:
             api_key = os.getenv("OPENWEATHER_API_KEY")
-            
+
             if not api_key:
                 # Return mock weather data
                 return {
                     "source": "OpenWeatherMap",
-                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    "fetched_at": datetime.now(UTC).isoformat(),
                     "city": city,
                     "data": {
                         "temperature": 28,
@@ -159,15 +158,15 @@ class LiveAPIConnector:
                     "status": "success",
                     "mode": "mock"
                 }
-            
+
             url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
             response = await self.client.get(url)
-            
+
             if response.status_code == 200:
                 data = response.json()
                 return {
                     "source": "OpenWeatherMap",
-                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    "fetched_at": datetime.now(UTC).isoformat(),
                     "city": city,
                     "data": {
                         "temperature": data["main"]["temp"],
@@ -181,24 +180,24 @@ class LiveAPIConnector:
                 }
             else:
                 return {"source": "OpenWeatherMap", "status": "error", "error": f"HTTP {response.status_code}"}
-                
+
         except Exception as e:
             logger.error(f"Weather API error: {e}")
             return {"source": "OpenWeatherMap", "status": "error", "error": str(e)}
-    
+
     # ============= CVE/Security API (for INDRA) =============
-    async def fetch_security_vulnerabilities(self) -> Dict:
+    async def fetch_security_vulnerabilities(self) -> dict:
         """Fetch latest CVE vulnerabilities for security monitoring."""
         try:
             # CIRCL CVE API - free and public
             url = "https://cve.circl.lu/api/last/10"
             response = await self.client.get(url)
-            
+
             if response.status_code == 200:
                 cves = response.json()
                 return {
                     "source": "CIRCL CVE Database",
-                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    "fetched_at": datetime.now(UTC).isoformat(),
                     "data": {
                         "latest_cves": [
                             {
@@ -217,30 +216,30 @@ class LiveAPIConnector:
                 }
             else:
                 return {"source": "CIRCL CVE", "status": "error", "error": f"HTTP {response.status_code}"}
-                
+
         except Exception as e:
             logger.error(f"CVE API error: {e}")
             return {"source": "CIRCL CVE", "status": "error", "error": str(e)}
-    
+
     # ============= GitHub API (for VISHWAKARMA) =============
-    async def fetch_github_trends(self) -> Dict:
+    async def fetch_github_trends(self) -> dict:
         """Fetch GitHub trending repos and tech trends."""
         try:
             # GitHub Search API for trending
             url = "https://api.github.com/search/repositories?q=stars:>10000&sort=stars&order=desc&per_page=5"
             headers = {"Accept": "application/vnd.github.v3+json"}
-            
+
             github_token = os.getenv("GITHUB_TOKEN")
             if github_token:
                 headers["Authorization"] = f"token {github_token}"
-            
+
             response = await self.client.get(url, headers=headers)
-            
+
             if response.status_code == 200:
                 data = response.json()
                 return {
                     "source": "GitHub",
-                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    "fetched_at": datetime.now(UTC).isoformat(),
                     "data": {
                         "trending_repos": [
                             {
@@ -257,13 +256,13 @@ class LiveAPIConnector:
                 }
             else:
                 return {"source": "GitHub", "status": "error", "error": f"HTTP {response.status_code}"}
-                
+
         except Exception as e:
             logger.error(f"GitHub API error: {e}")
             return {"source": "GitHub", "status": "error", "error": str(e)}
-    
+
     # ============= World Bank API (for financial data) =============
-    async def fetch_economic_indicators(self, country: str = "IN") -> Dict:
+    async def fetch_economic_indicators(self, country: str = "IN") -> dict:
         """Fetch economic indicators from World Bank."""
         try:
             # World Bank API - free and public
@@ -272,12 +271,12 @@ class LiveAPIConnector:
                 "FP.CPI.TOTL.ZG": "Inflation Rate",
                 "SL.UEM.TOTL.ZS": "Unemployment Rate"
             }
-            
+
             results = {}
             for code, name in indicators.items():
                 url = f"https://api.worldbank.org/v2/country/{country}/indicator/{code}?format=json&per_page=1"
                 response = await self.client.get(url)
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     if len(data) > 1 and data[1]:
@@ -285,10 +284,10 @@ class LiveAPIConnector:
                             "value": data[1][0].get("value"),
                             "year": data[1][0].get("date")
                         }
-            
+
             return {
                 "source": "World Bank",
-                "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "fetched_at": datetime.now(UTC).isoformat(),
                 "country": country,
                 "data": results,
                 "status": "success",
@@ -297,18 +296,18 @@ class LiveAPIConnector:
         except Exception as e:
             logger.error(f"World Bank API error: {e}")
             return {"source": "World Bank", "status": "error", "error": str(e)}
-    
+
     # ============= Aggregate fetch for department =============
-    async def fetch_department_live_data(self, department: str) -> Dict:
+    async def fetch_department_live_data(self, department: str) -> dict:
         """Fetch all relevant live data for a department."""
         department = department.lower()
-        
+
         data = {
             "department": department,
-            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "fetched_at": datetime.now(UTC).isoformat(),
             "sources": []
         }
-        
+
         if department == "lakshmi":
             data["sources"] = await asyncio.gather(
                 self.fetch_rbi_policy_data(),
@@ -333,12 +332,12 @@ class LiveAPIConnector:
         else:
             # Default sources
             data["sources"] = [await self.fetch_economic_indicators()]
-        
+
         return data
 
 
 # Singleton instance
-_connector: Optional[LiveAPIConnector] = None
+_connector: LiveAPIConnector | None = None
 
 def get_connector() -> LiveAPIConnector:
     global _connector

@@ -13,7 +13,6 @@ import os
 
 from backend.shared import ValidationError
 
-
 SUPPORTED_LANGS = ["hi", "en", "mr", "ta", "te", "bn", "gu", "kn", "ml", "pa"]
 
 
@@ -23,7 +22,7 @@ def transcribe(audio_b64: str, lang: str) -> dict:
     try:
         raw = base64.b64decode(audio_b64, validate=True)
     except Exception:
-        raise ValidationError("audio must be valid base64")
+        raise ValidationError("audio must be valid base64") from None
     if not raw:
         raise ValidationError("empty audio")
 

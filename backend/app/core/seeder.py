@@ -6,17 +6,30 @@ in a fresh production environment (Atlas MongoDB).
 
 import asyncio
 import logging
+import os
 import warnings
 from datetime import datetime
-# Suppress bcrypt version warning from passlib
-warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
-from passlib.context import CryptContext
+
 from motor.motor_asyncio import AsyncIOMotorClient
+
+# Suppress bcrypt version warning from passlib. This has to run before passlib
+# is imported, which is why that one import is not at the top of the file.
+warnings.filterwarnings("ignore", message=".*error reading bcrypt version.*")
+from passlib.context import CryptContext  # noqa: E402
 
 logger = logging.getLogger("kailash.seeder")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Default admin user for production
+# Password for the bootstrap admin, read at import. There is deliberately no
+# default: a literal here is published in this repository, and because
+# seed_database() runs on every startup, any account seeded with it is
+# effectively permanent -- deleting the account only gets it recreated on the
+# next boot. Set this to bootstrap a fresh deployment, sign in, change the
+# password, then unset the variable.
+ADMIN_SEED_PASSWORD = os.environ.get("ADMIN_SEED_PASSWORD", "")
+
+# Identity of the bootstrap admin. The password is supplied at seed time from
+# the variable above and is never stored in this file.
 DEFAULT_ADMIN = {
     "id": "2b03875f-bb4a-4330-8c22-0fe45a9969d0",
     "email": "admin@kailash.ai",
@@ -27,8 +40,6 @@ DEFAULT_ADMIN = {
     "is_admin": True,
     "is_active": True,
     "two_factor_enabled": False,
-    "created_at": datetime.utcnow(),
-    "updated_at": datetime.utcnow()
 }
 
 # 20 AI Departments
@@ -64,31 +75,33 @@ DEPARTMENTS = [
 
 async def seed_database(db):
     """Seed the database with initial data if empty
-    
+
     This is designed to handle permission-restricted environments like Atlas.
     If the user doesn't have permissions, seeding is gracefully skipped.
     """
-    
+
     try:
-        # Check if users collection is empty
+        # Bootstrap an admin only into a database that has no users at all.
+        # There is no "recreate it if missing" branch on purpose: that made the
+        # account unremovable, since the next startup put it straight back.
         user_count = await db.users.count_documents({})
         if user_count == 0:
-            logger.info("Seeding admin user...")
-            # Hash the default password
-            DEFAULT_ADMIN["hashed_password"] = pwd_context.hash("Kailash@2026")
-            await db.users.insert_one(DEFAULT_ADMIN)
-            logger.info(f"Admin user created: {DEFAULT_ADMIN['kailash_code']}")
+            if ADMIN_SEED_PASSWORD:
+                admin = dict(DEFAULT_ADMIN)
+                admin["hashed_password"] = pwd_context.hash(ADMIN_SEED_PASSWORD)
+                admin["created_at"] = datetime.utcnow()
+                admin["updated_at"] = datetime.utcnow()
+                await db.users.insert_one(admin)
+                logger.info(f"Bootstrap admin created: {admin['kailash_code']}")
+            else:
+                logger.error(
+                    "No users exist and ADMIN_SEED_PASSWORD is unset, so no admin "
+                    "was created. Set it, start once to bootstrap, then unset it."
+                )
         else:
-            logger.info(f"Users already exist ({user_count} found), skipping user seeding")
-            
-            # Check if the specific user exists, if not add them
-            existing_user = await db.users.find_one({"kailash_code": "KAILASH001"})
-            if not existing_user:
-                logger.info("Adding default admin user...")
-                DEFAULT_ADMIN["hashed_password"] = pwd_context.hash("Kailash@2026")
-                await db.users.insert_one(DEFAULT_ADMIN)
-                logger.info(f"Admin user added: {DEFAULT_ADMIN['kailash_code']}")
-        
+            logger.info(f"Users already exist ({user_count} found), not seeding an admin")
+
+
         # Check if departments collection is empty
         dept_count = await db.departments.count_documents({})
         if dept_count == 0:
@@ -112,7 +125,7 @@ async def seed_database(db):
                 logger.info(f"✅ Added {len(missing_depts)} missing departments")
             else:
                 logger.info("All departments already exist")
-        
+
         # Ensure indexes exist
         try:
             await db.users.create_index("kailash_code", unique=True)
@@ -121,7 +134,7 @@ async def seed_database(db):
             logger.info("Database indexes created")
         except Exception as e:
             logger.info(f"Index creation skipped (may already exist): {e}")
-            
+
     except Exception as e:
         error_str = str(e).lower()
         if "not authorized" in error_str or "unauthorized" in error_str:
@@ -134,17 +147,17 @@ async def run_seeder(mongo_url: str, database_name: str):
     try:
         client = AsyncIOMotorClient(mongo_url)
         db = client[database_name]
-        
+
         # Verify connection
         await client.admin.command('ping')
         logger.info(f"📡 Connected to MongoDB database: {database_name}")
-        
+
         # Run seeding
         await seed_database(db)
-        
+
         client.close()
         logger.info("✅ Database seeding completed")
-        
+
     except Exception as e:
         logger.error(f"❌ Seeding failed: {e}")
         raise
@@ -152,12 +165,13 @@ async def run_seeder(mongo_url: str, database_name: str):
 if __name__ == "__main__":
     # For manual testing
     import os
+
     from dotenv import load_dotenv
     load_dotenv()
-    
+
     logging.basicConfig(level=logging.INFO)
-    
+
     mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
     db_name = os.environ.get("DATABASE_NAME", "kailash")
-    
+
     asyncio.run(run_seeder(mongo_url, db_name))

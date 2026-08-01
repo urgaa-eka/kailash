@@ -1,0 +1,11 @@
+gstr1_section,supply_type,condition,description
+B2B,B2B,"counterparty GSTIN is present (registered)","Invoice-level detail of taxable supplies to registered persons"
+B2CL,B2CL,"unregistered AND inter-state AND invoice value > 100000","Large B2C inter-state invoices (threshold reduced to Rs 1 lakh); invoice-level"
+B2CS,B2CS,"unregistered AND (intra-state OR invoice value <= 100000)","Small B2C supplies, reported rate-wise and state-wise (aggregated)"
+EXP,EXPORT,"export of goods/services (with or without payment of tax)","Exports; with LUT = zero-rated without tax, else with IGST"
+SEZ,SEZ,"supply to SEZ unit/developer","Zero-rated; reported like exports"
+CDNR,,"credit/debit note against a registered (B2B) invoice","Credit/Debit Notes - Registered"
+CDNUR,,"credit/debit note against B2CL/export (unregistered)","Credit/Debit Notes - Unregistered"
+HSN,,"all supplies, aggregated by HSN/SAC","HSN-wise summary of outward supplies (mandatory)"
+DOCS,,"all document series issued in the period","Documents issued - invoice/credit-note/debit-note series ranges"
+NIL,NIL,"nil-rated, exempt or non-GST outward supplies","Nil / Exempt / Non-GST summary"

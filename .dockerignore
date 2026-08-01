@@ -1,0 +1,60 @@
+# Build context exclusions. Without this every image build uploads the
+# whole working tree (virtualenvs, node_modules, git history, CDK output)
+# to the builder — slow locally and far slower against a cloud builder.
+
+# VCS & tooling
+.git
+.github
+.vscode
+.idea
+.devcontainer
+.snapshots
+.comments
+
+# Python
+.venv
+venv
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Node
+node_modules
+**/node_modules
+frontend/build
+.vite
+npm-debug.log*
+yarn-error.log*
+
+# Infra build artifacts
+infra/company/cdk.out
+infra/company/lambda-dist
+my-extension/ui/node_modules
+
+# Secrets & local env (never bake into an image)
+.env
+.env.*
+!.env.example
+**/.env
+!**/.env.example
+*.pem
+*.key
+serviceAccountKey.json
+
+# Local data / logs
+logs
+*.log
+backups
+*.sqlite
+*.db
+
+# Docs & large non-runtime assets (services don't need them at runtime;
+# company-segment/ is deliberately NOT excluded — the ledger service
+# reads its schema and seed CSVs from there.)
+docs
+*.md
+!README.md
+company-segment/docs

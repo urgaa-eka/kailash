@@ -1,9 +1,9 @@
 # Entry point for uvicorn
 # This file imports the astAPI app from the new backend structure
-from app.main import app
-
 # Configure uvicorn to not add Server header
 import uvicorn
+from app.main import app
+
 
 class CustomUvicornServer(uvicorn.Server):
     def install_signal_handlers(self):

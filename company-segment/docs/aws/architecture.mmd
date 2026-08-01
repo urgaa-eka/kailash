@@ -1,0 +1,121 @@
+%%{init: {'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#eef4ff','primaryBorderColor':'#3b6fd4','lineColor':'#7089ad','clusterBkg':'#f7f9fc','clusterBorder':'#c7d3e6'}}}%%
+flowchart TB
+  classDef src fill:#fff4e6,stroke:#e08a2e,color:#5b3d12;
+  classDef edge fill:#eef7ee,stroke:#3f9b46,color:#1e3d20;
+  classDef comp fill:#eef4ff,stroke:#3b6fd4,color:#12305e;
+  classDef data fill:#f3ecff,stroke:#7d4fd1,color:#33195e;
+  classDef ai fill:#ffeef2,stroke:#d1497a,color:#5e1233;
+  classDef xcut fill:#eef9fb,stroke:#2b9fb3,color:#0f4551;
+
+  subgraph SRC["SOURCES — inbound financial data"]
+    direction LR
+    S1["Sales invoices<br/>(GSTSAAS / e-invoice IRP)"]:::src
+    S2["Purchase bills<br/>+ GSTR-2B"]:::src
+    S3["Bank statements<br/>(CSV / MT940)"]:::src
+    S4["Payroll runs"]:::src
+    S5["Day-1 corporate docs<br/>(CoI, PAN, GST, MOA/AOA)"]:::src
+    S6["Tally XML<br/>(CA's books)"]:::src
+  end
+
+  subgraph EDGE["EDGE"]
+    direction LR
+    R53["Route 53 + ACM"]:::edge
+    WAF["AWS WAF"]:::edge
+    APIG["API Gateway<br/>REST + WebSocket"]:::edge
+  end
+
+  subgraph L0["L0 · INGESTION (Bronze)"]
+    direction LR
+    ING["Lambda<br/>ingestion contracts"]:::comp
+    SQS["SQS<br/>buffer"]:::comp
+    TXT["Textract<br/>doc extraction"]:::ai
+    VAULT["S3<br/>document vault (FY-partitioned)"]:::data
+    IDEM["DynamoDB<br/>source_hash / error queue"]:::data
+    MIG["Step Functions<br/>Tally migration"]:::comp
+  end
+
+  subgraph L1["L1 · CORE LEDGER — System of Record (Silver)"]
+    direction LR
+    POST["Lambda<br/>posting engine<br/>(maker-checker)"]:::comp
+    AUR[("Aurora Serverless v2<br/>PostgreSQL<br/>co_journal · masters · sub-ledgers<br/>balanced + immutable, FY-partitioned")]:::data
+    KMS["KMS<br/>PII / column encryption"]:::xcut
+  end
+
+  subgraph L2["L2 · COMPUTE & COMPLIANCE (Gold)"]
+    direction LR
+    GST["Lambda<br/>GST engine<br/>GSTR-1/3B/2B/9"]:::comp
+    TDS["Lambda<br/>TDS + income-tax"]:::comp
+    ROC["Lambda<br/>ROC/MCA + Sch III<br/>statement builder"]:::comp
+    SFC["Step Functions<br/>period-end close"]:::comp
+    SCH["EventBridge Scheduler<br/>compliance calendar"]:::comp
+    GSTN["GSTN API / IRP<br/>e-invoice + filing"]:::edge
+  end
+
+  subgraph L3["L3 · RECONCILIATION (internal vs CA/Tally)"]
+    direction LR
+    REC["Lambda + Step Functions<br/>10 control points"]:::comp
+    SM["SageMaker<br/>variance / anomaly ML"]:::ai
+    ER["AWS Entity Resolution<br/>+ Neptune<br/>party / GSTIN matching"]:::ai
+  end
+
+  subgraph L4["L4 · REPORTING & EXPORT"]
+    direction LR
+    VW["Aurora views<br/>co_v_trial_balance / schedule_iii"]:::data
+    CACHE["ElastiCache (Redis)<br/>FY dashboard cache"]:::data
+    BI["Redshift Serverless / Athena<br/>+ QuickSight"]:::data
+    EXP["S3<br/>GSTR-1 JSON · Sch III PDF"]:::data
+    UI["Finance dashboard<br/>(CloudFront)"]:::edge
+  end
+
+  subgraph AI["EKA DHI — grounded AI layer"]
+    direction LR
+    BR["Bedrock (Claude Sonnet)<br/>+ Knowledge Base"]:::ai
+    GRD["Bedrock Guardrails<br/>+ abstention (no guessed figures)"]:::ai
+  end
+
+  subgraph BUS["CENTER LAKE BACKBONE + CONSUMERS"]
+    direction LR
+    EVB["EventBridge<br/>publish financial facts"]:::xcut
+    AG["Eka Brain<br/>85 agents · finance_lora"]:::ai
+    PRD["Other products<br/>KAILASH-AI · GSTSAAS · URGAA · Ignition"]:::comp
+  end
+
+  subgraph XC["CROSS-CUTTING"]
+    direction LR
+    COG["Cognito + IAM Identity Center<br/>RBAC · CA read-only"]:::xcut
+    SEC["Secrets Manager"]:::xcut
+    OBS["CloudTrail + CloudWatch<br/>audit + metrics"]:::xcut
+    IAC["CDK (TypeScript)<br/>GitHub Actions + OIDC"]:::xcut
+  end
+
+  SRC --> EDGE --> ING
+  S5 --> VAULT
+  S6 --> MIG --> AUR
+  ING --> SQS --> POST
+  ING --> TXT --> POST
+  ING --> IDEM
+  ING --> VAULT
+  POST --> AUR
+  KMS -.-> AUR
+  AUR --> GST & TDS & ROC
+  SFC --> GST & TDS & ROC
+  SCH -.-> SFC
+  GST <--> GSTN
+  GST & TDS & ROC --> VW
+  AUR --> REC
+  REC --> SM
+  REC --> ER
+  REC --> VW
+  VW --> CACHE --> UI
+  VW --> BI
+  GST --> EXP
+  ROC --> EXP
+  TXT -.-> BR
+  REC -.-> BR
+  BR --> GRD
+  VW --> EVB
+  EVB --> AG
+  EVB --> PRD
+  COG -.-> APIG
+  SEC -.-> GSTN
+  OBS -.-> AUR

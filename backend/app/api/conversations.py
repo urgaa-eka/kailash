@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import Optional
 from datetime import datetime
-from bson import ObjectId
-from app.core.mongodb import MongoD
+
 from app.api.deps import get_current_active_user
+from app.core.mongodb import MongoD
+from bson import ObjectId
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
@@ -18,7 +18,7 @@ async def list_conversations(
     conversations = await db.conversations.find(
         {"user_id": str(current_user.id)}
     ).sort("updated_at", -1).skip(skip).limit(limit).to_list(limit)
-    
+
     return {
         "conversations": [
             {
@@ -45,12 +45,12 @@ async def get_conversation(
             "_id": ObjectId(conversation_id),
             "user_id": str(current_user.id)
         })
-    except:
-        raise HTTPException(status_code=400, detail="Invalid conversation ID")
-    
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid conversation ID") from exc
+
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    
+
     return {
         "id": str(conv["_id"]),
         "messages": [
@@ -77,12 +77,12 @@ async def delete_conversation(
             "_id": ObjectId(conversation_id),
             "user_id": str(current_user.id)
         })
-    except:
-        raise HTTPException(status_code=400, detail="Invalid conversation ID")
-    
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid conversation ID") from exc
+
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    
+
     return {"deleted": True, "id": conversation_id}
 
 @router.post("/{conversation_id}/clear")
@@ -97,10 +97,10 @@ async def clear_conversation(
             {"_id": ObjectId(conversation_id), "user_id": str(current_user.id)},
             {"$set": {"messages": [], "updated_at": datetime.utcnow()}}
         )
-    except:
-        raise HTTPException(status_code=400, detail="Invalid conversation ID")
-    
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid conversation ID") from exc
+
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    
+
     return {"cleared": True, "id": conversation_id}

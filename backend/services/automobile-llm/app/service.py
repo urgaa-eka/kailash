@@ -59,9 +59,9 @@ async def chat(messages: list[dict], model: str | None = None, temperature: floa
             r.raise_for_status()
         data = r.json()
     except httpx.HTTPStatusError as e:
-        raise UpstreamError(f"openrouter {e.response.status_code}: {e.response.text[:200]}")
+        raise UpstreamError(f"openrouter {e.response.status_code}: {e.response.text[:200]}") from e
     except Exception as e:
-        raise UpstreamError(f"openrouter call failed: {e}")
+        raise UpstreamError(f"openrouter call failed: {e}") from e
 
     text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
     return {

@@ -118,3 +118,17 @@ agenthub/agents/youtube/db
 !frontend/.env.production
 !frontend/.env.staging
 !frontend/.env.development
+
+# MCP config (contains API keys)
+.mcp.json
+
+# Vite dependency cache (build artifact)
+.vite/
+
+# design-sync (claude.ai/design)
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+frontend/.ds-lib/

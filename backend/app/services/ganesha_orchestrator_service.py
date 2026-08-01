@@ -3,12 +3,13 @@ GANESHA AI Orchestration Service
 Coordinates User → Claude → Emergent workflow
 """
 
-import anthropic
-import httpx
 import json
 import logging
-from typing import AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
 from datetime import datetime
+
+import anthropic
+import httpx
 
 logger = logging.getLogger("kailash.ganesha")
 
@@ -18,28 +19,28 @@ class GaneshaOrchestratorService:
     Main orchestration service
     Manages intelligent workflow between user, Claude AI, and Emergent
     """
-    
+
     def __init__(self, anthropic_api_key: str, emergent_api_url: str = None, emergent_api_key: str = None):
         self.claude_client = anthropic.AsyncAnthropic(api_key=anthropic_api_key)
         self.emergent_api_url = emergent_api_url
         self.emergent_api_key = emergent_api_key
         self.model = "claude-3-haiku-20240307"
-    
+
     async def process_request(
         self,
         user_message: str,
-        conversation_history: List[Dict],
-        user_context: Dict
-    ) -> AsyncGenerator[Dict, None]:
+        conversation_history: list[dict],
+        user_context: dict
+    ) -> AsyncGenerator[dict, None]:
         """
         Main orchestration method
         YFields streaming events as workflow progresses
         """
-        
+
         try:
             # Step : Analyze with Claude
             claude_response = ""
-            
+
             async for chunk in self._analyze_with_claude(user_message, conversation_history, user_context):
                 claude_response += chunk
                 yield {
@@ -47,24 +48,24 @@ class GaneshaOrchestratorService:
                     'content': chunk,
                     'timestamp': datetime.now().isoformat()
                 }
-            
+
             # Step : Determine if code execution needed
             needs_emergent = self._should_use_emergent(user_message)
-            
+
             if needs_emergent and self.emergent_api_url:
                 # Step 3: Create optimized Emergent prompt
                 emergent_prompt = await self._create_emergent_prompt(user_message, claude_response)
-                
+
                 yield {
                     'type': 'sending_to_emergent',
                     'prompt': emergent_prompt,
                     'timestamp': datetime.now().isoformat()
                 }
-                
+
                 # Step 4: Execute with Emergent
                 try:
                     emergent_result = await self._call_emergent(emergent_prompt)
-                    
+
                     yield {
                         'type': 'emergent_response',
                         'summary': emergent_result.get('summary', 'Code generated successfully'),
@@ -72,10 +73,10 @@ class GaneshaOrchestratorService:
                         'files': emergent_result.get('files', []),
                         'timestamp': datetime.now().isoformat()
                     }
-                    
+
                     # Step : Review code with Claude
                     review = await self._review_code(emergent_result.get('code', ''))
-                    
+
                     yield {
                         'type': 'ganesha_review',
                         'review': review['summary'],
@@ -83,26 +84,26 @@ class GaneshaOrchestratorService:
                         'suggestions': review.get('suggestions', []),
                         'timestamp': datetime.now().isoformat()
                     }
-                    
+
                     # Step : ix issues if any
                     if review.get('issues'):
                         fix_prompt = await self._create_fix_prompt(review['issues'], emergent_result.get('code', ''))
-                        
+
                         yield {
                             'type': 'sending_fix_to_emergent',
                             'prompt': fix_prompt,
                             'timestamp': datetime.now().isoformat()
                         }
-                        
+
                         fix_result = await self._call_emergent(fix_prompt)
-                        
+
                         yield {
                             'type': 'fix_complete',
                             'summary': 'All issues resolved',
                             'code': fix_result.get('code', ''),
                             'timestamp': datetime.now().isoformat()
                         }
-                
+
                 except Exception as e:
                     logger.error(f"Emergent execution error: {str(e)}")
                     yield {
@@ -110,14 +111,14 @@ class GaneshaOrchestratorService:
                         'message': f"Emergent execution failed: {str(e)}",
                         'timestamp': datetime.now().isoformat()
                     }
-            
+
             # Step : inal summary
             yield {
                 'type': 'task_complete',
                 'summary': self._generate_completion_message(needs_emergent),
                 'timestamp': datetime.now().isoformat()
             }
-            
+
         except Exception as e:
             logger.error(f"Orchestration error: {str(e)}")
             yield {
@@ -125,17 +126,17 @@ class GaneshaOrchestratorService:
                 'message': f"Orchestration failed: {str(e)}",
                 'timestamp': datetime.now().isoformat()
             }
-    
+
     async def _analyze_with_claude(
         self,
         user_message: str,
-        history: List[Dict],
-        user_context: Dict
+        history: list[dict],
+        user_context: dict
     ) -> AsyncGenerator[str, None]:
         """
         Analyze user request with Claude API
         """
-        
+
         system_prompt = f"""You are GANESHA, the AI orchestrator for Kailash (Go4Garage URGAA platform).
 
 **Your Role:**
@@ -167,7 +168,7 @@ Respond in a professional, helpful tone. Use  emoji when greeting."""
 
         # uild conversation messages
         messages = []
-        
+
         for msg in history[-10:]:  # Last 10 messages for context
             if msg.get('type') == 'user':
                 messages.append({
@@ -179,13 +180,13 @@ Respond in a professional, helpful tone. Use  emoji when greeting."""
                     'role': 'assistant',
                     'content': msg.get('content', '')
                 })
-        
+
         # Add current message
         messages.append({
             'role': 'user',
             'content': user_message
         })
-        
+
         # Stream response from Claude
         async with self.claude_client.messages.stream(
             model=self.model,
@@ -196,42 +197,41 @@ Respond in a professional, helpful tone. Use  emoji when greeting."""
         ) as stream:
             async for text in stream.text_stream:
                 yield text
-    
+
     def _should_use_emergent(self, user_message: str) -> bool:
         """
         Determine if Emergent code execution is needed
         """
-        
+
         # Keywords indicating code generation needed
         code_keywords = [
             'build', 'create', 'implement', 'add', 'develop',
             'code', 'generate', 'make', 'setup', 'configure',
             'deploy', 'install'
         ]
-        
+
         # Keywords indicating just information/planning
         info_keywords = [
             'what', 'how', 'why', 'explain', 'tell me',
             'show me', 'help', 'status', 'review',
             'should i', 'can you explain'
         ]
-        
+
         message_lower = user_message.lower()
-        
-        # Check if it's an info request
-        if any(keyword in message_lower for keyword in info_keywords):
-            # Unless it also has build keywords
-            if not any(keyword in message_lower for keyword in code_keywords):
-                return False
-        
+
+        # An info request is not a code request -- unless it also carries build keywords
+        if (any(keyword in message_lower for keyword in info_keywords)
+                and not any(keyword in message_lower for keyword in code_keywords)):
+            return False
+
         # Check if it's a code request
         return any(keyword in message_lower for keyword in code_keywords)
-    
+
     async def _create_emergent_prompt(self, user_message: str, claude_analysis: str) -> str:
         """
         Create optimized prompt for Emergent
         """
-        
+
         response = await self.claude_client.messages.create(
             model=self.model,
             max_tokens=3,
@@ -271,14 +271,14 @@ frontend/ 60
 Create the prompt now. Start directly with instructions, no preamble."""
             }]
         )
-        
+
         return response.content[0].text
-    
-    async def _call_emergent(self, prompt: str) -> Dict:
+
+    async def _call_emergent(self, prompt: str) -> dict:
         """
         Call Emergent API (or simulate if not configured)
         """
-        
+
         if not self.emergent_api_url or not self.emergent_api_key:
             # Simulation mode for testing
             logger.info("Emergent not configured - simulation mode")
@@ -287,7 +287,7 @@ Create the prompt now. Start directly with instructions, no preamble."""
                 'code': {'example.py': '# Code would be generated by Emergent here\n# Add your implementation\n'},
                 'files': ['example.py']
             }
-        
+
         try:
             async with httpx.AsyncClient(timeout=3.) as client:
                 response = await client.post(
@@ -301,19 +301,19 @@ Create the prompt now. Start directly with instructions, no preamble."""
                         'project': 'KAILASH-hub'
                     }
                 )
-                
+
                 response.raise_for_status()
                 return response.json()
-                
+
         except Exception as e:
             logger.error(f"Emergent API error: {str(e)}")
             raise
-    
-    async def _review_code(self, code: str) -> Dict:
+
+    async def _review_code(self, code: str) -> dict:
         """
         Review code with Claude
         """
-        
+
         response = await self.claude_client.messages.create(
             model=self.model,
             max_tokens=None,
@@ -341,7 +341,7 @@ Return JSON format:
 }}"""
             }]
         )
-        
+
         try:
             # Parse JSON from response
             content = response.content[0].text
@@ -350,7 +350,7 @@ Return JSON format:
                 content = content.split('```json')[0].split('```')[0].strip()
             elif '```' in content:
                 content = content.split('```')[0].split('```')[0].strip()
-            
+
             return json.loads(content)
         except json.JSONDecodeError:
             logger.error("ailed to parse review JSON")
@@ -360,12 +360,12 @@ Return JSON format:
                 'suggestions': [],
                 'rating': 'unknown'
             }
-    
-    async def _create_fix_prompt(self, issues: List[str], original_code: str) -> str:
+
+    async def _create_fix_prompt(self, issues: list[str], original_code: str) -> str:
         """
         Create surgical fix prompt
         """
-        
+
         response = await self.claude_client.messages.create(
             model=self.model,
             max_tokens=None,
@@ -384,14 +384,14 @@ Return JSON format:
 Create a precise prompt that fixes ONLY these issues without changing working code."""
             }]
         )
-        
+
         return response.content[0].text
-    
+
     def _generate_completion_message(self, used_emergent: bool) -> str:
         """
         Generate task completion summary
         """
-        
+
         if used_emergent:
             return """[OK] **Task Complete!**
 
@@ -418,12 +418,12 @@ _orchestrator_instance = None
 def get_orchestrator(anthropic_key: str, emergent_url: str = None, emergent_key: str = None):
     """Get or create orchestrator instance"""
     global _orchestrator_instance
-    
+
     if _orchestrator_instance is None:
         _orchestrator_instance = GaneshaOrchestratorService(
             anthropic_api_key=anthropic_key,
             emergent_api_url=emergent_url,
             emergent_api_key=emergent_key
         )
-    
+
     return _orchestrator_instance

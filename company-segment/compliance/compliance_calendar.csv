@@ -1,0 +1,30 @@
+area,form,authority,frequency,covers,due_date_rule,example_due_fy2025_26,notes
+GST,GSTR-1,GSTN,Monthly,Outward supplies (sales),11th of following month,2026-04-11,"Turnover > Rs 5 cr or non-QRMP filers"
+GST,GSTR-1 (QRMP),GSTN,Quarterly,Outward supplies (sales),13th of month after quarter,2026-04-13,"QRMP: aggregate turnover <= Rs 5 cr"
+GST,IFF,GSTN,Monthly (opt),B2B invoices months 1-2 of QRMP quarter,13th of following month,2026-05-13,"Optional invoice-furnishing for QRMP"
+GST,GSTR-1A,GSTN,As needed,Amend/rectify filed GSTR-1,Before GSTR-3B of same period,,"Correct GSTR-1 before 3B rather than adjust in 3B"
+GST,GSTR-3B,GSTN,Monthly,Summary liability + ITC,20th of following month,2026-04-20,"Auto-populated from GSTR-1/2B; file sequentially after GSTR-1"
+GST,GSTR-3B (QRMP),GSTN,Quarterly,Summary liability + ITC,22nd/24th of month after quarter (state-grouped),2026-04-22,"State group decides 22nd vs 24th"
+GST,GSTR-2B,GSTN,Monthly,Auto-drafted ITC statement,Generated ~14th,2026-04-14,"Static; consumed for purchase/ITC matching"
+GST,GSTR-9,GSTN,Annual,Annual return,31 Dec of next FY,2026-12-31,"Optional if aggregate turnover <= Rs 2 cr"
+GST,GSTR-9C,GSTN,Annual,Self-certified reconciliation statement,31 Dec of next FY,2026-12-31,"Required if aggregate turnover > Rs 5 cr"
+TDS,TDS deposit,Income-tax,Monthly,Deposit of TDS deducted,7th of following month (Mar: 30 Apr),2026-04-07,"March deposits due 30 Apr"
+TDS,24Q,Income-tax,Quarterly,TDS on salary,Q1 31 Jul / Q2 31 Oct / Q3 31 Jan / Q4 31 May,2026-07-31,"Salary TDS return (sec 192)"
+TDS,26Q,Income-tax,Quarterly,TDS non-salary (resident),Q1 31 Jul / Q2 31 Oct / Q3 31 Jan / Q4 31 May,2026-07-31,"194C/194J/194I etc."
+TDS,27Q,Income-tax,Quarterly,TDS non-resident,Q1 31 Jul / Q2 31 Oct / Q3 31 Jan / Q4 31 May,2026-07-31,"Payments to non-residents"
+TDS,Form 16,Income-tax,Annual,Salary TDS certificate,15 Jun,2026-06-15,"Issue to employees"
+TDS,Form 16A,Income-tax,Quarterly,Non-salary TDS certificate,Within 15 days of return due date,2026-08-15,"Issue to deductees"
+IncomeTax,Advance Tax I,Income-tax,Quarterly,15% cumulative,15 Jun,2025-06-15,
+IncomeTax,Advance Tax II,Income-tax,Quarterly,45% cumulative,15 Sep,2025-09-15,
+IncomeTax,Advance Tax III,Income-tax,Quarterly,75% cumulative,15 Dec,2025-12-15,
+IncomeTax,Advance Tax IV,Income-tax,Quarterly,100% cumulative,15 Mar,2026-03-15,
+IncomeTax,Tax Audit (3CA/3CB-3CD),Income-tax,Annual,Tax audit report,30 Sep,2026-09-30,"Triggered if turnover > Rs 1 cr (or > Rs 10 cr if >=95% digital)"
+IncomeTax,ITR-6,Income-tax,Annual,Company income-tax return,31 Oct (30 Nov if transfer pricing),2026-10-31,"Audited company"
+ROC,AGM,MCA,Annual,Approve financial statements,By 30 Sep,2026-09-30,"Within 6 months of FY end"
+ROC,ADT-1,MCA,Event,Auditor appointment,Within 15 days of AGM,2026-10-15,
+ROC,AOC-4,MCA,Annual,File audited financial statements,Within 30 days of AGM,2026-10-29,
+ROC,MGT-7/7A,MCA,Annual,Annual return,Within 60 days of AGM,2026-11-28,"7A for small company/OPC"
+ROC,DPT-3,MCA,Annual,Return of deposits & loans,30 Jun,2026-06-30,"Required even for non-deposit borrowings"
+ROC,DIR-3 KYC,MCA,Annual,Director KYC (active DINs),30 Sep,2026-09-30,
+ROC,MSME-1 (H2),MCA,Half-yearly,Dues to MSME > 45 days (Oct-Mar),30 Apr,2026-04-30,
+ROC,MSME-1 (H1),MCA,Half-yearly,Dues to MSME > 45 days (Apr-Sep),31 Oct,2026-10-31,

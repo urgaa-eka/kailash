@@ -23,7 +23,7 @@ def extract_pdf_text(data: bytes) -> list[dict[str, Any]]:
     try:
         reader = PdfReader(io.BytesIO(data))
     except Exception as e:
-        raise ValidationError(f"cannot parse pdf: {e}")
+        raise ValidationError(f"cannot parse pdf: {e}") from e
     pages = []
     for i, p in enumerate(reader.pages):
         try:

@@ -24,6 +24,71 @@
 
 ---
 
+## 0. Hard precondition — compose credentials
+
+`docker-compose.yml` declares three credentials with `${VAR:?...}`, which has no
+default. **Every** compose subcommand — `up`, `build`, `config`, `ps` — aborts
+during configuration parsing, before any container is created, if any of them is
+unset or empty:
+
+| Variable | Used by |
+|---|---|
+| `POSTGRES_PASSWORD` | `postgres`, `backend` (`POSTGRES_URL`), `company` (`COMPANY_DB_URL`) |
+| `REDIS_PASSWORD` | `redis` server command and healthcheck, `backend` (`REDIS_URL`) |
+| `PLATFORM_INTERNAL_TOKEN` | every platform service, and `company` |
+
+This is a deliberate trade. These previously carried `${VAR:-<literal>}`
+defaults, so a deploy with nothing configured came up on a password published in
+this repository, and `PLATFORM_INTERNAL_TOKEN` defaulted to empty — which
+`require_internal_token` treats as matching a caller that sends no header at all.
+The failure now moves from *silently deploying with a known-bad credential* to a
+loud abort at parse time.
+
+Compose reads these from the environment or from a `.env` file **in the same
+directory as `docker-compose.yml`** — on the VPS that is `/opt/kailash/.env`, not
+`backend/.env`, which compose never consults for interpolation. Create it before
+the first deploy that includes this change:
+
+```bash
+# On the VPS, in /opt/kailash
+umask 077
+cat > .env <<'EOF'
+POSTGRES_PASSWORD=<generated>
+REDIS_PASSWORD=<generated>
+PLATFORM_INTERNAL_TOKEN=<generated>
+EOF
+```
+
+`.env` is gitignored, and `deploy.sh`'s `git clean -fd` has no `-x`, so it is not
+removed by a deploy. Rotating these values requires recreating the Postgres and
+Redis volumes or issuing `ALTER USER` / `CONFIG SET requirepass` — changing the
+variable alone does not change an already-initialised database's password.
+
+### When `ENV=production`
+
+The backend additionally refuses to start if either of these still holds its
+development default (TRD NFR-Sec4 / TR-2, enforced in `app/core/config.py`):
+
+| Variable | Rejected value | Why |
+|---|---|---|
+| `SECRET_KEY` | `dev-secret-key-change-in-production` | It is published in this repository. Anyone who can read the source can forge a JWT for any account, including the admin — no password needed. |
+| `CORS_ORIGINS` | `*` | Any origin may call the API with credentials. |
+
+The check runs at import, so the process exits before serving a request rather
+than serving one signed with a public key. `ENV` defaults to `dev`, where both
+defaults remain allowed.
+
+### Bootstrapping the first admin
+
+`app/core/seeder.py` creates an admin **only** into a database with no users at
+all, and **only** when `ADMIN_SEED_PASSWORD` is set. There is no default and no
+"recreate if missing" branch, so a deleted admin stays deleted. To bootstrap:
+set `ADMIN_SEED_PASSWORD`, start once, sign in, change the password, then unset
+the variable. `database/seed_data.py` requires `SEED_ADMIN_PASSWORD` in the same
+way and exits if it is unset.
+
+---
+
 ## 1. Frontend → Firebase Hosting
 
 ### Prerequisites
@@ -76,7 +141,7 @@ Pushes to `main` that modify `apps/frontend/` trigger the `deploy-frontend.yml` 
 ### Initial VPS Setup (One-Time)
 ```bash
 # SSH into your Vultr VPS, then:
-curl -fsSL https://raw.githubusercontent.com/flywithvvk/kailash/main/deploy/vultr/setup-vps.sh | bash
+curl -fsSL https://raw.githubusercontent.com/urgaa-eka/kailash/main/deploy/vultr/setup-vps.sh | bash
 ```
 
 This installs: Docker, Nginx, Certbot, UFW firewall, fail2ban, 2GB swap.
@@ -85,7 +150,7 @@ This installs: Docker, Nginx, Certbot, UFW firewall, fail2ban, 2GB swap.
 ```bash
 # On the VPS:
 cd /opt/kailash
-git clone https://github.com/flywithvvk/kailash.git .
+git clone https://github.com/urgaa-eka/kailash.git .
 cp apps/backend/.env.example apps/backend/.env
 nano apps/backend/.env  # Fill in production secrets
 bash deploy/vultr/deploy.sh
@@ -143,7 +208,7 @@ docker compose -f deploy/docker/docker-compose.prod.yml up -d --build
 
 ## 4. GitHub Secrets Checklist
 
-Go to: `https://github.com/flywithvvk/kailash/settings/secrets/actions`
+Go to: `https://github.com/urgaa-eka/kailash/settings/secrets/actions`
 
 | Secret | For |
 |--------|-----|

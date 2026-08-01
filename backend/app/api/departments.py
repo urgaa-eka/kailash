@@ -1,19 +1,20 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from ..api.deps import get_current_active_user
+from ..core.mongodb import get_db
 from ..models.department import Department
 from ..models.user import User
-from ..core.mongodb import get_db
-from ..api.deps import get_current_active_user
 
 router = APIRouter(prefix="/departments", tags=["departments"])
 
-@router.get("/", response_model=List[Department])
+@router.get("/", response_model=list[Department])
 async def get_all_departments(current_user: User = Depends(get_current_active_user)):
     """Get all departments"""
     db = get_db()
     # Optimized query with projection and limit for production performance
     departments = await db.departments.find({}, {"_id": 0}).limit(100).to_list(length=None)
-    
+
     result = []
     for dept in departments:
         # Handle sub_agents - could be int or list
@@ -23,56 +24,56 @@ async def get_all_departments(current_user: User = Depends(get_current_active_us
         elif not isinstance(sub_agents, list):
             dept["sub_agents"] = []
         result.append(Department(**dept))
-    
+
     return result
 
 @router.get("/{department_id}", response_model=Department)
 async def get_department(department_id: str, current_user: User = Depends(get_current_active_user)):
     """Get a specific department by ID"""
     db = get_db()
-    
+
     # Try exact ID match first
     dept_dict = await db.departments.find_one({"id": {"$regex": f"^{department_id}$", "$options": "i"}}, {"_id": 0})
-    
+
     if not dept_dict:
         # Try name match (handles frontend IDs like 'ganesha' -> 'GANESHA')
         dept_dict = await db.departments.find_one({"name": {"$regex": f"^{department_id}$", "$options": "i"}}, {"_id": 0})
-    
+
     if not dept_dict:
         # Try partial name match
         dept_dict = await db.departments.find_one({"name": {"$regex": department_id, "$options": "i"}}, {"_id": 0})
-    
+
     if not dept_dict:
         raise HTTPException(status_code=404, detail="Department not found")
-    
+
     # Handle sub_agents - could be int or list
     sub_agents = dept_dict.get("sub_agents", [])
     if isinstance(sub_agents, int):
         dept_dict["sub_agents"] = [{"name": f"Agent {i+1}", "role": "Specialist", "status": "active", "workload": 0, "tasks": 0} for i in range(sub_agents)]
     elif not isinstance(sub_agents, list):
         dept_dict["sub_agents"] = []
-    
+
     return Department(**dept_dict)
 
 @router.get("/{department_id}/health")
 async def get_department_health(department_id: str, current_user: User = Depends(get_current_active_user)):
     """Get department health metrics"""
     db = get_db()
-    
+
     # Use flexible matching like other endpoints
     dept_dict = await db.departments.find_one({"id": {"$regex": f"^{department_id}$", "$options": "i"}})
-    
+
     if not dept_dict:
         dept_dict = await db.departments.find_one({"name": {"$regex": f"^{department_id}$", "$options": "i"}})
-    
+
     if not dept_dict:
         dept_dict = await db.departments.find_one({"name": {"$regex": department_id, "$options": "i"}})
-    
+
     if not dept_dict:
         raise HTTPException(status_code=404, detail="Department not found")
-    
+
     dept = Department(**dept_dict)
-    
+
     return {
         "department_id": dept.id,
         "name": dept.name,
@@ -88,19 +89,19 @@ async def get_department_health(department_id: str, current_user: User = Depends
 async def get_department_sub_agents(department_id: str, current_user: User = Depends(get_current_active_user)):
     """Get sub-agents for a department"""
     db = get_db()
-    
+
     # Use flexible matching like other endpoints
     dept_dict = await db.departments.find_one({"id": {"$regex": f"^{department_id}$", "$options": "i"}})
-    
+
     if not dept_dict:
         dept_dict = await db.departments.find_one({"name": {"$regex": f"^{department_id}$", "$options": "i"}})
-    
+
     if not dept_dict:
         dept_dict = await db.departments.find_one({"name": {"$regex": department_id, "$options": "i"}})
-    
+
     if not dept_dict:
         raise HTTPException(status_code=404, detail="Department not found")
-    
+
     dept = Department(**dept_dict)
     return {
         "department_id": dept.id,
@@ -112,21 +113,21 @@ async def get_department_sub_agents(department_id: str, current_user: User = Dep
 async def get_department_summary(department_id: str, current_user: User = Depends(get_current_active_user)):
     """Get department summary with tasks, gaps, and sub-agents"""
     db = get_db()
-    
+
     # Try to find by id (case-insensitive)
     dept_dict = await db.departments.find_one({"id": {"$regex": f"^{department_id}$", "$options": "i"}}, {"_id": 0})
-    
+
     if not dept_dict:
         # Try finding by name (case-insensitive) - handles frontend IDs like 'ganesha' -> 'GANESHA'
         dept_dict = await db.departments.find_one({"name": {"$regex": f"^{department_id}$", "$options": "i"}}, {"_id": 0})
-    
+
     if not dept_dict:
         # Try partial name match for better compatibility
         dept_dict = await db.departments.find_one({"name": {"$regex": department_id, "$options": "i"}}, {"_id": 0})
-    
+
     if not dept_dict:
         raise HTTPException(status_code=404, detail="Department not found")
-    
+
     # Handle sub_agents - could be int or list
     sub_agents = dept_dict.get("sub_agents", [])
     if isinstance(sub_agents, int):
@@ -143,16 +144,16 @@ async def get_department_summary(department_id: str, current_user: User = Depend
             } if isinstance(agent, dict) else {"id": f"agent_{i+1}", "name": str(agent), "status": "active", "role": "Specialist Agent", "current_task": None}
             for i, agent in enumerate(sub_agents)
         ]
-    
+
     # Use the found department name for consistent queries
     dept_name = dept_dict.get("name", department_id)
-    
+
     # Get related tasks using department name
     tasks = await db.tasks.find(
         {"department": {"$regex": dept_name, "$options": "i"}},
         {"_id": 0}
     ).limit(10).to_list(length=None)
-    
+
     # Ensure tasks have required fields
     formatted_tasks = [
         {
@@ -164,13 +165,13 @@ async def get_department_summary(department_id: str, current_user: User = Depend
         }
         for task in (tasks or [])
     ]
-    
+
     # Get related gaps using department name
     gaps = await db.gaps.find(
         {"department": {"$regex": dept_name, "$options": "i"}},
         {"_id": 0}
     ).limit(10).to_list(length=None)
-    
+
     # Ensure gaps have required fields
     formatted_gaps = [
         {
@@ -183,7 +184,7 @@ async def get_department_summary(department_id: str, current_user: User = Depend
         }
         for gap in (gaps or [])
     ]
-    
+
     # Build complete response with all fields frontend expects
     return {
         "department": dept_dict.get("name", department_id),
@@ -215,17 +216,17 @@ async def get_department_summary(department_id: str, current_user: User = Depend
 
 @router.post("/{name}/invoke")
 async def invoke_department(
-    name: str, 
+    name: str,
     task: dict,
     current_user: User = Depends(get_current_active_user)
 ):
     """Invoke a department to process a task"""
     from ..departments.registry import get_department
-    
+
     department = get_department(name)
     if not department:
         raise HTTPException(status_code=404, detail=f"Department '{name}' not found")
-    
+
     try:
         result = await department.process_task(task)
         return {
@@ -234,4 +235,4 @@ async def invoke_department(
             "result": result
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Department invocation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Department invocation failed: {str(e)}") from e

@@ -1,11 +1,10 @@
+import json
+
 import anthropic
 import httpx
-from ..core.config import settings
-import uuid
-import os
-import asyncio
-import json
 from dotenv import load_dotenv
+
+from ..core.config import settings
 
 # Load environment variables (don't override Kubernetes env vars)
 load_dotenv(override=False)

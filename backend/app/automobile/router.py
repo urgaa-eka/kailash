@@ -1,12 +1,14 @@
 """Automobile Industry API Router"""
 
-from fastapi import APIRouter, Query, HTTPException, Depends
-from typing import Optional, List, Dict, Any
-from .pricing_engine import pricing_engine
-from .market_data import market_data_collector
-from .gst_integration import gst_software_client
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from ..api.deps import get_current_active_user
 from ..models.user import User
+from .gst_integration import gst_software_client
+from .market_data import market_data_collector
+from .pricing_engine import pricing_engine
 
 router = APIRouter(prefix="/automobile", tags=["Automobile Industry Module"])
 
@@ -14,15 +16,15 @@ router = APIRouter(prefix="/automobile", tags=["Automobile Industry Module"])
 async def get_uniform_price(
     service_type: str = Query(..., description="Service type (e.g., oil_change)"),
     vehicle_type: str = Query(..., description="Vehicle type (e.g., sedan, suv)"),
-    region: Optional[str] = Query(None, description="Region filter"),
+    region: str | None = Query(None, description="Region filter"),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get uniform price for a service using Market + GST data fusion"""
     result = await pricing_engine.calculate_uniform_price(service_type, vehicle_type, region)
-    
+
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
-    
+
     return result
 
 @router.get("/pricing/table/{vehicle_type}")
@@ -32,7 +34,7 @@ async def get_pricing_table(
 ):
     """Get complete pricing table for a vehicle type"""
     pricing = await pricing_engine.get_service_pricing_table(vehicle_type)
-    
+
     return {
         "vehicle_type": vehicle_type,
         "services": len(pricing),
@@ -47,10 +49,10 @@ async def get_pricing_trends(
 ):
     """Get pricing trends for a service over time"""
     result = await pricing_engine.analyze_pricing_trends(service_type, days)
-    
+
     if "error" in result:
         raise HTTPException(status_code=404, detail=result.get("error", "Insufficient data"))
-    
+
     return result
 
 @router.get("/market/insights/{vehicle_type}")
@@ -63,7 +65,7 @@ async def get_market_insights(
 
 @router.post("/market/update")
 async def update_market_data(
-    data: List[Dict[str, Any]],
+    data: list[dict[str, Any]],
     current_user: User = Depends(get_current_active_user)
 ):
     """Bulk update market pricing data"""
@@ -89,8 +91,8 @@ async def sync_gst_data(
 
 @router.get("/gst/analysis")
 async def get_job_card_analysis(
-    service_type: Optional[str] = Query(None, description="Filter by service type"),
-    vehicle_type: Optional[str] = Query(None, description="Filter by vehicle type"),
+    service_type: str | None = Query(None, description="Filter by service type"),
+    vehicle_type: str | None = Query(None, description="Filter by vehicle type"),
     current_user: User = Depends(get_current_active_user)
 ):
     """Analyze job card data with optional filters"""
@@ -99,7 +101,7 @@ async def get_job_card_analysis(
         filters["service_type"] = service_type
     if vehicle_type:
         filters["vehicle_type"] = vehicle_type
-    
+
     return await gst_software_client.analyze_job_cards(filters)
 
 @router.post("/gst/sample-data")

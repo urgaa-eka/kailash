@@ -8,9 +8,9 @@ Usage:
     from app.core.firebase import firebase_app, get_firebase_app
 """
 
-import os
 import json
 import logging
+import os
 
 import firebase_admin
 from firebase_admin import credentials
