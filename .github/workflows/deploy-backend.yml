@@ -10,6 +10,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Repository-state checks that must hold before anything is deployed.
+  # repo_state matters most here: deploy.sh runs `git reset --hard` and
+  # `git clean -fd` on the VPS, so an uncommitted change on a critical path is
+  # deleted with nothing to recover from.
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: python -m scripts.verify.config_drift
+      - run: python -m scripts.verify.secret_scan
+      - run: python -m scripts.verify.repo_state
+
   # Runs the full CI workflow as a gate. Without this edge, ci.yml and this
   # workflow were independent triggers on the same push, so lint, the service
   # matrix, the company ledger suite and the compose build had no bearing on
@@ -55,7 +70,7 @@ jobs:
   deploy:
     name: Deploy to Vultr VPS
     runs-on: ubuntu-latest
-    needs: [ci-gate, test]
+    needs: [preflight, ci-gate, test]
     if: github.ref == 'refs/heads/main'
     environment: production
 
@@ -94,3 +109,16 @@ jobs:
 
             echo "✅ Deployment successful!"
             docker compose -f docker-compose.yml ps
+
+  # Confirms the VPS actually serves what was just deployed. Its exit code is
+  # the job's exit code. UNAVAILABLE (2) is reported distinctly from FAILED
+  # (1): a runner that lost egress is not the same event as the API being down.
+  verify-production:
+    name: Verify production
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: python -m scripts.verify.deployment_check --env production
