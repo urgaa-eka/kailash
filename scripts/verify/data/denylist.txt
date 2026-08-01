@@ -1,0 +1,12 @@
+# Literals that must never appear in a tracked file.
+#
+# Seeded with the credentials that were published in this repository's history.
+# Rotation NEVER adds the new value here: a denylist of live credentials would
+# itself be the leak. Add the OLD value after rotating, so a revert is caught.
+#
+# One literal per line. Blank lines and # comments ignored.
+
+kailash_prod_2026
+kailash_redis_2026
+Kailash@2026
+dev-secret-key-change-in-production

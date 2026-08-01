@@ -93,7 +93,7 @@ A Firebase project identifier mismatch in `frontend/.firebaserc` has already bee
 
 #### Acceptance Criteria
 
-1. THE file `docker-compose.yml` SHALL declare `POSTGRES_PASSWORD` and `REDIS_PASSWORD` as environment references without fallback values, verified by the strings `kailash_prod_2026` and `kailash_redis_2026` being absent from the file.
+1. THE file `docker-compose.yml` SHALL declare `POSTGRES_PASSWORD` and `REDIS_PASSWORD` as environment references without fallback values, verified by the strings `kailash_prod_2026` and `kailash_redis_2026` being absent from the file.  <!-- secret-scan: allow documents the credential incident being remediated -->
 2. WHEN the Compose_Stack starts with `POSTGRES_PASSWORD` or `REDIS_PASSWORD` unset or empty, THE Compose_Stack SHALL exit with a non-zero code before any Data_Services container accepts a network connection.
 3. THE Secret_Scan SHALL inspect every file tracked by git and SHALL exit with code 0 only when no file contains a literal credential value.
 4. WHEN a pull request targets `main` and WHEN a commit is pushed to `main`, THE CI_Pipeline SHALL run the Secret_Scan as a required job.

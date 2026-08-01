@@ -267,7 +267,7 @@ Three architectural decisions define the platform:
 | NFR-Sec1 | All external traffic shall be TLS 1.2 or 1.3 only, with HTTP redirected to HTTPS at the proxy. |
 | NFR-Sec2 | The application port shall bind to loopback (`127.0.0.1:8000`) and never be published directly to the public interface. |
 | NFR-Sec3 | Passwords shall be stored only as bcrypt hashes; plaintext passwords shall never be logged. |
-| NFR-Sec4 | `SECRET_KEY` shall be a long random value in every non-development environment; the default `dev-secret-key-change-in-production` shall be rejected at startup in production. |
+| NFR-Sec4 | `SECRET_KEY` shall be a long random value in every non-development environment; the default `dev-secret-key-change-in-production` shall be rejected at startup in production. |  <!-- secret-scan: allow documents the credential incident being remediated -->
 | NFR-Sec5 | CORS shall be restricted to the explicit `ALLOWED_ORIGINS` list in production (`kailash-ai.in`, `www.kailash-ai.in`, and the Firebase hosting domains); the permissive development default shall not reach production. |
 | NFR-Sec6 | Security headers shall be applied at both the proxy and the hosting layer: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection`, `Referrer-Policy: strict-origin-when-cross-origin`, and a `Permissions-Policy` denying camera and geolocation while allowing microphone to self. |
 | NFR-Sec7 | Rate limiting shall be enforced at the proxy: 30 requests/second for general API traffic and 5 requests/second for authentication endpoints, per client address. |
@@ -653,7 +653,7 @@ No change merges to `main` unless `lint`, `shared`, `services` (all nine), `back
 | Test counts | README publishes 5 / 53 / 10+ / 3+; suites exist but were not re-executed for this assessment. |
 | Git remote | Resolved — `urgaa-eka/kailash` is canonical (matches `origin`); README badges, `deploy/vultr/*.sh` and `docs/DEPLOYMENT.md` all updated. |
 | `CORS_ORIGINS` default | `Settings.CORS_ORIGINS` defaults to `"*"` in `core/config.py`, with the restrictive list living in `.env.example`. The permissive default must not reach production. |
-| `SECRET_KEY` default | Falls back to `dev-secret-key-change-in-production` if unset. Production startup must reject this. |
+| `SECRET_KEY` default | Falls back to `dev-secret-key-change-in-production` if unset. Production startup must reject this. |  <!-- secret-scan: allow documents the credential incident being remediated -->
 | Startup permission check | Currently logs a critical block and continues; the hard-fail line is commented out in `main.py`. |
 | Mobile clients | **None.** `ios_app_kailash_ai/` and `android_app_kailash_ai/` contain only empty `deployed/` and `not_deployed/` directories. |
 
@@ -670,7 +670,7 @@ The technical foundation is real, coherent and unusually well-structured for an 
 | ID | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
 | TR-1 | **Deploy script pulls from the wrong repository** because `REPO_URL` in `deploy/vultr/deploy.sh` does not match the configured `origin`. `deploy.sh` performs `git reset --hard` plus `git clean -fd`, so a wrong-source deploy is destructive. | Medium | High | Reconcile all three references to one canonical remote before the next deploy; parameterise `REPO_URL` from the environment; add a pre-deploy assertion that the resolved remote matches an allowlist. |
-| TR-2 | **Permissive development defaults reach production** — `CORS_ORIGINS="*"`, `SECRET_KEY="dev-secret-key-change-in-production"`, `require_internal_token` being a no-op in dev mode. | Medium | High | Fail fast at startup when `ENV=production` and any of these hold an unsafe value; add a CI check on production configuration. |
+| TR-2 | **Permissive development defaults reach production** — `CORS_ORIGINS="*"`, `SECRET_KEY="dev-secret-key-change-in-production"`, `require_internal_token` being a no-op in dev mode. | Medium | High | Fail fast at startup when `ENV=production` and any of these hold an unsafe value; add a CI check on production configuration. |  <!-- secret-scan: allow documents the credential incident being remediated -->
 | TR-3 | **Startup permission validation is advisory, not blocking** — the hard-fail is commented out, so the app can start into a state where authentication is guaranteed to fail. | Medium | High | Enable the hard-fail in production; add a synthetic login probe to monitoring so the failure is detected in seconds, not by users. |
 | TR-4 | **In-memory RAG and knowledge graph lose state on restart** and cannot scale beyond a single process. | High | Medium | Move to a persistent vector store (the Pinecone configuration is already scaffolded) and a durable graph representation. |
 | TR-5 | **Single-instance backend** — one container, one VPS, no redundancy. | Medium | High | Introduce a second instance behind a load balancer, or container orchestration; verify statelessness first (NFR-S1). |

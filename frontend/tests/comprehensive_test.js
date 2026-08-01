@@ -1,10 +1,12 @@
 const puppeteer = require('puppeteer');
 
 const BASE_URL = 'http://localhost:3000';
+// Credentials come from the environment. They used to be literals here,
+// and this file is tracked in a public repository.
 const CREDENTIALS = {
-  kailash_code: '<REDACTED_kailash_code>',
-  password: '<REDACTED_PASSWORD>',
-  two_factor: '123456'
+  kailash_code: process.env.KAILASH_CODE,
+  password: process.env.KAILASH_PASSWORD,
+  two_factor: process.env.KAILASH_2FA || '123456'
 };
 
 const ROUTES_TO_TEST = [

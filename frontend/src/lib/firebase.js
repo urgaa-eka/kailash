@@ -6,6 +6,9 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 // projectId swap: apiKey, appId, messagingSenderId and measurementId are all
 // per-project and would silently point analytics at the wrong place otherwise.
 const firebaseConfig = {
+  // Firebase web API keys ship in every client bundle. Access is controlled by
+  // referrer restrictions and security rules, not by keeping this string secret.
+  // secret-scan: allow public by design, shipped in the client bundle
   apiKey: "AIzaSyDD70yOW6vheOK2OPzNXT0b0R5B9ZXI1ho",
   authDomain: "kailash-29111.firebaseapp.com",
   projectId: "kailash-29111",

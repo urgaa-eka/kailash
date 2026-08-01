@@ -97,6 +97,8 @@ agenthub/agents/youtube/db
 
 # Build caches
 .cache/
+.hypothesis/
+.pytest_cache/
 
 # Mobile development
 # React Native, Expo directories
