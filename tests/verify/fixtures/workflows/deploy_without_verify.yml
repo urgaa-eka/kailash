@@ -1,0 +1,36 @@
+name: production deploy with no verification successor
+on:
+  push:
+    branches: [main]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.repo_state
+
+  ci-gate:
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
+
+  deploy-staging:
+    needs: [preflight, ci-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1
+        with:
+          script: docker compose -p kailash-staging up -d
+
+  verify-staging:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env staging
+
+  deploy-production:
+    needs: [preflight, ci-gate, deploy-staging, verify-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1
+        with:
+          script: docker compose -f docker-compose.yml up -d

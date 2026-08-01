@@ -1,0 +1,37 @@
+{
+  "name": "kailash-mongo",
+  "probe_source": "compose",
+  "note": "Requirement 1.2: the probe names an executable the image does not have, so `which` is the evidence and the remedy is a different executable.",
+  "health": {
+    "Status": "unhealthy",
+    "FailingStreak": 5,
+    "Log": [
+      {
+        "Start": "2026-01-05T10:00:00.100000000Z",
+        "End": "2026-01-05T10:00:00.180000000Z",
+        "ExitCode": 127,
+        "Output": "OCI runtime exec failed: exec failed: unable to start container process: exec: \"mongosh\": executable file not found in $PATH\n"
+      }
+    ]
+  },
+  "effective": {
+    "Test": ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping')\""],
+    "Interval": 30000000000,
+    "Timeout": 20000000000,
+    "StartPeriod": 60000000000,
+    "Retries": 5
+  },
+  "state": {
+    "Status": "running",
+    "Running": true,
+    "ExitCode": 0,
+    "StartedAt": "2026-01-05T05:00:00.000000000Z"
+  },
+  "restarts": 0,
+  "executable": {
+    "name": "mongosh",
+    "present": false,
+    "which_exit_code": 1,
+    "which_output": ""
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "kailash-frontend",
+  "probe_source": "none",
+  "note": "The only container with no probe at all, so it reports no health state and `docker ps --filter health=healthy` can list at most 14 names. Requirement 1.5 is unsatisfiable until task 4.6 adds one.",
+  "health": null,
+  "effective": null,
+  "state": {
+    "Status": "running",
+    "Running": true,
+    "ExitCode": 0,
+    "StartedAt": "2026-01-05T05:00:00.000000000Z"
+  },
+  "restarts": 0
+}

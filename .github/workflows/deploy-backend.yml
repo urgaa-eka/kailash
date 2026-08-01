@@ -98,8 +98,19 @@ jobs:
             git reset --hard origin/main
             git clean -fd
 
-            # Rebuild and restart containers
-            docker compose -f docker-compose.yml up -d --build --remove-orphans
+            # The service set production runs, decided in
+            # docs/records/profiled-services-scope.md: the kailash-ai profile's
+            # full 15-service set, minus `frontend`. Eleven of the fifteen
+            # declare profiles: ["kailash-ai"], so without the flag this step
+            # started four containers and left every platform service inert.
+            # `frontend` is excluded because Firebase Hosting serves the SPA;
+            # naming services also keeps --build from building the CRA image on
+            # the VPS. Keep in step with PROD_SERVICES in deploy/vultr/deploy.sh.
+            PROD_SERVICES="backend mongo postgres redis company document-ai forecasting anomaly rag vision-gateway speech model-registry knowledge-graph automobile-llm"
+
+            # Rebuild and restart containers. $PROD_SERVICES is deliberately
+            # unquoted: compose takes the service names as separate arguments.
+            docker compose -f docker-compose.yml --profile kailash-ai up -d --build --remove-orphans $PROD_SERVICES
 
             # Wait and health check
             sleep 15
@@ -110,7 +121,9 @@ jobs:
             }
 
             echo "✅ Deployment successful!"
-            docker compose -f docker-compose.yml ps
+            # --profile is required here too: `ps` filters by active profile, so
+            # without it this line reports 4 containers out of 14.
+            docker compose -f docker-compose.yml --profile kailash-ai ps
 
   # Confirms the VPS actually serves what was just deployed. Its exit code is
   # the job's exit code. UNAVAILABLE (2) is reported distinctly from FAILED

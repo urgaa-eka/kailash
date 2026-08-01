@@ -9,6 +9,32 @@ APP_DIR="/opt/kailash"
 REPO_URL="https://github.com/urgaa-eka/kailash.git"
 BRANCH="${DEPLOY_BRANCH:-main}"
 COMPOSE_FILE="docker-compose.yml"
+COMPOSE_PROFILE="kailash-ai"
+
+# The service set production runs. Decided in
+# docs/records/profiled-services-scope.md: the kailash-ai profile's full
+# 15-service set, minus `frontend`.
+#
+# Without --profile this script started four containers -- backend, mongo,
+# postgres, redis -- because the other eleven declare profiles: ["kailash-ai"]
+# and compose treats a profile-gated service as inert unless the profile is
+# enabled. "Deploy the backend" silently meant "deploy the backend and nothing
+# it talks to".
+#
+# `frontend` is named out rather than scaled to zero: it is the nginx SPA
+# container for local development, and Firebase Hosting serves the SPA in
+# production. Naming services explicitly also keeps `up --build` from building
+# frontend/Dockerfile (a full yarn install + CRA build) on the VPS for an image
+# that would never run.
+#
+# Adding a service to docker-compose.yml means adding it here too. Keep in step
+# with the same list in .github/workflows/deploy-backend.yml.
+PROD_SERVICES=(
+    backend mongo postgres redis
+    company
+    document-ai forecasting anomaly rag vision-gateway
+    speech model-registry knowledge-graph automobile-llm
+)
 
 echo "═══════════════════════════════════════════════════"
 echo " Kailash — Vultr Deployment"
@@ -132,10 +158,13 @@ check_env() {
 }
 
 deploy_containers() {
-    echo "▶ Building and deploying containers..."
+    echo "▶ Building and deploying ${#PROD_SERVICES[@]} containers..."
     cd "$APP_DIR"
-    docker compose -f "$COMPOSE_FILE" pull --ignore-buildable 2>/dev/null || true
-    docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans
+    docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" \
+        pull --ignore-buildable "${PROD_SERVICES[@]}" 2>/dev/null || true
+    docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" \
+        up -d --build --remove-orphans "${PROD_SERVICES[@]}"
+    docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" ps
     echo "  ✅ Containers deployed"
 }
 

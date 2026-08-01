@@ -1,0 +1,40 @@
+name: staging depends on production, so the promotion order is inverted
+on:
+  push:
+    branches: [main]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.config_drift
+
+  ci-gate:
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
+
+  deploy-production:
+    needs: [preflight, ci-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - run: firebase deploy --only hosting --project kailash-38268
+
+  verify-production:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env production
+
+  deploy-staging:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          channelId: staging
+
+  verify-staging:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env staging

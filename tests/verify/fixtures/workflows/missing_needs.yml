@@ -1,0 +1,38 @@
+name: deploy-production reachable without the staging verification
+on:
+  push:
+    branches: [main]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.config_drift
+
+  ci-gate:
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
+
+  deploy-staging:
+    needs: [preflight, ci-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker compose -p kailash-staging up -d
+
+  verify-staging:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env staging
+
+  deploy-production:
+    needs: [preflight, ci-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker compose -f docker-compose.yml up -d
+
+  verify-production:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env production

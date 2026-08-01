@@ -1,0 +1,50 @@
+{
+  "name": "kailash-forecasting",
+  "probe_source": "image",
+  "note": "Requirement 1.6: replay succeeds well inside the declared timeout while the recorded probe failed, and no start period is declared, so the attribution is the probe invocation and the remedy is timeout plus start_period.",
+  "health": {
+    "Status": "unhealthy",
+    "FailingStreak": 5,
+    "Log": [
+      {
+        "Start": "2026-01-05T10:00:00.000000000Z",
+        "End": "2026-01-05T10:00:05.010000000Z",
+        "ExitCode": -1,
+        "Output": "Health check exceeded timeout (5s)"
+      },
+      {
+        "Start": "2026-01-05T10:00:35.000000000Z",
+        "End": "2026-01-05T10:00:40.020000000Z",
+        "ExitCode": -1,
+        "Output": "Health check exceeded timeout (5s)"
+      }
+    ]
+  },
+  "effective": {
+    "Test": ["CMD-SHELL", "python -c \"import os,urllib.request,sys;urllib.request.urlopen(f'http://localhost:{os.environ[\\\"PORT\\\"]}/health')\" || exit 1"],
+    "Interval": 30000000000,
+    "Timeout": 5000000000,
+    "Retries": 5
+  },
+  "state": {
+    "Status": "running",
+    "Running": true,
+    "ExitCode": 0,
+    "StartedAt": "2026-01-05T05:00:00.000000000Z"
+  },
+  "restarts": 0,
+  "executable": {
+    "name": "python",
+    "present": true,
+    "which_exit_code": 0,
+    "which_output": "/usr/local/bin/python\n"
+  },
+  "replay": {
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "",
+    "duration_seconds": 0.31
+  },
+  "measured_first_success_seconds": 47.0,
+  "declared_start_period_seconds": 0
+}

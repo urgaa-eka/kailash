@@ -8,6 +8,11 @@ named a third one, so a deploy would have reported success and changed nothing.
 A missing declaration is a finding, not a skip. Skipping absent values would
 let the check pass by deleting a line, certifying agreement among three files
 while the fourth targets nothing.
+
+An *added* line is drift too, which is why every extractor returns every
+declaration a file makes rather than the first one. A file that declares the
+value twice with two different values is a defect regardless of which one the
+consumer honours: nobody reading it can tell where the deploy lands.
 """
 from __future__ import annotations
 
@@ -36,11 +41,27 @@ DATA_DIR = Path(__file__).parent / "data"
 
 
 @dataclass(frozen=True)
+class Declaration:
+    """One occurrence of a value in a file, with its line when known."""
+
+    value: str
+    line: int | None = None
+
+
+Extractor = Callable[[str], list[Declaration]]
+
+
+@dataclass(frozen=True)
 class Source:
-    """One place a value is declared."""
+    """One place a value is declared.
+
+    `extract` returns *every* declaration in the file, not the first. A
+    first-match extractor cannot distinguish "declared once, correctly" from
+    "declared twice, disagreeing", and the second is drift.
+    """
 
     path: str
-    extract: Callable[[str], str | None]
+    extract: Extractor
     required: bool = False
 
 
@@ -51,38 +72,70 @@ class DriftRule:
     expected: str | None = None
     required_sources: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        # One place declares which sources are required: the sources themselves.
+        # Two lists that must agree would be the defect this module exists for.
+        if not self.required_sources:
+            self.required_sources = [s.path for s in self.sources if s.required]
+
 
 # --------------------------------------------------------------------------
 # Extractors
 # --------------------------------------------------------------------------
 
-def _firebaserc_default(text: str) -> str | None:
+def _lineno(text: str, offset: int) -> int:
+    return text.count("\n", 0, offset) + 1
+
+
+def _firebaserc_default(text: str) -> list[Declaration]:
+    """`.projects.default` only.
+
+    Other aliases under `.projects` are deliberately not compared: Requirement 8
+    introduces a staging target, and an alias naming a staging project is a
+    legitimate second value rather than drift.
+    """
     try:
-        return (json.loads(text).get("projects") or {}).get("default")
+        value = (json.loads(text).get("projects") or {}).get("default")
     except (json.JSONDecodeError, AttributeError):
-        return None
+        return []
+    if not isinstance(value, str) or not value:
+        return []
+    m = re.search(r'"default"\s*:', text)
+    return [Declaration(value, _lineno(text, m.start()) if m else None)]
 
 
-def _dotenv_key(pattern: str) -> Callable[[str], str | None]:
-    rx = re.compile(rf"^\s*(?:export\s+)?{pattern}\s*=\s*(.*?)\s*$", re.M)
+def _dotenv_key(pattern: str) -> Extractor:
+    # `\r` is matched explicitly rather than via `\s`: these files are checked
+    # out CRLF on the Windows developer host and LF on the CI runner, and `\s`
+    # would additionally span newlines and let a match run past its own line.
+    rx = re.compile(
+        rf"^[ \t]*(?:export[ \t]+)?{pattern}[ \t]*=[ \t]*(.*?)[ \t\r]*$", re.M)
 
-    def extract(text: str) -> str | None:
-        m = rx.search(text)
-        if not m:
-            return None
-        return m.group(1).strip().strip('"').strip("'") or None
+    def extract(text: str) -> list[Declaration]:
+        out: list[Declaration] = []
+        for m in rx.finditer(text):
+            value = m.group(1).strip().strip('"').strip("'")
+            if value:
+                out.append(Declaration(value, _lineno(text, m.start())))
+        return out
 
     return extract
 
 
-def _workflow_project_id(text: str) -> str | None:
-    """`projectId:` under the hosting-deploy step.
+def _workflow_project_id(text: str) -> list[Declaration]:
+    """Every `projectId:` in the workflow, not just the hosting-deploy step's.
 
     Parsed by regex rather than YAML on purpose: the value may be a `${{ }}`
     expression, and this check cares about the literal that was written.
+
+    Every occurrence participates because the staging channel this repository
+    is heading for deploys from a second step in this same file. Reading only
+    the first `projectId:` would let that step name any project at all while
+    the check reported agreement -- and the step that deploys is the one whose
+    value decides where the build lands.
     """
-    m = re.search(r"^\s*projectId:\s*(\S+)\s*$", text, re.M)
-    return m.group(1).strip("\"'") if m else None
+    return [Declaration(m.group(1).strip("\"'"), _lineno(text, m.start()))
+            for m in re.finditer(r"^[ \t]*projectId:[ \t]*(\S+)[ \t\r]*$", text, re.M)]
 
 
 def _firebase_js_field(field_name: str) -> Callable[[str], str | None]:
@@ -126,31 +179,55 @@ def _firebase_project_id_rule() -> DriftRule:
     )
 
 
-def check_firebase_project_id(corpus: Corpus, report: Report) -> None:
-    rule = _firebase_project_id_rule()
-    seen: list[tuple[str, str | None]] = []
+def _render(declarations: list[Declaration]) -> str:
+    return ",".join(d.value for d in declarations) if declarations else "<absent>"
+
+
+def run_agreement_rule(rule: DriftRule, corpus: Corpus, report: Report) -> None:
+    """Every declaration in every source must equal `rule.expected`.
+
+    Three failure shapes, all of which have to be findings:
+    absent from a required source, present but different, and present twice
+    with two different values in one file.
+    """
+    seen: list[tuple[str, list[Declaration]]] = []
     for src in rule.sources:
         text = corpus.read(src.path)
-        value = src.extract(text) if text is not None else None
-        seen.append((src.path, value))
+        seen.append((src.path, src.extract(text) if text is not None else []))
 
-    for path, value in seen:
-        if value is None:
-            report.add(Finding(
-                rule=rule.rule_id, path=path, observed="<absent>",
-                expected=rule.expected,
-                message="declaration missing; a deleted line is drift, not an exemption",
-            ))
-        elif value != rule.expected:
-            report.add(Finding(
-                rule=rule.rule_id, path=path, observed=value, expected=rule.expected,
-            ))
+    required = set(rule.required_sources)
+    disagreed = False
 
-    if any(v != rule.expected for _, v in seen):
+    for path, declarations in seen:
+        if not declarations:
+            if path in required:
+                report.add(Finding(
+                    rule=rule.rule_id, path=path, observed="<absent>",
+                    expected=rule.expected,
+                    message="declaration missing; a deleted line is drift, not an exemption",
+                ))
+                disagreed = True
+            continue
+        for decl in declarations:
+            if decl.value != rule.expected:
+                report.add(Finding(
+                    rule=rule.rule_id, path=path, line=decl.line,
+                    observed=decl.value, expected=rule.expected,
+                ))
+                disagreed = True
+
+    if disagreed:
+        # Requirement 3.7: every participating path with the value found in it,
+        # including the ones that agree -- a reader fixing the drift needs to
+        # see which value the majority of the files actually carry.
         report.notes.append(
-            "firebase-project-id participants: "
-            + "; ".join(f"{p}={v or '<absent>'}" for p, v in seen)
+            f"{rule.rule_id} participants: "
+            + "; ".join(f"{p}={_render(d)}" for p, d in seen)
         )
+
+
+def check_firebase_project_id(corpus: Corpus, report: Report) -> None:
+    run_agreement_rule(_firebase_project_id_rule(), corpus, report)
 
 
 def check_github_repo_slug(corpus: Corpus, report: Report) -> None:
@@ -161,7 +238,8 @@ def check_github_repo_slug(corpus: Corpus, report: Report) -> None:
     vacuous pass there is the most dangerous outcome in the whole check.
     """
     required = "deploy/vultr/deploy.sh"
-    required_hits = 0
+    required_hits = 0     # matches in the required source that agree
+    required_seen = 0     # matches in the required source, agreeing or not
 
     for rel, text in corpus.texts():
         if rel.startswith(".kiro/") or rel == "CHANGELOG.md":
@@ -173,11 +251,26 @@ def check_github_repo_slug(corpus: Corpus, report: Report) -> None:
                 for m in rx.finditer(line):
                     slug = f"{m.group('owner')}/{m.group('name')}"
                     if rel == required:
-                        required_hits += 1
+                        required_seen += 1
                     if slug == EXPECTED_REPO_SLUG:
+                        if rel == required:
+                            required_hits += 1
                         continue
                     reason = suppression_on(lines, idx)
-                    if reason:
+                    if rel == required:
+                        # Requirement 9.2 is an exact-match obligation on this
+                        # file, so a suppression marker cannot discharge it, and
+                        # a disagreeing match does not count towards the
+                        # required hit. Otherwise `# verify: allow` on this one
+                        # line turns `git reset --hard` and `git clean -fd`
+                        # loose on another repository behind a green check.
+                        report.add(Finding(
+                            rule="github-repo-slug", path=rel, line=lineno,
+                            observed=slug, expected=EXPECTED_REPO_SLUG,
+                            message="required source names another repository"
+                                    + ("; suppression ignored here" if reason else ""),
+                        ))
+                    elif reason:
                         report.suppressions.append(
                             Suppression("github-repo-slug", rel, lineno, reason))
                     else:
@@ -186,7 +279,10 @@ def check_github_repo_slug(corpus: Corpus, report: Report) -> None:
                             observed=slug, expected=EXPECTED_REPO_SLUG,
                         ))
 
-    if required_hits == 0:
+    if required_hits == 0 and required_seen == 0:
+        # Only when the file names no repository at all. A disagreeing match has
+        # already been reported above with its line, and claiming "no reference"
+        # on top of that would be untrue.
         report.add(Finding(
             rule="github-repo-slug", path=required, observed="<no match>",
             expected=EXPECTED_REPO_SLUG,

@@ -1,0 +1,43 @@
+name: gating jobs that cannot fail
+on:
+  push:
+    branches: [main]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.config_drift || true
+
+  ci-gate:
+    needs: preflight
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - run: pytest -q tests/backend
+
+  deploy-staging:
+    needs: [preflight, ci-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker compose -p kailash-staging up -d
+
+  verify-staging:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python -m scripts.verify.deployment_check --env staging
+          exit 0
+
+  deploy-production:
+    needs: [preflight, ci-gate, deploy-staging, verify-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - run: docker compose -f docker-compose.yml up -d
+
+  verify-production:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env production

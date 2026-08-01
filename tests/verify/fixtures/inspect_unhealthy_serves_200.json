@@ -1,0 +1,38 @@
+{
+  "name": "kailash-backend",
+  "probe_source": "compose",
+  "note": "Requirement 1.7: answers 200 on /health while the probe asks for /api/health, so the attribution must name the path element of the definition rather than stopping at 'unhealthy'.",
+  "health": {
+    "Status": "unhealthy",
+    "FailingStreak": 5,
+    "Log": [
+      {
+        "Start": "2026-01-05T10:00:00.100000000Z",
+        "End": "2026-01-05T10:00:00.240000000Z",
+        "ExitCode": 22,
+        "Output": "curl: (22) The requested URL returned error: 404\n"
+      }
+    ]
+  },
+  "effective": {
+    "Test": ["CMD-SHELL", "curl -f http://localhost:8000/api/health || exit 1"],
+    "Interval": 30000000000,
+    "Timeout": 10000000000,
+    "StartPeriod": 40000000000,
+    "Retries": 3
+  },
+  "state": {
+    "Status": "running",
+    "Running": true,
+    "ExitCode": 0,
+    "StartedAt": "2026-01-05T05:00:00.000000000Z"
+  },
+  "restarts": 0,
+  "replay": {
+    "exit_code": 0,
+    "stdout": "{\"status\":\"ok\"}",
+    "stderr": "",
+    "duration_seconds": 0.09,
+    "replayed": ["docker", "exec", "kailash-backend", "curl", "-fsS", "http://localhost:8000/health"]
+  }
+}

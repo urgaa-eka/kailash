@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import http.server
 import json
+import re
 import shutil
 import socket
 import subprocess
@@ -17,14 +18,117 @@ from pathlib import Path
 
 import pytest
 
+FIXTURES = Path(__file__).parent / "fixtures"
+
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "docker: needs a docker daemon")
     config.addinivalue_line("markers", "network: needs outbound network")
 
 
+def read_fixture(name: str) -> str:
+    """Raw fixture text. Used for the malformed captures, which must not parse."""
+    return (FIXTURES / name).read_text(encoding="utf-8")
+
+
+def load_fixture(name: str) -> dict:
+    """A captured `docker inspect` shape, keyed by the Phase A capture names:
+    `health` (.State.Health), `effective` (.Config.Healthcheck), `state`
+    (.State) and `restarts` (.RestartCount)."""
+    return json.loads(read_fixture(name))
+
+
+@pytest.fixture
+def fixtures_dir() -> Path:
+    return FIXTURES
+
+
 def _have(cmd: str) -> bool:
     return shutil.which(cmd) is not None
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_DEPLOY_SH = REPO_ROOT / "deploy" / "vultr" / "deploy.sh"
+
+
+def find_bash() -> str | None:
+    """A bash that can see this filesystem.
+
+    Git bash in preference to WSL: WSL's `bash.exe` lives in System32 and its
+    filesystem view is not the host's, so a script written to a Windows temp
+    path is invisible to it.
+    """
+    for candidate in (r"C:\Program Files\Git\bin\bash.exe",
+                      r"C:\Program Files (x86)\Git\bin\bash.exe"):
+        if Path(candidate).is_file():
+            return candidate
+    found = shutil.which("bash")
+    if found and "system32" in found.lower():
+        return None
+    return found
+
+
+def extract_shell_function(name: str, text: str) -> str:
+    """One `name() { ... }` definition, by brace matching.
+
+    Sourcing `deploy.sh` is not an option: it ends in `main "$@"`, so sourcing
+    it would install Docker and deploy the stack from inside a test run.
+    """
+    m = re.search(rf"^{name}\(\)\s*\{{", text, re.M)
+    if not m:
+        raise AssertionError(f"{name}() not found")
+    depth, i = 0, m.end() - 1
+    while i < len(text):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[m.start():i + 1]
+        i += 1
+    raise AssertionError(f"unbalanced braces in {name}()")
+
+
+def _posix(p: Path | str) -> str:
+    s = str(p).replace("\\", "/")
+    if len(s) > 1 and s[1] == ":":
+        s = f"/{s[0].lower()}{s[2:]}"
+    return s
+
+
+@pytest.fixture(scope="session")
+def bash_normalise(tmp_path_factory):
+    """The bash `normalise_remote()` from `deploy/vultr/deploy.sh`, batched.
+
+    One process per *call*, not per URL: the parity property compares many URLs
+    per example, and a bash process each would dominate the suite's runtime.
+
+    Skips rather than fails when no usable bash exists, so the suite still runs
+    on a host without one -- the Python-side properties still hold there, only
+    the cross-implementation agreement goes unchecked.
+    """
+    bash = find_bash()
+    if bash is None:
+        pytest.skip("no usable bash")
+    script = SCRIPT_DEPLOY_SH.read_text(encoding="utf-8")
+    body = extract_shell_function("normalise_remote", script)
+    harness = tmp_path_factory.mktemp("bash") / "normalise.sh"
+    harness.write_text("#!/usr/bin/env bash\n" + body + "\n"
+                       'for u in "$@"; do normalise_remote "$u"; echo; done\n',
+                       encoding="utf-8", newline="\n")
+
+    def normalise(urls):
+        urls = list(urls)
+        if not urls:
+            return []
+        out = subprocess.run([bash, _posix(harness), *urls],
+                             capture_output=True, text=True, check=False)
+        assert out.returncode == 0, out.stderr
+        lines = out.stdout.split("\n")[:len(urls)]
+        assert len(lines) == len(urls), (out.stdout, urls)
+        return lines
+
+    return normalise
 
 
 @pytest.fixture(autouse=True)
@@ -87,6 +191,12 @@ class Repo:
     def backend_env_example(self, project: str) -> None:
         self.write("backend/.env.example", f"FIREBASE_PROJECT_ID={project}\n")
 
+    def workflow(self, name: str, body: str) -> Path:
+        """An arbitrary `.github/workflows/<name>` file, staged."""
+        if not name.endswith((".yml", ".yaml")):
+            name += ".yml"
+        return self.write(f".github/workflows/{name}", body)
+
     def deploy_workflow(self, project: str) -> None:
         self.write(".github/workflows/deploy-frontend.yml",
                    "jobs:\n  d:\n    steps:\n"
@@ -129,33 +239,92 @@ def tmp_repo(tmp_path: Path) -> Repo:
     return Repo(tmp_path)
 
 
+def _argv(args: tuple) -> tuple[str, ...]:
+    """Normalise both call conventions to one argv tuple.
+
+    `execute(["docker", "rm", "-f", name])` and `execute("docker", "rm", "-f",
+    name)` are the same command and must be equally visible. The design's
+    removal gate uses the second form, so a matcher that only understood the
+    first would make `assert_never("docker rm")` pass while `docker rm` was
+    being issued -- a vacuous assertion guarding an irreversible command.
+    """
+    if not args:
+        return ()
+    if isinstance(args[0], list | tuple):
+        return tuple(str(a) for a in args[0])
+    return tuple(str(a) for a in args)
+
+
 @dataclass
 class Call:
     args: tuple
     kwargs: dict
+
+    @property
+    def argv(self) -> tuple[str, ...]:
+        return _argv(self.args)
+
+    @property
+    def command(self) -> str:
+        return " ".join(self.argv)
 
 
 @dataclass
 class FakeExecutor:
     """Records calls and returns scripted results, so destructive commands can
     be asserted on without a daemon: the assertion is that `docker rm` was
-    never called, which needs no docker."""
+    never called, which needs no docker.
+
+    `scripted` maps a command string to `(returncode, stdout, stderr)`. An
+    exact match wins; otherwise the longest key that is a substring of the
+    command is used, so a family of `docker inspect ... <name>` calls can be
+    scripted by their common prefix. Unscripted commands return 0 and empty
+    output.
+    """
 
     scripted: dict = field(default_factory=dict)
     calls: list[Call] = field(default_factory=list)
 
     def __call__(self, *args, **kwargs):
-        self.calls.append(Call(args, kwargs))
-        key = " ".join(args[0]) if args and isinstance(args[0], list | tuple) else str(args)
-        rc, out, err = self.scripted.get(key, (0, "", ""))
-        return subprocess.CompletedProcess(args[0] if args else [], rc, out, err)
+        call = Call(args, kwargs)
+        self.calls.append(call)
+        rc, out, err = self._result_for(call.command)
+        completed = subprocess.CompletedProcess(list(call.argv), rc, out, err)
+        if rc and kwargs.get("check"):
+            # Mirror subprocess: a collector written with check=True must fail
+            # here too, or the fake would hide the difference.
+            raise subprocess.CalledProcessError(rc, list(call.argv), out, err)
+        return completed
+
+    def _result_for(self, command: str) -> tuple[int, str, str]:
+        if command in self.scripted:
+            return self.scripted[command]
+        matches = [k for k in self.scripted if k and k in command]
+        if matches:
+            return self.scripted[max(matches, key=len)]
+        return (0, "", "")
+
+    def script(self, command: str, returncode: int = 0, stdout: str = "",
+               stderr: str = "") -> None:
+        self.scripted[command] = (returncode, stdout, stderr)
+
+    def commands(self) -> list[str]:
+        return [c.command for c in self.calls]
+
+    def matching(self, fragment: str) -> list[str]:
+        """Every recorded command containing `fragment`, in call order.
+
+        Assert against this when the requirement is *exactly* which targets
+        were acted on, not merely that something was.
+        """
+        return [c for c in self.commands() if fragment in c]
 
     def called_with(self, fragment: str) -> bool:
-        return any(fragment in " ".join(map(str, c.args[0])) for c in self.calls
-                   if c.args and isinstance(c.args[0], list | tuple))
+        return bool(self.matching(fragment))
 
     def assert_never(self, fragment: str) -> None:
-        assert not self.called_with(fragment), f"{fragment!r} was called"
+        issued = self.matching(fragment)
+        assert not issued, f"{fragment!r} was called: {issued}"
 
 
 @pytest.fixture

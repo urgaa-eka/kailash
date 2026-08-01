@@ -1,0 +1,42 @@
+{
+  "name": "kailash-anomaly",
+  "probe_source": "image",
+  "note": "The service is not listening. Requirement 1.8: an application defect, recorded as a blocking condition rather than remedied by editing the probe.",
+  "health": {
+    "Status": "unhealthy",
+    "FailingStreak": 5,
+    "Log": [
+      {
+        "Start": "2026-01-05T10:00:00.000000000Z",
+        "End": "2026-01-05T10:00:00.190000000Z",
+        "ExitCode": 1,
+        "Output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n  File \"/usr/local/lib/python3.11/urllib/request.py\", line 216, in urlopen\n    return opener.open(url, data, timeout)\nurllib.error.URLError: <urlopen error [Errno 111] Connection refused>\n"
+      }
+    ]
+  },
+  "effective": {
+    "Test": ["CMD-SHELL", "python -c \"import os,urllib.request,sys;urllib.request.urlopen(f'http://localhost:{os.environ[\\\"PORT\\\"]}/health')\" || exit 1"],
+    "Interval": 30000000000,
+    "Timeout": 5000000000,
+    "Retries": 5
+  },
+  "state": {
+    "Status": "running",
+    "Running": true,
+    "ExitCode": 0,
+    "StartedAt": "2026-01-05T05:00:00.000000000Z"
+  },
+  "restarts": 0,
+  "executable": {
+    "name": "python",
+    "present": true,
+    "which_exit_code": 0,
+    "which_output": "/usr/local/bin/python\n"
+  },
+  "replay": {
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "urllib.error.URLError: <urlopen error [Errno 111] Connection refused>\n",
+    "duration_seconds": 0.2
+  }
+}
