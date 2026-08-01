@@ -34,17 +34,89 @@ install_prerequisites() {
     echo "  ✅ Prerequisites ready"
 }
 
+# Reduce any remote URL form to owner/name. Mirrors normalise_remote() in
+# scripts/verify/repo_state.py, which is property-tested across every form git
+# accepts -- one that silently returns the URL unchanged would make this guard
+# reject every valid checkout, turning a safety feature into an outage.
+normalise_remote() {
+    local url="$1"
+    url="${url%/}"
+    url="${url%.git}"
+    case "$url" in
+        *://*)                       # scheme://[user@]host/owner/name
+            url="${url#*://}"
+            url="${url#*@}"
+            url="${url#*/}"
+            ;;
+        *@*:*)                       # scp-like: user@host:owner/name
+            url="${url#*:}"
+            ;;
+        *:*)                         # host:owner/name
+            url="${url#*:}"
+            ;;
+    esac
+    printf '%s' "$url"
+}
+
+# Called before every destructive git operation below.
+#
+# `git reset --hard`, `git clean -fd` and `git clone` all destroy whatever is
+# in the target directory. If APP_DIR is not the checkout we think it is --
+# wrong repository, or not a work tree at all -- those commands do their work
+# anyway, against the wrong thing.
+#
+# Not hypothetical: REPO_URL in this script named a different owner than
+# `git remote get-url origin` reported, for as long as this script existed.
+# The wrong slug is deliberately not written out here -- this file is the one
+# place a stray repository reference is most dangerous, and config_drift
+# treats every slug in it as authoritative.
+assert_expected_checkout() {
+    local dir="$1"
+    local expected="urgaa-eka/kailash"
+
+    if [ ! -d "${dir}/.git" ]; then
+        echo "  ✖ ${dir} is not a git work tree; refusing to run a destructive git operation there" >&2
+        return 1
+    fi
+
+    local origin
+    origin="$(git -C "$dir" remote get-url origin 2>/dev/null || true)"
+    if [ -z "$origin" ]; then
+        echo "  ✖ ${dir} has no origin remote; refusing" >&2
+        return 1
+    fi
+
+    local slug
+    slug="$(normalise_remote "$origin")"
+    if [ "$slug" != "$expected" ]; then
+        echo "  ✖ ${dir} origin is '${slug}', expected '${expected}'" >&2
+        echo "    Refusing: git reset --hard and git clean -fd would destroy a checkout of another repository." >&2
+        return 1
+    fi
+
+    echo "  ✅ ${dir} is a checkout of ${expected}"
+}
+
 update_code() {
     echo "▶ Updating codebase..."
     if [ -d "${APP_DIR}/.git" ]; then
+        assert_expected_checkout "$APP_DIR"
         cd "$APP_DIR"
         git fetch origin "$BRANCH"
         git reset --hard "origin/${BRANCH}"
         git clean -fd
     else
+        # A clone into a non-empty directory is equally destructive in effect:
+        # it either fails or leaves a half-populated tree. Refuse unless the
+        # directory is absent or empty.
+        if [ -e "$APP_DIR" ] && [ -n "$(ls -A "$APP_DIR" 2>/dev/null)" ]; then
+            echo "  ✖ ${APP_DIR} exists, is not empty, and is not a git work tree; refusing to clone over it" >&2
+            return 1
+        fi
         mkdir -p "$APP_DIR"
         git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
         cd "$APP_DIR"
+        assert_expected_checkout "$APP_DIR"
     fi
     echo "  ✅ Code updated to $(git rev-parse --short HEAD)"
 }
