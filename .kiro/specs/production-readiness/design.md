@@ -304,10 +304,12 @@ Scan every tracked file for `(?:github\.com[:/])(?P<owner>[\w.-]+)/(?P<name>kail
 
 ### Rule `firebase-app-identity` (3.3)
 
-A Firebase project *id* (`kailash-38268`) and project *number* (`172604807567`) are unrelated strings; no string operation derives one from the other. Two comparisons instead:
+A Firebase project *id* (`kailash-29111`) and project *number* (`794735482892`) are unrelated strings; no string operation derives one from the other. Two comparisons instead:
 
 1. `appId.split(":")[1]` must equal `messagingSenderId` in `frontend/src/lib/firebase.js`. The Firebase SDK config always carries the project number in both, so this catches a partial copy-paste from another project using only in-repository evidence.
-2. `appId.split(":")[1]` must equal `data/project_map.json[project_id]`. The map is a small reviewed file recording the one-time console lookup, `{"kailash-38268": "172604807567"}`. Adding an environment means adding a line and a reviewer noticing.
+2. `appId.split(":")[1]` must equal `data/project_map.json[project_id]`. The map is a small reviewed file recording the one-time console lookup, `{"kailash-29111": "794735482892"}`. Adding an environment means adding a line and a reviewer noticing.
+
+Note that rule 1 alone would have passed the pre-correction config: `kailash-38268`'s `appId` and `messagingSenderId` agreed with each other perfectly. Both were internally consistent and pointed at the wrong project. Only rule 2, or evidence from outside the repository, catches that.
 
 ### Rule `node-version` (beyond the letter of Requirement 3)
 

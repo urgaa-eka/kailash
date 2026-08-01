@@ -2,7 +2,12 @@
 
 ## Introduction
 
-The Kailash monorepo ships a React 19 SPA to Firebase Hosting (project `kailash-38268`, domains `kailash-ai.in` and `www.kailash-ai.in`) and a FastAPI backend to a Vultr VPS running a 15-container Docker Compose stack behind Nginx and Let's Encrypt at `api.kailash-ai.in`. Configuration for both targets is present in the repository, and the backend test suite passes (37 tests against containerized Postgres).
+The Kailash monorepo ships a React 19 SPA to Firebase Hosting (project `kailash-29111`) and a FastAPI backend to a Vultr VPS running a 15-container Docker Compose stack behind Nginx and Let's Encrypt. Configuration for both targets is present in the repository, and the backend test suite passes (37 tests against containerized Postgres).
+
+Two premises in the original text were wrong and are corrected here, because checks written against them would enforce the wrong values:
+
+- The frontend targeted `kailash-38268`, which serves a stale "AEGIS HUB" build on no live domain. `kailash-ai.com` — where `kailash-ai.in` redirects — is served by `kailash-29111`, the only Firebase project the operator account can see. All four config sites now name `kailash-29111`.
+- `api.kailash-ai.in` has no DNS record (`nslookup` → non-existent domain). The backend hostname baked into `frontend/.env.production` does not resolve, so the deployed SPA has no reachable API. Requirement 2 must verify the backend origin resolves before asserting anything about its content.
 
 Production readiness is not established. Fourteen of the fifteen containers in the `kailash-ai` compose profile report Docker health state `unhealthy`. No staging environment exists, so every merge to `main` reaches production directly. The live status of both production domains has never been confirmed against the current build. Default database and cache credentials are embedded as compose fallback values. Nine per-service Dockerfiles reference pre-consolidation paths and cannot build. No rollback procedure is documented for either deployment target.
 
@@ -13,7 +18,7 @@ A Firebase project identifier mismatch in `frontend/.firebaserc` has already bee
 ## Glossary
 
 - **Kailash_Platform**: The complete deployed system, comprising the Frontend_App and the Compose_Stack.
-- **Frontend_App**: The React 19 single-page application built from `frontend/` via CRACO and hosted on Firebase Hosting project `kailash-38268`.
+- **Frontend_App**: The React 19 single-page application built from `frontend/` via CRACO and hosted on Firebase Hosting project `kailash-29111`.
 - **Compose_Stack**: The 15 containers started by the `kailash-ai` profile of `docker-compose.yml`, all bound to `127.0.0.1`.
 - **Backend_Service**: The FastAPI container named `kailash-backend`, listening on port 8000.
 - **Platform_Services**: The nine containers `document-ai` (8101), `forecasting` (8102), `anomaly` (8103), `rag` (8104), `vision-gateway` (8105), `speech` (8106), `model-registry` (8107), `knowledge-graph` (8108), and `automobile-llm` (8109).

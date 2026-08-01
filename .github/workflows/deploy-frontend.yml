@@ -63,5 +63,7 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           channelId: live
-          projectId: kailash-38268
+          # kailash-29111 is the project kailash-ai.com actually resolves to.
+          # kailash-38268 served a stale "AEGIS HUB" build on no live domain.
+          projectId: kailash-29111
           entryPoint: frontend
