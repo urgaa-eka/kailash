@@ -69,6 +69,7 @@ else:
 # The development fallback for SECRET_KEY. It is published in this repository,
 # so anything signed with it can be forged by anyone who has read the source.
 # Startup rejects it when ENV names a production environment (TRD NFR-Sec4).
+# secret-scan: allow the literal must be here to be rejected; it is the sentinel
 DEV_SECRET_KEY = 'dev-secret-key-change-in-production'
 PRODUCTION_ENVS = {'production', 'prod'}
 

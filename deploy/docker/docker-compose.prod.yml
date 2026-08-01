@@ -1,4 +1,4 @@
-# Kailash — Production Docker Compose for Vultr VPS
+﻿# Kailash â€” Production Docker Compose for Vultr VPS
 # Usage: docker compose -f docker-compose.prod.yml up -d
 
 version: '3.8'
@@ -18,7 +18,7 @@ services:
       - MONGO_URL=mongodb://mongo:27017
       - DATABASE_NAME=kailash
       - REDIS_URL=redis://redis:6379/0
-      - POSTGRES_URL=postgresql+asyncpg://kailash:${POSTGRES_PASSWORD:-kailash_prod_2026}@postgres:5432/kailash
+      - POSTGRES_URL=postgresql+asyncpg://kailash:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/kailash
     depends_on:
       mongo:
         condition: service_healthy
@@ -67,7 +67,7 @@ services:
     environment:
       POSTGRES_DB: kailash
       POSTGRES_USER: kailash
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kailash_prod_2026}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
