@@ -58,7 +58,12 @@ umask 077
     echo "# Required once ENV=production: app/core/config.py refuses to start on"
     echo "# the published default SECRET_KEY or on CORS_ORIGINS='*'."
     echo "ENV=dev"
-    echo "CORS_ORIGINS=https://kailash-ai.in,https://www.kailash-ai.in,https://kailash-ai.com"
+    echo "# Every origin the SPA can be served from. Both apex domains are"
+    echo "# synced to the same site, both www forms resolve, and the Firebase"
+    echo "# default hosts plus the staging channel serve the same build during"
+    echo "# verification. Whichever origin is missing here is the one where"
+    echo "# every API call fails CORS. Must match backend/.env.example."
+    echo "CORS_ORIGINS=https://kailash-ai.in,https://www.kailash-ai.in,https://kailash-ai.com,https://www.kailash-ai.com,https://kailash-29111.web.app,https://kailash-29111.firebaseapp.com,https://kailash-29111--staging.web.app"
 } > "$ENV_FILE"
 
 chmod 600 "$ENV_FILE"

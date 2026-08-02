@@ -234,8 +234,24 @@ tag_backend_image() {
 
 setup_nginx() {
     echo "▶ Configuring Nginx reverse proxy..."
-    cp "${APP_DIR}/deploy/vultr/nginx-api.conf" /etc/nginx/sites-available/kailash-api
-    ln -sf /etc/nginx/sites-available/kailash-api /etc/nginx/sites-enabled/kailash-api
+    # The full configs reference /etc/letsencrypt/live/<host>/ certificates,
+    # so each is installed only once its certificate exists -- otherwise
+    # `nginx -t` fails on the config this script itself installed, which on a
+    # fresh box killed the deploy before setup_ssl ever ran. setup_ssl issues
+    # certificates with `certonly` (no config edits) and re-runs this.
+    if [ -f /etc/letsencrypt/live/api.kailash-ai.in/fullchain.pem ]; then
+        cp "${APP_DIR}/deploy/vultr/nginx-api.conf" /etc/nginx/sites-available/kailash-api
+        ln -sf /etc/nginx/sites-available/kailash-api /etc/nginx/sites-enabled/kailash-api
+    else
+        echo "  ⏭  api certificate absent; config deferred until setup_ssl issues it"
+    fi
+    if [ -f /etc/letsencrypt/live/staging-api.kailash-ai.in/fullchain.pem ] \
+        && [ -f "${APP_DIR}/deploy/staging/nginx-staging-api.conf" ]; then
+        cp "${APP_DIR}/deploy/staging/nginx-staging-api.conf" \
+            /etc/nginx/sites-available/kailash-staging-api
+        ln -sf /etc/nginx/sites-available/kailash-staging-api \
+            /etc/nginx/sites-enabled/kailash-staging-api
+    fi
     rm -f /etc/nginx/sites-enabled/default
 
     if [ ! -f /etc/nginx/proxy_params ]; then
@@ -257,16 +273,25 @@ EOF
 }
 
 setup_ssl() {
-    echo "▶ Checking SSL certificate..."
-    if [ ! -f /etc/letsencrypt/live/api.kailash-ai.in/fullchain.pem ]; then
-        mkdir -p /var/www/certbot
-        certbot --nginx -d api.kailash-ai.in --non-interactive --agree-tos \
-            --email admin@kailash-ai.in --redirect || {
-            echo "  ⚠️  Certbot failed. Ensure DNS points api.kailash-ai.in to this server."
-        }
-    else
-        certbot renew --dry-run 2>/dev/null || true
+    echo "▶ Checking SSL certificates..."
+    local issued_new=0
+    local host
+    for host in api.kailash-ai.in staging-api.kailash-ai.in; do
+        if [ ! -f "/etc/letsencrypt/live/${host}/fullchain.pem" ]; then
+            mkdir -p /var/www/certbot
+            # certonly: issue without touching any nginx config, so this works
+            # on a box that has no server block for the hostname yet.
+            certbot certonly --nginx -d "$host" --non-interactive --agree-tos \
+                --email admin@kailash-ai.in && issued_new=1 || {
+                echo "  ⚠️  Certbot failed for ${host}. Ensure DNS points it at this server."
+            }
+        fi
+    done
+    if [ "$issued_new" -eq 1 ]; then
+        # Now that certificates exist, the deferred configs can be installed.
+        setup_nginx
     fi
+    certbot renew --dry-run 2>/dev/null || true
     echo "  ✅ SSL configured"
 }
 
@@ -290,7 +315,12 @@ health_check() {
 
 setup_cron() {
     echo "▶ Setting up SSL auto-renewal cron..."
-    (crontab -l 2>/dev/null | grep -v certbot; echo "0 3 * * * certbot renew --quiet --post-hook 'systemctl reload nginx'") | crontab -
+    # `|| true` twice: on a fresh box `crontab -l` exits 1 (no crontab yet)
+    # and `grep -v` exits 1 on empty input -- under `pipefail` either one
+    # killed the whole deploy at its very last step.
+    { crontab -l 2>/dev/null || true; } | { grep -v certbot || true; } \
+        | { cat; echo "0 3 * * * certbot renew --quiet --post-hook 'systemctl reload nginx'"; } \
+        | crontab -
     echo "  ✅ Cron configured"
 }
 
