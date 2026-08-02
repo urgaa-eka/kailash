@@ -8,10 +8,22 @@ echo "════════════════════════�
 echo " KAILASH — Vultr VPS Initial Setup"
 echo "═══════════════════════════════════════════════════"
 
-apt-get update -qq && apt-get upgrade -y -qq
+# Non-negotiable on an unattended run: a fresh image's pending updates can
+# include conffile questions (PAM did, live), and debconf blocks on them
+# forever with no TTY. And on first boot unattended-upgrades races this
+# script for the dpkg lock -- pause it and let apt wait out any holder.
+export DEBIAN_FRONTEND=noninteractive
+export APT_LISTCHANGES_FRONTEND=none
+APT_OPTS=(-o Dpkg::Options::=--force-confdef
+          -o Dpkg::Options::=--force-confold
+          -o DPkg::Lock::Timeout=600)
+systemctl stop unattended-upgrades 2>/dev/null || true
+trap 'systemctl start unattended-upgrades 2>/dev/null || true' EXIT
+
+apt-get "${APT_OPTS[@]}" update -qq && apt-get "${APT_OPTS[@]}" upgrade -y -qq
 
 # Firewall
-apt-get install -y -qq ufw
+apt-get "${APT_OPTS[@]}" install -y -qq ufw
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow ssh
@@ -20,7 +32,7 @@ ufw allow 443/tcp
 echo "y" | ufw enable
 
 # Security
-apt-get install -y -qq fail2ban
+apt-get "${APT_OPTS[@]}" install -y -qq fail2ban
 systemctl enable --now fail2ban
 
 # Swap (for low-memory VPS)
@@ -37,7 +49,7 @@ curl -fsSL https://get.docker.com | sh
 systemctl enable --now docker
 
 # Nginx + Certbot
-apt-get install -y -qq nginx certbot python3-certbot-nginx git curl jq
+apt-get "${APT_OPTS[@]}" install -y -qq nginx certbot python3-certbot-nginx git curl jq
 systemctl enable --now nginx
 
 # App directory
