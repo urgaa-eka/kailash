@@ -28,6 +28,23 @@ def _graph(yaml_text: str, tmp_path: Path, name: str = "w.yml") -> wg.Graph:
     return wg.load_graph(p)
 
 
+def _two_file_repo(tmp_path: Path, caller: str, called: str) -> wg.Graph:
+    """Install two fixtures as `.github/workflows/{deploy,ci}.yml` and load the
+    caller from there.
+
+    The layout is the point: `uses: ./.github/workflows/ci.yml` resolves against
+    the repository root, not against the calling file's directory, so a
+    cross-boundary rule cannot be exercised by a single loose file.
+    """
+    wf = tmp_path / ".github" / "workflows"
+    wf.mkdir(parents=True, exist_ok=True)
+    (wf / "deploy.yml").write_text(
+        (FIXTURES / caller).read_text(encoding="utf-8"), encoding="utf-8")
+    (wf / "ci.yml").write_text(
+        (FIXTURES / called).read_text(encoding="utf-8"), encoding="utf-8")
+    return wg.load_graph(wf / "deploy.yml")
+
+
 def _check(yaml_text: str, tmp_path: Path, **kw) -> Report:
     report = Report()
     wg.check_graph(_graph(yaml_text, tmp_path), report, **kw)
@@ -157,6 +174,275 @@ class TestMaskedGate:
                 steps: [{run: python -m scripts.verify.deployment_check}]
             """, tmp_path)
         assert report.exit_code() is Exit.OK, report.render()
+
+
+class TestGatingAcrossTheWorkflowCallBoundary:
+    """The gate that can fail is in another file.
+
+    `ci-gate` is a `uses:` job: it has no steps, so nothing *in it* can mask
+    anything, and computing the gating set within one file left ci.yml's own
+    jobs uninspected. Re-adding `|| true` to ci.yml's `yarn build` -- the exact
+    masking tasks 2.2/2.3 removed -- passed the check that exists to forbid it.
+    """
+
+    def test_mask_in_the_called_workflow_is_reported(self, tmp_path):
+        g = _two_file_repo(tmp_path, "crossfile_deploy.yml",
+                           "crossfile_ci_masked.yml")
+        report = Report()
+        wg.check_graph(g, report, require_staging=True)
+        rendered = report.render()
+        assert report.exit_code() is Exit.FAILED, rendered
+        masked = [f for f in report.findings if f.rule == "masked-gate"]
+        assert masked, rendered
+        # The finding must name the called workflow and the job inside it,
+        # otherwise it points the reader at the file that is not at fault.
+        assert masked[0].path == "ci.yml"
+        assert masked[0].observed == "frontend: || true"
+        assert "ci-gate" in masked[0].message
+        # Nothing else broke: the caller is fully gated and verified.
+        assert {f.rule for f in report.findings} == {"masked-gate"}
+
+    def test_a_reviewed_mask_in_the_called_workflow_stays_suppressed(self, tmp_path):
+        """Same setup, marker added. The marker lives in the called file, so the
+        lookup has to read that file's source rather than the caller's."""
+        g = _two_file_repo(tmp_path, "crossfile_deploy.yml",
+                           "crossfile_ci_suppressed.yml")
+        report = Report()
+        wg.check_graph(g, report, require_staging=True)
+        rendered = report.render()
+        assert report.exit_code() is Exit.OK, rendered
+        assert [s.rule for s in report.suppressions] == ["masked-gate"]
+        assert report.suppressions[0].path == "ci.yml"
+        assert "best-effort" in report.suppressions[0].reason
+
+    def test_the_called_jobs_join_the_gating_set(self, tmp_path):
+        g = _two_file_repo(tmp_path, "crossfile_deploy.yml",
+                           "crossfile_ci_masked.yml")
+        report = Report()
+        expanded = wg.expand_gating_set(g, {"ci-gate", "preflight"}, report)
+        assert {(owner.path, name) for owner, name, _ in expanded} == {
+            ("deploy.yml", "ci-gate"), ("deploy.yml", "preflight"),
+            ("ci.yml", "lint"), ("ci.yml", "frontend"),
+        }
+
+    def test_a_self_calling_workflow_is_noted_not_followed_forever(self, tmp_path):
+        """The recursion guard. `Graph.has_cycle` covers `needs` cycles; a
+        `uses:` cycle is a different graph and would not return."""
+        g = _two_file_repo(tmp_path, "crossfile_deploy.yml",
+                           "crossfile_ci_recursive.yml")
+        report = Report()
+        wg.check_graph(g, report, require_staging=True)
+        rendered = report.render()
+        assert report.exit_code() is Exit.OK, rendered
+        assert "already inspected" in rendered
+
+    def test_a_workflow_calling_its_caller_terminates(self, tmp_path):
+        """The two-file cycle: deploy.yml -> ci.yml -> deploy.yml."""
+        wf = tmp_path / ".github" / "workflows"
+        wf.mkdir(parents=True)
+        (wf / "deploy.yml").write_text(
+            "jobs:\n"
+            "  ci-gate:\n    uses: ./.github/workflows/ci.yml\n"
+            "  deploy:\n    needs: [preflight, ci-gate]\n"
+            "    steps: [{uses: appleboy/ssh-action@v1}]\n"
+            "  preflight:\n    steps: [{run: echo hi}]\n"
+            "  verify-production:\n    needs: deploy\n"
+            "    steps: [{run: python -m scripts.verify.deployment_check}]\n",
+            encoding="utf-8")
+        (wf / "ci.yml").write_text(
+            "jobs:\n  back:\n    uses: ./.github/workflows/deploy.yml\n",
+            encoding="utf-8")
+        report = Report()
+        wg.check_graph(wg.load_graph(wf / "deploy.yml"), report)
+        assert report.exit_code() is Exit.OK, report.render()
+        assert "already inspected" in report.render()
+
+    def test_a_third_party_gate_is_reported_as_unresolvable(self, tmp_path):
+        """`owner/repo@ref` is not in this checkout, so its steps cannot be read.
+        An uninspected gate is not a verified gate, so it is a finding rather
+        than a silent pass."""
+        report = _check("""
+            jobs:
+              preflight:
+                steps: [{run: echo hi}]
+              ci-gate:
+                uses: some-org/shared/.github/workflows/ci.yml@v2
+              deploy:
+                needs: [preflight, ci-gate]
+                steps: [{uses: appleboy/ssh-action@v1}]
+              verify-production:
+                needs: deploy
+                steps: [{run: python -m scripts.verify.deployment_check}]
+            """, tmp_path)
+        assert report.exit_code() is Exit.FAILED
+        assert "unresolvable-gate" in report.render()
+        assert "some-org/shared" in report.render()
+
+    def test_an_absent_local_gate_is_a_note_not_a_finding(self, tmp_path):
+        """A graph analysed away from its repository names a callee that is not
+        there. Actions refuses to start such a run, so the loud failure already
+        exists; a finding here would make every isolated graph unanalysable."""
+        report = _check(GOOD, tmp_path)
+        assert report.exit_code() is Exit.OK, report.render()
+        assert "absent from this checkout" in report.render()
+
+    def test_a_local_gate_that_does_not_parse_is_reported(self, tmp_path):
+        wf = tmp_path / ".github" / "workflows"
+        wf.mkdir(parents=True)
+        (wf / "deploy.yml").write_text(
+            (FIXTURES / "crossfile_deploy.yml").read_text(encoding="utf-8"),
+            encoding="utf-8")
+        (wf / "ci.yml").write_text("jobs:\n  a: [unclosed\n", encoding="utf-8")
+        report = Report()
+        wg.check_graph(wg.load_graph(wf / "deploy.yml"), report)
+        assert report.exit_code() is Exit.FAILED
+        assert "unresolvable-gate" in report.render()
+
+    def test_the_real_deploy_workflows_reach_the_ci_jobs(self):
+        """The regression guard for the defect itself: `backend` and `frontend`
+        in ci.yml -- the jobs tasks 2.2/2.3 unmasked -- must be inside the
+        gating set of both real deploy workflows."""
+        root = REPO_ROOT
+        for name in ("deploy-backend.yml", "deploy-frontend.yml"):
+            g = wg.load_graph(root / ".github" / "workflows" / name, root=root)
+            deploys = {j.name for j in g.jobs.values() if j.deploys}
+            gating = set(deploys)
+            for job in deploys:
+                gating |= g.ancestors(job)
+            reached = {(owner.path, job)
+                       for owner, job, _ in wg.expand_gating_set(g, gating, Report())}
+            assert ("ci.yml", "backend") in reached, name
+            assert ("ci.yml", "frontend") in reached, name
+
+
+class TestGateConditions:
+    """A status function in a job-level `if:` outranks every `needs` edge."""
+
+    def _with_condition(self, condition: str) -> str:
+        return (
+            "jobs:\n"
+            "  preflight:\n"
+            f"    if: {condition}\n"
+            "    steps: [{run: echo hi}]\n"
+            "  ci-gate:\n    uses: ./.github/workflows/ci.yml\n"
+            "  deploy:\n    needs: [preflight, ci-gate]\n"
+            "    steps: [{uses: appleboy/ssh-action@v1}]\n"
+            "  verify-production:\n    needs: deploy\n"
+            "    steps: [{run: python -m scripts.verify.deployment_check}]\n"
+        )
+
+    @pytest.mark.parametrize("condition", [
+        "always()",
+        "${{ always() }}",
+        "success() || failure()",
+        "${{ success() || github.event_name == 'workflow_dispatch' }}",
+        "cancelled()",
+    ])
+    def test_a_condition_that_survives_failure_is_reported(self, tmp_path, condition):
+        report = _check(self._with_condition(condition), tmp_path)
+        assert report.exit_code() is Exit.FAILED, report.render()
+        assert "conditional-gate" in report.render()
+
+    @pytest.mark.parametrize("condition", [
+        "github.ref == 'refs/heads/main'",
+        "${{ github.event_name == 'push' }}",
+        "success()",
+    ])
+    def test_a_condition_naming_no_status_function_is_benign(self, tmp_path, condition):
+        """`github.ref == ...` narrows *when* the job runs without changing
+        whether a failed gate stops it. The two conditions the real workflows
+        carry are of this shape, which is why this is a coverage gap and not a
+        live hole."""
+        report = _check(self._with_condition(condition), tmp_path)
+        assert "conditional-gate" not in report.render(), report.render()
+
+    def test_the_condition_on_a_deploy_job_itself_counts(self, tmp_path):
+        """A deploy job is not its own ancestor, so a set built only from
+        ancestors would miss the one `if:` that matters most."""
+        report = _check("""
+            jobs:
+              preflight:
+                steps: [{run: echo hi}]
+              ci-gate:
+                uses: ./.github/workflows/ci.yml
+              deploy:
+                needs: [preflight, ci-gate]
+                if: always()
+                steps: [{uses: appleboy/ssh-action@v1}]
+              verify-production:
+                needs: deploy
+                steps: [{run: python -m scripts.verify.deployment_check}]
+            """, tmp_path)
+        assert report.exit_code() is Exit.FAILED
+        assert "conditional-gate" in report.render()
+
+    def test_the_real_workflow_conditions_are_benign(self):
+        for name in ("deploy-backend.yml", "deploy-frontend.yml", "ci.yml"):
+            g = wg.load_graph(REPO_ROOT / ".github" / "workflows" / name,
+                              root=REPO_ROOT)
+            for job in g.jobs.values():
+                assert job.defeating_condition is None, (name, job.name)
+
+
+class TestJobIntrospection:
+    def test_needs_alone_does_not_make_a_job_a_verifier(self, tmp_path):
+        """`needs: [verify-staging]` names a verifier; it does not perform a
+        verification. Searching the whole job body made every production deploy
+        job vouch for itself."""
+        g = _graph("""
+            jobs:
+              deploy:
+                needs: [verify-staging, deploy-staging]
+                steps: [{uses: appleboy/ssh-action@v1}]
+              verify-staging:
+                steps: [{run: python -m scripts.verify.deployment_check --env staging}]
+            """, tmp_path)
+        assert not g.jobs["deploy"].verifies
+        assert g.jobs["verify-staging"].verifies
+
+    def test_the_real_production_deploy_jobs_do_not_verify_themselves(self):
+        for name, job in (("deploy-backend.yml", "deploy"),
+                          ("deploy-frontend.yml", "build-and-deploy")):
+            g = wg.load_graph(REPO_ROOT / ".github" / "workflows" / name,
+                              root=REPO_ROOT)
+            assert not g.jobs[job].verifies, name
+
+    def test_every_mask_in_a_job_is_returned(self, tmp_path):
+        """One match per job hid a second mask behind the first one's
+        suppression."""
+        g = _graph("""
+            jobs:
+              gate:
+                continue-on-error: true
+                steps:
+                  - run: pytest -q || true
+            """, tmp_path)
+        assert g.jobs["gate"].masks == ["|| true", "continue-on-error: true"]
+
+    def test_a_reviewed_mask_does_not_cover_an_unreviewed_one(self, tmp_path):
+        """Two masks, one marker. The unmarked one must still be a finding, and
+        the marker in one job must not reach into another."""
+        text = (
+            "jobs:\n"
+            "  preflight:\n"
+            "    steps:\n"
+            "      # verify: allow best-effort install checked by the next step\n"
+            "      - run: pip install optional-thing || true\n"
+            "      - run: python -c \"import app.main\"\n"
+            "  other-gate:\n"
+            "    needs: preflight\n"
+            "    steps: [{run: pytest -q || true}]\n"
+            "  ci-gate:\n    uses: ./.github/workflows/ci.yml\n"
+            "  deploy:\n    needs: [preflight, ci-gate, other-gate]\n"
+            "    steps: [{uses: appleboy/ssh-action@v1}]\n"
+            "  verify-production:\n    needs: deploy\n"
+            "    steps: [{run: python -m scripts.verify.deployment_check}]\n"
+        )
+        report = _check(text, tmp_path)
+        assert report.exit_code() is Exit.FAILED, report.render()
+        masked = [f for f in report.findings if f.rule == "masked-gate"]
+        assert [f.observed for f in masked] == ["other-gate: || true"]
+        assert len(report.suppressions) == 1
 
 
 class TestUnverifiedDeploy:
@@ -461,6 +747,38 @@ def test_property_deploy_needs_both_gate_and_verifier(gated, verified, tmp_path_
     assert (report.exit_code() is Exit.OK) == (gated and verified)
 
 
+_CI_JOBS = ("lint", "shared", "backend", "frontend")
+
+
+@given(masked=st.sets(st.sampled_from(_CI_JOBS), max_size=4))
+def test_property_every_mask_in_a_called_gate_is_reported(masked, tmp_path_factory):
+    """Requirement 8.8 as a property: for any subset of the called workflow's
+    jobs that mask a failure, the report names exactly that subset.
+
+    Nothing about the rule may depend on which job, or how many: the defect was
+    that the answer was always "none of them".
+
+    **Validates: Requirements 8.8**
+    """
+    tmp = tmp_path_factory.mktemp("wg-crossfile")
+    wf = tmp / ".github" / "workflows"
+    wf.mkdir(parents=True)
+    (wf / "deploy.yml").write_text(
+        (FIXTURES / "crossfile_deploy.yml").read_text(encoding="utf-8"),
+        encoding="utf-8")
+    lines = ["on:\n  workflow_call:\n", "jobs:"]
+    for job in _CI_JOBS:
+        suffix = " || true" if job in masked else ""
+        lines.append(f"  {job}:")
+        lines.append(f"    steps: [{{run: make {job}{suffix}}}]")
+    (wf / "ci.yml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    report = Report()
+    wg.check_graph(wg.load_graph(wf / "deploy.yml"), report, require_staging=True)
+    assert {f.observed for f in report.findings if f.rule == "masked-gate"} == {
+        f"{job}: || true" for job in masked}
+
+
 _HOSTS = st.sets(st.sampled_from(
     ["a.example.com", "b.example.com", "c.example.com", "d.example.com"]),
     max_size=4)
@@ -488,3 +806,16 @@ def test_property_service_parity_fails_iff_sets_differ(production, staging):
     wg.check_service_parity(production, staging, report)
     assert bool(report.findings) == (production != staging)
     assert len(report.findings) == len(production ^ staging)
+
+
+@pytest.mark.parametrize("command", [
+    "npx --yes firebase-tools@13 deploy --only hosting --project kailash-29111 --non-interactive",
+    "npx --yes firebase-tools@13 hosting:channel:deploy staging --expires 30d --project kailash-29111",
+    "firebase deploy --only hosting",
+])
+def test_cli_deploy_forms_are_recognised_as_deploys(command):
+    """The WIF rewrite swapped action-hosting-deploy for the firebase CLI via
+    npx, where no whitespace follows the word `firebase`. A deploy the markers
+    cannot see exits the gating set silently, which is the vacuous pass this
+    whole check exists to prevent."""
+    assert any(rx.search(command) for rx in wg.DEPLOY_MARKERS), command

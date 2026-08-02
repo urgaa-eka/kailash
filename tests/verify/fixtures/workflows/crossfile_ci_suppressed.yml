@@ -1,0 +1,20 @@
+name: the called gate, with the mask reviewed (installed as ci.yml)
+# Same file as crossfile_ci_masked.yml apart from the marker. The suppression
+# mechanism has to keep working across the boundary, and it has to read the
+# marker from *this* file: the comment lives here, not in the caller.
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ruff check backend
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      # verify: allow the optional install is best-effort; a failure surfaces
+      # at the next step, which imports the app and cannot succeed without it
+      - run: pip install emergentintegrations==0.1.0 || true
+      - run: python -c "import app.main"

@@ -3,10 +3,12 @@
 Three rules:
 
 1. Status and content type per endpoint, without following redirects.
-   Following them would let a 301 to an unrelated host pass as 200 -- which is
-   not hypothetical here: the legacy `.in` web hosts 301 to kailash-ai.com by
-   design, and only refusing to follow lets this check tell "serves the SPA"
-   from "redirects to something that does".
+   Following them would let a 301 to an unrelated host pass as 200. That
+   matters most for the two apex domains: both are expected to serve the SPA
+   themselves, and if one were reconfigured to bounce to the other, a
+   redirect-following client would report 200 `text/html` for a host that
+   serves nothing. Refusing to follow is what lets this check tell "serves the
+   SPA" from "redirects to something that does".
 2. Asset-manifest containment: every hashed asset the served HTML references
    must appear in the manifest from the deploying build. Containment, not
    equality -- the manifest legitimately lists lazy chunks the entry HTML
@@ -46,42 +48,49 @@ class Endpoint:
     content_type: str | None = None
     check_certificate: bool = False
     parse_assets: bool = False
+    # What this host is for, not which host it is. Production has two apexes
+    # and staging one, so the "staging is verified by the same rules as
+    # production" obligation (Requirement 8.6) is expressed per role rather
+    # than by pairing the two tables position by position.
+    role: str = "apex"
 
 
-# The web hostnames are `.com`, established by observation of the live
-# deployment on 2026-08-01, not by the original spec (which assumed `.in`):
-# kailash-ai.com serves the SPA 200 text/html from Firebase Hosting, and BOTH
-# `.in` hosts 301 to it -- a deliberate, human-configured redirect. The API
-# hostname stays `.in` because that is what the shipped bundle calls
-# (frontend/.env.production REACT_APP_BACKEND_URL). Evidence and the operator
-# actions this implies: docs/records/production-domain.md.
+# Both apex domains are owned by the operator and both are synced to serve the
+# same site, so both are production and both are verified: `kailash-ai.in` (the
+# domain Requirements 2.1/2.2 name, and the one baked into the bundle as
+# REACT_APP_DOMAIN) and `kailash-ai.com` (observed serving the SPA from
+# Firebase Hosting on 2026-08-01). Neither is a redirect to the other; a host
+# that only bounced would fail its `text/html` assertion here, which is the
+# point.
+#
+# The API hostname is `.in` only. `api.kailash-ai.com` has never resolved and
+# nothing in the repository references it, so adding it would assert an
+# intention no file declares. The shipped bundle calls `api.kailash-ai.in`
+# (frontend/.env.production REACT_APP_BACKEND_URL), and that is the single API
+# origin. Evidence and the operator actions this implies:
+# docs/records/production-domain.md.
 ENVIRONMENTS: dict[str, tuple[Endpoint, ...]] = {
     "production": (
+        Endpoint("https://kailash-ai.in/", (200,), "text/html",
+                 check_certificate=True, parse_assets=True, role="apex"),
         Endpoint("https://kailash-ai.com/", (200,), "text/html",
-                 check_certificate=True, parse_assets=True),
+                 check_certificate=True, parse_assets=True, role="apex"),
+        Endpoint("https://www.kailash-ai.in/", (200, 301, 308),
+                 check_certificate=True, role="www"),
         Endpoint("https://www.kailash-ai.com/", (200, 301, 308),
-                 check_certificate=True),
+                 check_certificate=True, role="www"),
         Endpoint("https://api.kailash-ai.in/api/health", (200,),
-                 check_certificate=True),
+                 check_certificate=True, role="api"),
     ),
     "staging": (
         Endpoint("https://staging.kailash-ai.com/", (200,), "text/html",
-                 check_certificate=True, parse_assets=True),
+                 check_certificate=True, parse_assets=True, role="apex"),
         Endpoint("https://www.staging.kailash-ai.com/", (200, 301, 308),
-                 check_certificate=True),
+                 check_certificate=True, role="www"),
         Endpoint("https://staging-api.kailash-ai.in/api/health", (200,),
-                 check_certificate=True),
+                 check_certificate=True, role="api"),
     ),
 }
-
-# The `.in` web hosts remain user-facing entry points for as long as links to
-# them exist, so production verification asserts they still redirect (and only
-# redirect: a 200 here would mean split-brain hosting) and that their
-# certificates are not about to lapse.
-LEGACY_REDIRECTS: tuple[Endpoint, ...] = (
-    Endpoint("https://kailash-ai.in/", (301, 308), check_certificate=True),
-    Endpoint("https://www.kailash-ai.in/", (301, 308), check_certificate=True),
-)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -193,10 +202,7 @@ def build_report(args) -> Report:
     report = Report()
     if manifest is None:
         report.notes.append("no --manifest given; asset containment not checked")
-    endpoints = ENVIRONMENTS[args.env]
-    if args.env == "production":
-        endpoints = endpoints + LEGACY_REDIRECTS
-    for ep in endpoints:
+    for ep in ENVIRONMENTS[args.env]:
         check_endpoint(ep, report, manifest)
     return report
 

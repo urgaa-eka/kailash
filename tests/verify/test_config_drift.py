@@ -16,10 +16,74 @@ def _run(root, capsys) -> tuple[int, str]:
     return rc, capsys.readouterr().out
 
 
+NODE = config_drift.EXPECTED_NODE_VERSION
+
+
+DOMAIN = config_drift.EXPECTED_PRODUCTION_DOMAIN
+
+
+def _ci_yml(frontend="20", infra="20", domain=DOMAIN):
+    """`ci.yml` reduced to the two jobs that pin Node.
+
+    `company-infra` is present in every fixture because the rule has to keep
+    ignoring it: that pin is the CDK toolchain, not the frontend build runtime.
+    """
+    body = "jobs:\n"
+    body += ("  company-infra:\n    steps:\n"
+             "      - uses: actions/setup-node@v4\n"
+             f"        with: {{ node-version: \"{infra}\" }}\n") if infra else ""
+    env = ("        env:\n"
+           f"          REACT_APP_DOMAIN: {domain}\n") if domain else ""
+    if frontend:
+        body += ("  frontend:\n    steps:\n"
+                 "      - uses: actions/setup-node@v4\n"
+                 "        with:\n"
+                 f"          node-version: \"{frontend}\"\n"
+                 "      - run: yarn build\n" + env)
+    else:
+        body += "  frontend:\n    steps:\n      - run: yarn build\n" + env
+    return body
+
+
+def _deploy_frontend_yml(project=GOOD, node="20", staging_node="20",
+                         domain=DOMAIN, staging_domain="staging.kailash-ai.com"):
+    """Both frontend-building jobs: staging channel and live."""
+    def job(name, channel, version, dom):
+        return ("" if version is None else
+                f"  {name}:\n    steps:\n"
+                "      - uses: actions/setup-node@v4\n"
+                "        with:\n"
+                f"          node-version: '{version}'\n"
+                "      - run: yarn build\n"
+                + ("        env:\n"
+                   f"          REACT_APP_DOMAIN: {dom}\n" if dom else "")
+                + "      - uses: FirebaseExtended/action-hosting-deploy@v0\n"
+                "        with:\n"
+                f"          channelId: {channel}\n"
+                f"          projectId: {project}\n")
+
+    return "jobs:\n" + job("deploy-staging", "staging", staging_node, staging_domain) \
+        + job("build-and-deploy", "live", node, domain)
+
+
+def _node_sites(repo, ci="20", deploy="20", staging="20", docker="20", project=GOOD):
+    repo.write(".github/workflows/ci.yml", _ci_yml(frontend=ci))
+    repo.write(".github/workflows/deploy-frontend.yml",
+               _deploy_frontend_yml(project, node=deploy, staging_node=staging))
+    repo.write("frontend/Dockerfile",
+               (f"FROM node:{docker}-alpine AS builder\n" if docker else "FROM scratch\n")
+               + "RUN yarn build\n\nFROM nginx:alpine\n")
+
+
 def _minimal(repo, project=GOOD, url=f"https://github.com/{SLUG}.git"):
     repo.all_firebase_sites(project)
+    repo.env_production(project, extra=f"REACT_APP_DOMAIN={DOMAIN}\n")
     repo.firebase_js(project, "1:794735482892:web:abc", "794735482892")
     repo.deploy_sh(url)
+    # The node-version and production-domain rules read these files in every
+    # run, so a fixture that omitted them would fail on absent required sources
+    # rather than on the thing the test is about.
+    _node_sites(repo, project=project)
 
 
 class TestFirebaseProjectId:
@@ -60,6 +124,8 @@ class TestFirebaseProjectId:
         _minimal(tmp_repo)
         tmp_repo.write(".github/workflows/deploy-frontend.yml",
                        "jobs:\n  deploy-live:\n    steps:\n"
+                       "      - uses: actions/setup-node@v4\n"
+                       f"        with: {{ node-version: '{NODE}' }}\n"
                        "      - uses: FirebaseExtended/action-hosting-deploy@v0\n"
                        "        with:\n"
                        "          channelId: live\n"
@@ -83,6 +149,191 @@ class TestFirebaseProjectId:
         assert rc == int(Exit.FAILED)
         assert "frontend/.env.production" in out
         assert "kailash-38268" in out
+
+
+class TestNodeVersion:
+    """Task 5.5. The runtime the frontend is built on, wherever it is declared."""
+
+    def test_all_declarations_agree_passes(self, tmp_repo, capsys):
+        _minimal(tmp_repo)
+        rc, _ = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.OK)
+
+    def test_ci_pinned_to_18_fails_and_names_it(self, tmp_repo, capsys):
+        """The live defect: CI validating a build on a runtime no deploy uses.
+        On 18 the install fails outright -- react-router-dom@7.9.6 declares
+        engines.node >=20."""
+        _minimal(tmp_repo)
+        _node_sites(tmp_repo, ci="18")
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert ".github/workflows/ci.yml" in out
+        assert "18" in out
+        # Requirement 3.7: the agreeing files too, so a reader sees which
+        # version the rest of the repository actually carries.
+        assert "frontend/Dockerfile=20" in out
+        assert ".github/workflows/deploy-frontend.yml=20,20" in out
+
+    def test_dockerfile_on_another_major_fails_and_names_it(self, tmp_repo, capsys):
+        _minimal(tmp_repo)
+        _node_sites(tmp_repo, docker="18")
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert "frontend/Dockerfile" in out
+        assert "18" in out
+
+    def test_absent_ci_pin_is_a_finding_not_a_skip(self, tmp_repo, capsys):
+        """Deleting the pin hands the choice to the runner default, which is the
+        same defect as a disagreeing pin: nobody can tell what it builds on."""
+        _minimal(tmp_repo)
+        _node_sites(tmp_repo, ci=None)
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert ".github/workflows/ci.yml" in out
+        assert "<absent>" in out
+
+    def test_staging_building_on_another_major_is_drift(self, tmp_repo, capsys):
+        """Both jobs in deploy-frontend.yml build the frontend. A staging build
+        on another Node means verify-staging clears an artifact production never
+        builds, so a first-match extractor over this file would miss it."""
+        _minimal(tmp_repo)
+        _node_sites(tmp_repo, staging="22")
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert ".github/workflows/deploy-frontend.yml" in out
+        assert "22" in out
+
+    def test_cdk_toolchain_pin_does_not_participate(self, tmp_repo, capsys):
+        """`company-infra` pins Node for `npx cdk synth`. That is a toolchain
+        version, independent of the runtime the shipped bundle is built on;
+        coupling them would make a CDK bump a frontend finding."""
+        _minimal(tmp_repo)
+        tmp_repo.write(".github/workflows/ci.yml", _ci_yml(frontend="20", infra="22"))
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.OK), out
+
+    def test_patch_pin_reads_as_its_major(self, tmp_repo, capsys):
+        """`node-version: "20.11.1"` and `node:20-alpine` are the same runtime
+        written two ways; the obligation engines.node >=20 states is a major."""
+        _minimal(tmp_repo)
+        _node_sites(tmp_repo, ci="20.11.1")
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.OK), out
+
+    def test_unreadable_pin_is_reported_with_its_literal(self, tmp_repo, capsys):
+        """`lts/*` resolves to whatever is current at run time, so it is not a
+        pin at all -- and it must be reported as itself, not as "<absent>"."""
+        _minimal(tmp_repo)
+        _node_sites(tmp_repo, ci="lts/*")
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert "lts/*" in out
+        assert "<absent>" not in out
+
+
+class TestProductionDomain:
+    """The domain the production bundle is built with, wherever it is declared.
+
+    The defect: the production build baked `kailash-ai.in` while the deployment
+    check verified `kailash-ai.com`. Both domains are owned and both serve the
+    same site, so neither half was wrong on its own -- which is why nothing
+    caught it. One declared constant is the fix.
+    """
+
+    def test_all_declarations_agree_passes(self, tmp_repo, capsys):
+        _minimal(tmp_repo)
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.OK), out
+
+    def test_ci_building_another_domain_fails_and_names_it(self, tmp_repo, capsys):
+        _minimal(tmp_repo)
+        tmp_repo.write(".github/workflows/ci.yml",
+                       _ci_yml(domain="kailash-ai.com"))
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert ".github/workflows/ci.yml" in out
+        assert "kailash-ai.com" in out
+        # Requirement 3.7: the agreeing files too, so a reader sees which value
+        # the rest of the repository carries.
+        assert f".github/workflows/deploy-frontend.yml={DOMAIN}" in out
+        assert f"frontend/.env.production={DOMAIN}" in out
+
+    def test_deploy_building_another_domain_fails_and_names_it(self, tmp_repo, capsys):
+        """The authoritative source: this is the build Firebase serves live."""
+        _minimal(tmp_repo)
+        tmp_repo.write(".github/workflows/deploy-frontend.yml",
+                       _deploy_frontend_yml(domain="kailash-ai.com"))
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert ".github/workflows/deploy-frontend.yml" in out
+        assert "kailash-ai.com" in out
+
+    def test_env_production_disagreeing_fails(self, tmp_repo, capsys):
+        """The workflows override it, so this does not change what ships -- it
+        makes a local `yarn build` and the deployed bundle differ, which is the
+        same defect one step removed."""
+        _minimal(tmp_repo)
+        tmp_repo.env_production(GOOD, extra="REACT_APP_DOMAIN=kailash-ai.com\n")
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert "frontend/.env.production" in out
+        assert "kailash-ai.com" in out
+
+    def test_absent_declaration_is_a_finding_not_a_skip(self, tmp_repo, capsys):
+        """Deleting the line hands the value to CRA's default (undefined),
+        which is the same "nobody can tell" defect as a disagreeing one."""
+        _minimal(tmp_repo)
+        tmp_repo.write(".github/workflows/ci.yml", _ci_yml(domain=None))
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert ".github/workflows/ci.yml" in out
+        assert "<absent>" in out
+
+    def test_staging_domain_does_not_participate(self, tmp_repo, capsys):
+        """`deploy-staging` legitimately builds with a staging hostname. Folding
+        it in would make a correct staging value a finding, and the rule would
+        then be loosened until it caught nothing."""
+        _minimal(tmp_repo)
+        tmp_repo.write(".github/workflows/deploy-frontend.yml",
+                       _deploy_frontend_yml(staging_domain="staging.kailash-ai.com"))
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.OK), out
+
+    def test_a_second_declaration_in_the_production_job_is_drift(self, tmp_repo, capsys):
+        """A later step of the same build declaring another domain cannot hide
+        behind the first: `finditer`, not `search`."""
+        _minimal(tmp_repo)
+        body = _deploy_frontend_yml()
+        body += ("      - run: yarn build:legacy\n"
+                 "        env:\n"
+                 "          REACT_APP_DOMAIN: kailash-ai.com\n")
+        tmp_repo.write(".github/workflows/deploy-frontend.yml", body)
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert "kailash-ai.com" in out
+
+    def test_crlf_checkout_is_read_the_same_as_lf(self, tmp_repo, capsys):
+        """The developer host checks these files out CRLF and CI checks them out
+        LF. A `\\s*$` anchor would match nothing on one of the two, and a rule
+        that silently reads no declarations is worse than no rule."""
+        _minimal(tmp_repo)
+        for rel in (".github/workflows/ci.yml", ".github/workflows/deploy-frontend.yml"):
+            text = (tmp_repo.root / rel).read_text(encoding="utf-8")
+            (tmp_repo.root / rel).write_bytes(
+                text.replace("\n", "\r\n").encode("utf-8"))
+            tmp_repo.git("add", "--", rel)
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.OK), out
+
+    def test_expression_literal_is_reported_as_itself(self, tmp_repo, capsys):
+        """`${{ vars.DOMAIN || '...' }}` is not a declaration a reader can
+        resolve, so it is reported rather than silently accepted."""
+        _minimal(tmp_repo)
+        tmp_repo.write(".github/workflows/ci.yml",
+                       _ci_yml(domain="${{ vars.DOMAIN || 'kailash-ai.in' }}"))
+        rc, out = _run(tmp_repo.root, capsys)
+        assert rc == int(Exit.FAILED)
+        assert "vars.DOMAIN" in out
 
 
 class TestRepoSlug:
@@ -221,3 +472,19 @@ def test_property_agreement_iff_all_present_and_equal(values):
         for path, value in zip(paths, values):
             assert path in rendered
             assert (value if value is not None else "<absent>") in rendered
+
+
+def test_the_project_cli_flag_form_is_extracted_like_projectid():
+    """The WIF-era deploy steps declare the project as `--project <id>` on the
+    firebase CLI rather than as an action `projectId:` input. Both forms are
+    declarations; dropping one made the required source read as absent."""
+    text = (
+        "      - name: Deploy to Firebase Hosting\n"
+        "        run: npx --yes firebase-tools@13 deploy --only hosting "
+        "--project kailash-29111 --non-interactive\n"
+        "      - name: Staging channel\n"
+        "        run: npx --yes firebase-tools@13 hosting:channel:deploy "
+        "staging --expires 30d --project kailash-29111\n"
+    )
+    values = [d.value for d in config_drift._workflow_project_id(text)]
+    assert values == ["kailash-29111", "kailash-29111"]

@@ -37,6 +37,27 @@ from .common import (
 EXPECTED_FIREBASE_PROJECT = "kailash-29111"
 EXPECTED_REPO_SLUG = "urgaa-eka/kailash"
 
+# The version that ships is the version of record: `deploy-frontend.yml` builds
+# the artifact Firebase serves on 20 and `frontend/Dockerfile` builds the SPA
+# image on `node:20-alpine`. CI's frontend job previously pinned 18, where the
+# install fails outright -- `react-router-dom@7.9.6` in `frontend/yarn.lock`
+# declares `engines.node >=20` -- so CI was gating a runtime no deploy uses.
+EXPECTED_NODE_VERSION = "20"
+
+# The one place the app's own idea of its identity is declared.
+#
+# Both `kailash-ai.in` and `kailash-ai.com` are owned and both are synced to
+# serve the same site, so this constant is not a routing rule -- the other
+# domain keeps working whichever value is chosen. `.in` is canonical because
+# every declaration that already exists says so: both workflow builds,
+# `frontend/.env.production`, the backend health payload
+# (`backend/app/main.py` `"domain": "kailash-ai.in"`), the canonical link and
+# og:url in `frontend/public/index.html`, and the support addresses in LICENSE
+# and `email_service.py`. Choosing `.com` would mean editing all of those for
+# no functional gain. `deployment_check.py` verifies both apexes serve the SPA;
+# that is a separate obligation from which one the bundle names.
+EXPECTED_PRODUCTION_DOMAIN = "kailash-ai.in"
+
 DATA_DIR = Path(__file__).parent / "data"
 
 
@@ -123,19 +144,137 @@ def _dotenv_key(pattern: str) -> Extractor:
 
 
 def _workflow_project_id(text: str) -> list[Declaration]:
-    """Every `projectId:` in the workflow, not just the hosting-deploy step's.
+    """Every project declaration in the workflow, whichever form carries it.
 
+    Two forms exist: `projectId:` (the action-hosting-deploy input) and
+    `--project <id>` (the firebase CLI flag the WIF-era deploy steps use).
     Parsed by regex rather than YAML on purpose: the value may be a `${{ }}`
     expression, and this check cares about the literal that was written.
 
-    Every occurrence participates because the staging channel this repository
-    is heading for deploys from a second step in this same file. Reading only
-    the first `projectId:` would let that step name any project at all while
-    the check reported agreement -- and the step that deploys is the one whose
-    value decides where the build lands.
+    Every occurrence participates because this file deploys from two steps
+    (the staging channel and production). Reading only the first declaration
+    would let the other step name any project at all while the check reported
+    agreement -- and the step that deploys is the one whose value decides
+    where the build lands.
     """
-    return [Declaration(m.group(1).strip("\"'"), _lineno(text, m.start()))
-            for m in re.finditer(r"^[ \t]*projectId:[ \t]*(\S+)[ \t\r]*$", text, re.M)]
+    declarations = [
+        Declaration(m.group(1).strip("\"'"), _lineno(text, m.start()))
+        for m in re.finditer(r"^[ \t]*projectId:[ \t]*(\S+)[ \t\r]*$", text, re.M)
+    ]
+    declarations += [
+        Declaration(m.group(1).strip("\"'"), _lineno(text, m.start()))
+        for m in re.finditer(r"--project[= \t]+(\S+)", text)
+    ]
+    return declarations
+
+
+# Both the block form (`node-version: "20"`) and the flow form
+# (`with: { node-version: "20" }`) the workflows in this repository use. Not
+# line-anchored, so no `$` is involved and the CRLF/LF checkout difference
+# cannot silently make it match nothing.
+NODE_VERSION_RX = re.compile(r"node-version:[ \t]*['\"]?(?P<v>[^'\"\s,}#]+)")
+
+# `FROM node:20-alpine AS builder`. `--platform=`-style flags may precede the
+# image reference.
+DOCKER_NODE_RX = re.compile(
+    r"^[ \t]*FROM[ \t]+(?:--[\w=./:-]+[ \t]+)*node:(?P<v>\S+)", re.M | re.I)
+
+
+def _node_major(raw: str) -> str | None:
+    """`20-alpine`, `20.11.1`, `v20` -> `20`; anything else -> None.
+
+    The comparison is on the major version because `node:20-alpine` and
+    `node-version: "20"` are the same runtime written in two vocabularies, and
+    the obligation `engines.node >=20` expresses is a major-version one. A
+    declaration whose major cannot be read (`lts/*`, `latest`) keeps its literal
+    so it is reported as disagreeing rather than vanishing into "<absent>".
+    """
+    m = re.match(r"^v?(\d+)(?:[.\-][\w.\-]*)?$", raw.strip())
+    return m.group(1) if m else None
+
+
+def _job_block(text: str, job: str) -> tuple[str, int]:
+    """The lines belonging to one top-level job, with their offset in `text`.
+
+    Segmented by indentation rather than parsed with pyyaml on purpose: this
+    module runs in CI jobs that install no dependencies -- `ci.yml`'s
+    `config-drift` job and the `preflight` job of both deploy workflows -- so a
+    pyyaml import here would turn the gate UNAVAILABLE exactly where
+    Requirement 3.6 requires it to run.
+    """
+    m = re.search(rf"^(?P<indent>[ \t]+){re.escape(job)}:[ \t\r]*$", text, re.M)
+    if not m:
+        return "", 0
+    indent = len(m.group("indent"))
+    start = m.end()
+    end = start
+    for line in text[start:].splitlines(keepends=True):
+        stripped = line.strip()
+        if stripped and len(line) - len(line.lstrip(" \t")) <= indent:
+            break
+        end += len(line)
+    return text[start:end], start
+
+
+def _workflow_node_version(job: str | None = None) -> Extractor:
+    """Every `node-version:` in the workflow, or only within one named job.
+
+    `deploy-frontend.yml` is read whole: both its `deploy-staging` and
+    `build-and-deploy` jobs build the frontend, and a staging build on another
+    Node would mean `verify-staging` green-lighting an artifact production never
+    builds. `ci.yml` is read job-scoped instead, because its `company-infra` job
+    pins Node for `npx cdk synth` -- a CDK toolchain version, independent of the
+    runtime the shipped bundle is built on. Coupling the two would make a CDK
+    bump a frontend finding and invite the pin to be loosened to clear it.
+    """
+
+    def extract(text: str) -> list[Declaration]:
+        segment, offset = _job_block(text, job) if job else (text, 0)
+        out: list[Declaration] = []
+        for m in NODE_VERSION_RX.finditer(segment):
+            raw = m.group("v")
+            out.append(Declaration(_node_major(raw) or raw,
+                                   _lineno(text, offset + m.start())))
+        return out
+
+    return extract
+
+
+def _workflow_env_literal(key: str, job: str) -> Extractor:
+    """Every `KEY: value` line inside one named job of a workflow.
+
+    Job-scoped, unlike the Node rule's whole-file read of
+    `deploy-frontend.yml`. A domain is per environment: the `deploy-staging`
+    job legitimately builds with a staging hostname, so folding it in would
+    make a correct staging value a finding and invite the rule to be loosened
+    until it caught nothing.
+
+    Every occurrence within the job participates, so a second `REACT_APP_DOMAIN`
+    added to a later step of the same build cannot hide behind the first.
+
+    The literal is compared, not the resolved value: `${{ vars.X || 'y' }}`
+    yields the whole expression and is reported as disagreeing, because what a
+    reader of the file can determine is exactly the literal that was written.
+    """
+    rx = re.compile(rf"^[ \t]*{re.escape(key)}:[ \t]*(.*?)[ \t\r]*$", re.M)
+
+    def extract(text: str) -> list[Declaration]:
+        segment, offset = _job_block(text, job)
+        out: list[Declaration] = []
+        for m in rx.finditer(segment):
+            value = m.group(1).strip().strip('"').strip("'")
+            if value:
+                out.append(Declaration(value, _lineno(text, offset + m.start())))
+        return out
+
+    return extract
+
+
+def _dockerfile_node_version(text: str) -> list[Declaration]:
+    """Every `FROM node:<version>` stage. `FROM nginx:alpine` is not one."""
+    return [Declaration(_node_major(m.group("v")) or m.group("v"),
+                        _lineno(text, m.start()))
+            for m in DOCKER_NODE_RX.finditer(text)]
 
 
 def _firebase_js_field(field_name: str) -> Callable[[str], str | None]:
@@ -175,6 +314,62 @@ def _firebase_project_id_rule() -> DriftRule:
                    _workflow_project_id, required=True),
             Source("backend/.env.example",
                    _dotenv_key(r"FIREBASE_PROJECT_ID"), required=True),
+        ],
+    )
+
+
+def _node_version_rule() -> DriftRule:
+    """The build runtime, wherever the frontend is built.
+
+    All three sources are required: an absent pin is not a neutral state, it
+    hands the choice to the runner's or base image's default, which is the same
+    "nobody can tell which runtime this builds on" defect as a disagreeing one.
+    """
+    return DriftRule(
+        rule_id="node-version",
+        expected=EXPECTED_NODE_VERSION,
+        sources=[
+            # Authoritative: this is the build that reaches Firebase.
+            Source(".github/workflows/deploy-frontend.yml",
+                   _workflow_node_version(), required=True),
+            Source("frontend/Dockerfile", _dockerfile_node_version, required=True),
+            Source(".github/workflows/ci.yml",
+                   _workflow_node_version(job="frontend"), required=True),
+        ],
+    )
+
+
+def _production_domain_rule() -> DriftRule:
+    """The domain baked into the production bundle, wherever it is declared.
+
+    The defect this closes: the production build baked `kailash-ai.in` while
+    `deployment_check.py` verified `kailash-ai.com`, and no file said the two
+    were the same site. Both are, so neither half was wrong on its own -- which
+    is precisely why nothing caught it. A constant is declared here so the
+    question "which domain does this build think it is" has one answer.
+
+    All three sources are required. An absent declaration hands the value to
+    CRA's default (undefined), which is the same "nobody can tell" defect as a
+    disagreeing one.
+    """
+    return DriftRule(
+        rule_id="production-domain",
+        expected=EXPECTED_PRODUCTION_DOMAIN,
+        sources=[
+            # Authoritative: this is the build Firebase serves on the live
+            # channel.
+            Source(".github/workflows/deploy-frontend.yml",
+                   _workflow_env_literal("REACT_APP_DOMAIN", "build-and-deploy"),
+                   required=True),
+            Source(".github/workflows/ci.yml",
+                   _workflow_env_literal("REACT_APP_DOMAIN", "frontend"),
+                   required=True),
+            # What a build outside CI resolves to. The workflows override it, so
+            # a disagreement here does not change what ships -- it makes a local
+            # `yarn build` and the deployed bundle differ, which is the same
+            # class of defect one step removed.
+            Source("frontend/.env.production",
+                   _dotenv_key(r"REACT_APP_DOMAIN"), required=True),
         ],
     )
 
@@ -228,6 +423,14 @@ def run_agreement_rule(rule: DriftRule, corpus: Corpus, report: Report) -> None:
 
 def check_firebase_project_id(corpus: Corpus, report: Report) -> None:
     run_agreement_rule(_firebase_project_id_rule(), corpus, report)
+
+
+def check_node_version(corpus: Corpus, report: Report) -> None:
+    run_agreement_rule(_node_version_rule(), corpus, report)
+
+
+def check_production_domain(corpus: Corpus, report: Report) -> None:
+    run_agreement_rule(_production_domain_rule(), corpus, report)
 
 
 def check_github_repo_slug(corpus: Corpus, report: Report) -> None:
@@ -355,6 +558,8 @@ def check_firebase_app_identity(corpus: Corpus, report: Report) -> None:
 
 CHECKS = (
     check_firebase_project_id,
+    check_node_version,
+    check_production_domain,
     check_github_repo_slug,
     check_firebase_app_identity,
 )

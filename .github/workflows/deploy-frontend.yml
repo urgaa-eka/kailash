@@ -7,6 +7,9 @@ on:
       - 'frontend/**'
   workflow_dispatch:
     inputs:
+      # Read by build-and-deploy's `if:` below. It was declared here and then
+      # referenced nowhere, so selecting "staging" still promoted to
+      # channelId: live -- a selector that lied about what it did.
       environment:
         description: 'Deploy environment'
         required: true
@@ -47,7 +50,21 @@ jobs:
     name: Deploy staging channel
     runs-on: ubuntu-latest
     needs: [preflight, ci-gate]
+    # Same branch guard deploy-backend.yml carries on its own deploy-staging:
+    # workflow_dispatch accepts any ref, and without this a branch nobody
+    # reviewed reaches a Firebase channel on the live project. References no
+    # status function, so the implicit success() on `needs` above still
+    # applies and the CI gate stays a gate.
+    if: github.ref == 'refs/heads/main'
     environment: staging
+    # Workload Identity Federation needs id-token: write to mint the OIDC
+    # token GitHub presents to Google. Declaring any permissions block flips
+    # GITHUB_TOKEN to deny-by-default, so contents: read must be listed too or
+    # actions/checkout breaks -- and that surfaces as a confusing checkout
+    # failure rather than an auth error.
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: frontend
@@ -89,17 +106,26 @@ jobs:
           path: frontend/build/asset-manifest.json
           if-no-files-found: error
 
-      - name: Deploy to the staging channel
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      # Org policy forbids both key creation and key upload
+      # (iam.disableServiceAccountKeyCreation + ...KeyUpload, enforced at org
+      # 74131276991), so no service-account key can exist. GitHub presents its
+      # own OIDC token instead and impersonates github-actions-deploy@, which
+      # holds roles/firebasehosting.admin. Nothing to leak, nothing to rotate.
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          # STAGING_-prefixed by Requirement 8.3: the staging and production
-          # secret-name sets are disjoint, and workflow_gate.py checks that.
-          firebaseServiceAccount: ${{ secrets.STAGING_FIREBASE_SERVICE_ACCOUNT }}
-          channelId: staging
-          expires: 30d
-          projectId: kailash-29111
-          entryPoint: frontend
+          workload_identity_provider: projects/794735482892/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: github-actions-deploy@kailash-29111.iam.gserviceaccount.com
+
+      # action-hosting-deploy@v0 cannot consume WIF credentials: its only auth
+      # input is firebaseServiceAccount, which expects key JSON, and it does
+      # not read Application Default Credentials (upstream issue #174, open
+      # since 2021). The firebase CLI does honour GOOGLE_APPLICATION_CREDENTIALS
+      # as auth@v2 sets it. Trade-off: the action's automatic PR comment is
+      # lost along with it.
+      - name: Deploy to the staging channel
+        run: npx --yes firebase-tools@13 hosting:channel:deploy staging --expires 30d --project kailash-29111 --non-interactive
 
   # Confirms staging actually serves what was just deployed, BEFORE anything
   # touches production. Its exit code is the job's exit code; a failure here
@@ -128,6 +154,30 @@ jobs:
     # verify-staging so a skipped verification cannot be mistaken for a green
     # one, and workflow_gate.py --require-staging asserts both edges.
     needs: [preflight, ci-gate, deploy-staging, verify-staging]
+    # Two guards, deliberately free of status functions. always(), failure(),
+    # cancelled(), or a `success() || ...` disjunction here would override the
+    # implicit success() that the `needs` edge above relies on, so production
+    # could run past a red verify-staging -- the one outcome the promotion gate
+    # exists to prevent.
+    #
+    # 1. github.ref: the guard deploy-backend.yml's `deploy` job carries.
+    #    workflow_dispatch can be fired from any ref, so without it a dispatch
+    #    from an unreviewed branch deployed that ref to channelId: live.
+    # 2. inputs.environment: the dispatch input is now actually read, so a
+    #    "staging" dispatch stops after verify-staging instead of promoting.
+    #    `inputs` is absent on the push trigger, hence the event_name arm.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.environment == 'production')
+    # The production GitHub Environment, and whatever reviewer requirement is
+    # configured on it, apply to the frontend live deploy the same way
+    # `environment: staging` above scopes the channel deploy and
+    # deploy-backend.yml's `deploy` scopes the VPS (Requirement 9.5).
+    environment: production
+    # Same WIF requirement as deploy-staging above: id-token: write to mint the
+    # OIDC token, contents: read because declaring permissions at all makes
+    # GITHUB_TOKEN deny-by-default and checkout would otherwise fail.
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: frontend
@@ -167,16 +217,17 @@ jobs:
           path: frontend/build/asset-manifest.json
           if-no-files-found: error
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          channelId: live
-          # kailash-29111 is the project kailash-ai.com actually resolves to.
-          # kailash-38268 served a stale "AEGIS HUB" build on no live domain.
-          projectId: kailash-29111
-          entryPoint: frontend
+          workload_identity_provider: projects/794735482892/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: github-actions-deploy@kailash-29111.iam.gserviceaccount.com
+
+      # kailash-29111 is the project kailash-ai.com actually resolves to.
+      # kailash-38268 served a stale "AEGIS HUB" build on no live domain.
+      - name: Deploy to Firebase Hosting
+        run: npx --yes firebase-tools@13 deploy --only hosting --project kailash-29111 --non-interactive
 
   # Confirms production actually serves what was just deployed. Its exit code
   # is the job's exit code -- that is what "record the outcome in the workflow

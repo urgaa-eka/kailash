@@ -1,0 +1,15 @@
+name: a called gate that calls itself (installed as ci.yml)
+# The recursion guard's fixture. `needs` cycles are Graph.has_cycle's problem;
+# this is the other graph -- `uses:` edges between files -- and a check that
+# walked it naively would not return.
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ruff check backend
+
+  nested:
+    uses: ./.github/workflows/ci.yml
