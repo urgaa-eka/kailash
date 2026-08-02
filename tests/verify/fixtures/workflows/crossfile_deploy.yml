@@ -1,0 +1,41 @@
+name: deploy through a reusable-workflow gate (installed as deploy.yml)
+# The shape both real deploy workflows have: the gate that can actually fail is
+# not a job in this file, it is `uses:` pointing at another workflow. Nothing
+# here masks anything, so any masked-gate finding is attributable to the called
+# workflow alone.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.config_drift
+
+  ci-gate:
+    uses: ./.github/workflows/ci.yml
+
+  deploy-staging:
+    needs: [preflight, ci-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1
+
+  verify-staging:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env staging
+
+  deploy:
+    needs: [preflight, ci-gate, deploy-staging, verify-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1
+
+  verify-production:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -m scripts.verify.deployment_check --env production

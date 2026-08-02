@@ -194,6 +194,8 @@ jobs:
           python -m pip install --upgrade pip
           grep -vi '^emergentintegrations' requirements.txt > /tmp/requirements.txt
           pip install -r /tmp/requirements.txt
+          # verify: allow a failed optional install surfaces at the next step,
+          # which runs `import app.main` and cannot succeed without it
           pip install emergentintegrations==0.1.0 \
             --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ || true
       # Runs backend/tests, not ../tests/backend. The latter is three probe

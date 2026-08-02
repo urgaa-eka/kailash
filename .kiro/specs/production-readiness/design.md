@@ -575,7 +575,13 @@ Staging receives **no copy of production data.** Seeding, if it is ever needed, 
 | `REDIS_PASSWORD` | `STAGING_REDIS_PASSWORD` |
 | `PLATFORM_INTERNAL_TOKEN` | `STAGING_PLATFORM_INTERNAL_TOKEN` |
 | `VULTR_HOST` / `VULTR_USER` / `VULTR_SSH_KEY` | `STAGING_VULTR_*` (same host, distinct declaration) |
-| `FIREBASE_SERVICE_ACCOUNT` | `STAGING_FIREBASE_SERVICE_ACCOUNT` |
+| ~~`FIREBASE_SERVICE_ACCOUNT`~~ | ~~`STAGING_FIREBASE_SERVICE_ACCOUNT`~~ |
+
+> **Superseded (2026-08-03):** the two Firebase service-account secrets were
+> never created. Org policy blocks service-account key creation and upload,
+> and both `deploy-frontend.yml` jobs authenticate via Workload Identity
+> Federation (`google-github-actions/auth@v2`, pool `github-actions`,
+> provider `github`) instead. No Firebase secret exists under either name.
 
 Disjoint name sets, verifiable by reading the workflow `env:` blocks — which is exactly the verification 8.3 specifies. GitHub Environments `staging` and `production` carry them, so the production environment can additionally require a reviewer.
 

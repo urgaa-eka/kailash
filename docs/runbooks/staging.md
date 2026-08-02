@@ -56,7 +56,13 @@ environment and on the VPS. Never write a value into a tracked file.
 | `REDIS_PASSWORD` | `STAGING_REDIS_PASSWORD` |
 | `PLATFORM_INTERNAL_TOKEN` | `STAGING_PLATFORM_INTERNAL_TOKEN` |
 | `VULTR_HOST` / `VULTR_USER` / `VULTR_SSH_KEY` / `VULTR_SSH_PORT` | `STAGING_VULTR_HOST` / `STAGING_VULTR_USER` / `STAGING_VULTR_SSH_KEY` / `STAGING_VULTR_SSH_PORT` (same host under Option D — distinct declaration, so flipping to Option C later is a secret-value change, not a workflow change) |
-| `FIREBASE_SERVICE_ACCOUNT` | `STAGING_FIREBASE_SERVICE_ACCOUNT` |
+
+Firebase deploys carry **no secret at all**: both `deploy-frontend.yml` jobs
+authenticate with `google-github-actions/auth@v2` via Workload Identity
+Federation (pool `github-actions`, provider `github`, project
+`794735482892`). Do not create or upload a service-account key — org policy
+(`iam.disableServiceAccountKeyCreation` / `iam.disableServiceAccountKeyUpload`)
+blocks both, by design.
 
 GitHub Environments `staging` and `production` carry their respective sets, so
 `production` can additionally require a reviewer. Creating the environments
@@ -184,7 +190,8 @@ production without a staging pass.
 change causes (or plausibly nearly causes) a production incident, or when such
 changes become routine, move staging to its own Firebase project and update
 `scripts/verify/data/project_map.json`, `frontend/.firebaserc` and the
-`STAGING_FIREBASE_SERVICE_ACCOUNT` secret together.
+Workload Identity Federation binding (the new project needs its own
+`github-actions` pool or an added attribute condition) together.
 
 ## Channel expiry: 30 days — operator sign-off required
 

@@ -1,6 +1,7 @@
 """Deployment verification: status, content type, asset containment, cert margin."""
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -11,45 +12,84 @@ from scripts.verify import deployment_check as dc
 from scripts.verify.common import Exit, Report
 
 
-def _endpoint(url, statuses=(200,), ctype=None, assets=False):
-    return dc.Endpoint(url, statuses, ctype, check_certificate=False, parse_assets=assets)
+def _endpoint(url, statuses=(200,), ctype=None, assets=False, role="apex"):
+    return dc.Endpoint(url, statuses, ctype, check_certificate=False,
+                       parse_assets=assets, role=role)
+
+
+def _roles(env: str) -> dict[str, list[dc.Endpoint]]:
+    out: dict[str, list[dc.Endpoint]] = {}
+    for ep in dc.ENVIRONMENTS[env]:
+        out.setdefault(ep.role, []).append(ep)
+    return out
 
 
 class TestEnvironmentTables:
     def test_both_environments_defined(self):
         assert set(dc.ENVIRONMENTS) == {"production", "staging"}
 
-    def test_corresponding_endpoints_share_allowed_sets(self):
+    def test_corresponding_roles_share_allowed_sets(self):
         """One check with two tables is how staging and production stay in
         step by construction, rather than by a parallel implementation that
-        drifts."""
-        prod, stag = dc.ENVIRONMENTS["production"], dc.ENVIRONMENTS["staging"]
-        assert len(prod) == len(stag)
-        for p, s in zip(prod, stag):
-            assert p.allowed_statuses == s.allowed_statuses
-            assert p.content_type == s.content_type
+        drifts.
+
+        Compared by role, not by position: production has two apex domains and
+        staging one, so a positional pairing would have to be loosened the
+        moment a second production domain was verified -- which is exactly the
+        change that prompted this."""
+        prod, stag = _roles("production"), _roles("staging")
+        assert set(prod) == set(stag) == {"apex", "www", "api"}
+        for role in prod:
+            for p in prod[role]:
+                for s in stag[role]:
+                    assert p.allowed_statuses == s.allowed_statuses
+                    assert p.content_type == s.content_type
+                    assert p.parse_assets == s.parse_assets
 
     def test_redirects_are_not_followed(self):
         """Following a redirect would let a 301 to an unrelated host pass as
-        200 -- not hypothetical: kailash-ai.in 301s to another domain."""
+        200. With two apexes serving the same site that is the load-bearing
+        case: an apex reconfigured to bounce to the other would look healthy to
+        a redirect-following client while serving nothing itself."""
         assert dc._NoRedirect().redirect_request(None, None, 301, "", {}, "x") is None
 
-    def test_production_topology_matches_the_observed_deployment(self):
-        """Web on `.com` (live evidence, 2026-08-01: kailash-ai.com serves the
-        SPA and both `.in` hosts 301 to it), API on `.in` (what the shipped
-        bundle's REACT_APP_BACKEND_URL calls). Recorded in
-        docs/records/production-domain.md; change that record before this."""
-        prod = dc.ENVIRONMENTS["production"]
-        assert prod[0].url == "https://kailash-ai.com/"
-        assert prod[2].url == "https://api.kailash-ai.in/api/health"
+    def test_both_apex_domains_are_verified_as_serving_the_spa(self):
+        """Both domains are owned and both are synced to the same site, so
+        neither is a redirect to the other and both must serve the SPA
+        themselves. Recorded in docs/records/production-domain.md; change that
+        record before this table."""
+        apex = {ep.url: ep for ep in _roles("production")["apex"]}
+        assert set(apex) == {"https://kailash-ai.in/", "https://kailash-ai.com/"}
+        for ep in apex.values():
+            assert ep.allowed_statuses == (200,)
+            assert ep.content_type == "text/html"
+            # The served build is checked against the deploying manifest on
+            # both, because "both serve the same site" is an assertion about
+            # the build, not only about the status code.
+            assert ep.parse_assets
 
-    def test_legacy_hosts_may_only_redirect(self):
-        """A 200 from a legacy `.in` web host would mean split-brain hosting:
-        two origins serving rival copies of the SPA."""
-        assert dc.LEGACY_REDIRECTS
-        for ep in dc.LEGACY_REDIRECTS:
-            assert 200 not in ep.allowed_statuses
-            assert ep.check_certificate
+    def test_both_www_hosts_are_verified(self):
+        www = {ep.url for ep in _roles("production")["www"]}
+        assert www == {"https://www.kailash-ai.in/", "https://www.kailash-ai.com/"}
+
+    def test_api_host_is_the_one_the_bundle_calls(self):
+        """`api.kailash-ai.com` has never resolved and no file references it.
+        Verifying it would assert an intention nothing declares."""
+        api = [ep.url for ep in _roles("production")["api"]]
+        assert api == ["https://api.kailash-ai.in/api/health"]
+        assert not any("api.kailash-ai.com" in ep.url
+                       for ep in dc.ENVIRONMENTS["production"])
+
+    def test_every_verified_hostname_has_a_certificate_check(self):
+        """Requirement 2.5. A host verified for status but not for expiry is a
+        host that will silently break on a lapsed certificate."""
+        for env in dc.ENVIRONMENTS.values():
+            for ep in env:
+                assert ep.check_certificate, ep.url
+
+    def test_no_production_host_is_verified_twice(self):
+        urls = [ep.url for ep in dc.ENVIRONMENTS["production"]]
+        assert len(urls) == len(set(urls))
 
 
 class TestStatusAndContentType:
@@ -87,6 +127,72 @@ class TestStatusAndContentType:
         dc.check_endpoint(_endpoint("http://127.0.0.1:1/"), report, None)
         assert report.exit_code() is Exit.UNAVAILABLE
         assert not report.findings
+
+
+class TestProductionTableAgainstALocalServer:
+    """The real production entries, aimed at a scripted local server.
+
+    Exercising `dc.ENVIRONMENTS["production"]` itself rather than hand-built
+    look-alikes: a rule that holds for a copy of the table proves nothing about
+    the table that ships.
+    """
+
+    @staticmethod
+    def _aimed(ep, url):
+        return replace(ep, url=url, check_certificate=False)
+
+    @pytest.mark.parametrize("url", ["https://kailash-ai.in/", "https://kailash-ai.com/"])
+    def test_apex_serving_html_passes(self, url, local_http_server):
+        ep = next(e for e in dc.ENVIRONMENTS["production"] if e.url == url)
+        local_http_server.script(status=200, content_type="text/html; charset=utf-8")
+        report = Report()
+        dc.check_endpoint(self._aimed(ep, local_http_server.url), report, None)
+        assert report.exit_code() is Exit.OK, report.render()
+
+    @pytest.mark.parametrize("url", ["https://kailash-ai.in/", "https://kailash-ai.com/"])
+    def test_apex_that_only_redirects_fails(self, url, local_http_server):
+        """Both domains are synced to the same site. One of them answering with
+        a bounce to the other means half the operator's traffic reaches a host
+        that serves nothing -- so 301 is a finding here, not a pass."""
+        ep = next(e for e in dc.ENVIRONMENTS["production"] if e.url == url)
+        local_http_server.script(status=301)
+        report = Report()
+        dc.check_endpoint(self._aimed(ep, local_http_server.url), report, None)
+        assert report.exit_code() is Exit.FAILED
+        assert "301" in report.render()
+
+    @pytest.mark.parametrize("url", ["https://www.kailash-ai.in/",
+                                     "https://www.kailash-ai.com/"])
+    @pytest.mark.parametrize("status", [200, 301, 308])
+    def test_www_may_serve_or_redirect(self, url, status, local_http_server):
+        ep = next(e for e in dc.ENVIRONMENTS["production"] if e.url == url)
+        local_http_server.script(status=status)
+        report = Report()
+        dc.check_endpoint(self._aimed(ep, local_http_server.url), report, None)
+        assert report.exit_code() is Exit.OK, report.render()
+
+    def test_api_health_must_be_200(self, local_http_server):
+        ep = next(e for e in dc.ENVIRONMENTS["production"]
+                  if e.url.endswith("/api/health"))
+        local_http_server.script(status=503, content_type="application/json",
+                                 body='{"status":"down"}')
+        report = Report()
+        dc.check_endpoint(self._aimed(ep, local_http_server.url), report, None)
+        assert report.exit_code() is Exit.FAILED
+        assert "503" in report.render()
+
+    def test_apex_serving_a_foreign_build_fails_on_both_domains(self, local_http_server):
+        """The two apexes are synced, so the manifest containment rule applies
+        to each of them independently: a stale copy on one is exactly the
+        split-brain this catches."""
+        local_http_server.script(
+            body='<html><script src="/static/js/main.deadbeef99.js"></script></html>')
+        manifest = {"files": {"main.js": "/static/js/main.448921c0.js"}}
+        for ep in _roles("production")["apex"]:
+            report = Report()
+            dc.check_endpoint(self._aimed(ep, local_http_server.url), report, manifest)
+            assert report.exit_code() is Exit.FAILED
+            assert "main.deadbeef99.js" in report.render()
 
 
 class TestAssetManifest:

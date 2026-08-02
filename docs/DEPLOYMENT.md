@@ -185,10 +185,12 @@ firebase deploy --only hosting
 ### CI/CD (Automatic)
 Pushes to `main` that modify `apps/frontend/` trigger the `deploy-frontend.yml` workflow.
 
-**Required GitHub Secrets:**
-| Secret | Description |
-|--------|-------------|
-| `FIREBASE_SERVICE_ACCOUNT` | Firebase service account JSON (from Firebase Console → Project Settings → Service Accounts) |
+**Required GitHub Secrets:** none for Firebase. Both deploy jobs authenticate
+with `google-github-actions/auth@v2` via Workload Identity Federation (pool
+`github-actions`, provider `github`, project `794735482892`). Do not create
+or upload a service-account key: org policy
+(`iam.disableServiceAccountKeyCreation` / `iam.disableServiceAccountKeyUpload`)
+blocks both.
 
 ### Environment Files
 | File | Usage |
@@ -283,10 +285,12 @@ Go to: `https://github.com/urgaa-eka/kailash/settings/secrets/actions`
 
 | Secret | For |
 |--------|-----|
-| `FIREBASE_SERVICE_ACCOUNT` | Frontend deploy |
 | `VULTR_HOST` | Backend deploy |
 | `VULTR_USER` | Backend deploy |
 | `VULTR_SSH_KEY` | Backend deploy |
+
+Frontend deploys need no secret: Workload Identity Federation covers both the
+production and staging Firebase jobs (see §CI/CD above).
 
 ### Staging (Requirement 8.3 — names only, values never in this repository)
 
@@ -298,7 +302,6 @@ require a reviewer):
 
 | Secret | For |
 |--------|-----|
-| `STAGING_FIREBASE_SERVICE_ACCOUNT` | Frontend staging channel deploy |
 | `STAGING_VULTR_HOST` | Backend staging deploy (same VPS under Option D; distinct declaration) |
 | `STAGING_VULTR_USER` | Backend staging deploy |
 | `STAGING_VULTR_SSH_KEY` | Backend staging deploy |
