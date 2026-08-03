@@ -15,17 +15,22 @@ Staging is **Option D**: a second compose project, `kailash-staging`, on the
 same VPS as production. The H1 verdict (refuted: memory 41%, CPU 3%, 915 GiB
 free disk) makes the host viable for both stacks; the overlay's
 `deploy.resources.limits` are the explicit mitigation for the contention risk.
-The frontend is a named Firebase Hosting channel (`staging`) on the same
-project production uses, `kailash-29111` — **Option A**, chosen because
-Requirement 8.1 asks only for a distinct hostname and a named channel provides
-one at zero infrastructure cost.
+The frontend is a **dedicated Hosting site**, `kailash-staging`, in the same
+project production uses (`kailash-29111`). It began as a named preview
+channel, but channels cannot carry custom domains, and attaching
+`staging.kailash-ai.com` to the main site would have served *production*
+content on the staging hostname — verify-staging greening itself against
+production, which is the isolation-defeat this design exists to prevent. The
+site target mapping lives in `frontend/.firebaserc` (`hosting.staging` →
+`kailash-staging`); deploys go through `firebase deploy --only
+hosting:staging`.
 
 | | Production | Staging |
 |---|---|---|
 | Web (canonical) | `kailash-ai.com` | `staging.kailash-ai.com` |
 | Web (www) | `www.kailash-ai.com` | `www.staging.kailash-ai.com` |
 | API | `api.kailash-ai.in` | `staging-api.kailash-ai.in` |
-| Firebase serving | live channel | named channel `staging` (`https://kailash-29111--staging.web.app`) |
+| Firebase serving | main site (`kailash-29111`) | dedicated site `kailash-staging` (`https://kailash-staging.web.app`) |
 | Compose project | default (`/opt/kailash`) | `-p kailash-staging`, same checkout |
 | Backend port (loopback) | `127.0.0.1:8000` | `127.0.0.1:9000` |
 | Platform services | `127.0.0.1:8101-8109` | `127.0.0.1:9101-9109` |
@@ -92,8 +97,8 @@ ci-gate  ──┤                                     ├─► production depl
         └────────────────────────────────────────┘
 ```
 
-`deploy-staging` brings up the `kailash-staging` project (backend) and the
-`staging` channel (frontend); `verify-staging` runs
+`deploy-staging` brings up the `kailash-staging` compose project (backend)
+and deploys the `kailash-staging` Hosting site (frontend); `verify-staging` runs
 `python -m scripts.verify.deployment_check --env staging` and its exit code is
 the job's exit code. GitHub Actions skips any job whose `needs` failed, so a
 red staging verification makes the production deploy **skipped**, not
@@ -114,8 +119,8 @@ docker compose -p kailash-staging \
 curl -sf http://127.0.0.1:9000/api/health
 ```
 
-**Manual (frontend).** `cd frontend && yarn firebase:preview` deploys the
-build to the named `staging` channel with a 30-day expiry.
+**Manual (frontend).** `cd frontend && yarn firebase:preview` builds and
+deploys to the `kailash-staging` Hosting site.
 
 Verify either path with:
 
@@ -193,21 +198,18 @@ changes become routine, move staging to its own Firebase project and update
 Workload Identity Federation binding (the new project needs its own
 `github-actions` pool or an added attribute condition) together.
 
-## Channel expiry: 30 days — operator sign-off required
+## Staging site persistence — a change from the channel design
 
-The `staging` channel is deployed with `expires: 30d`, and every staging
-deploy refreshes the window, so an abandoned staging URL expires rather than
-silently serving an ancient build. Two consequences the operator is signing
-up for:
+The original channel design carried a 30-day rolling expiry; the dedicated
+`kailash-staging` **site does not expire**. That trades the
+"abandoned staging goes dark" property for custom-domain support, which the
+verification suite requires. Consequence the operator is signing up for
+instead: an abandoned staging site silently serves an ancient build until
+the next deploy — check the `commit` field of
+`https://staging-api.kailash-ai.in/api/health` (backend) and the build hash
+in the served HTML (frontend) before trusting a stale-looking staging.
 
-- More than 30 days without a staging deploy means the staging URL goes dark
-  until the next deploy. That is the designed behaviour.
-- If the staging URL is ever **shared externally**, expiry becomes a surprise
-  to whoever holds the link. Do not share it as if it were stable; if a
-  stable external preview is ever needed, that is a different channel with a
-  deliberate expiry, not an extension of this one.
-
-- [ ] Operator sign-off on the 30-day expiry: _____________
+- [ ] Operator sign-off on non-expiring staging: _____________
 
 ## Operator prerequisites (blocking, one-time)
 
@@ -217,9 +219,10 @@ up for:
 - **Task 12.5** — DNS A record for `staging-api.kailash-ai.in`, the
   `nginx-staging.conf` route to `127.0.0.1:9000`, and certbot on the host.
   Additionally, the web hostnames `staging.kailash-ai.com` /
-  `www.staging.kailash-ai.com` must be attached in the Firebase console —
-  named channels only mint `*.web.app` URLs, so the custom staging domain is
-  console + DNS work.
+  `www.staging.kailash-ai.com` must be attached to the **`kailash-staging`
+  site** (they are CNAMEs to `kailash-staging.web.app` in Route 53; the
+  site + domain attachment were created 2026-08-03 via the Hosting REST
+  API — this line records the requirement for a rebuild from scratch).
 - GitHub Environments `staging` and `production`, with the secret names from
   the table above (values never in this repository).
 - `deploy/staging/.env.staging` on the VPS, from the example file, mode 0600.

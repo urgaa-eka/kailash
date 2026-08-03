@@ -124,8 +124,14 @@ jobs:
       # since 2021). The firebase CLI does honour GOOGLE_APPLICATION_CREDENTIALS
       # as auth@v2 sets it. Trade-off: the action's automatic PR comment is
       # lost along with it.
-      - name: Deploy to the staging channel
-        run: npx --yes firebase-tools@13 hosting:channel:deploy staging --expires 30d --project kailash-29111 --non-interactive
+      #
+      # hosting:staging is the DEDICATED SITE kailash-staging (targets in
+      # frontend/.firebaserc), not a preview channel: channels cannot carry
+      # custom domains, so staging.kailash-ai.com can only be served by its
+      # own site. Deploying the main site here would put staging content on
+      # production's domain.
+      - name: Deploy to the staging site
+        run: npx --yes firebase-tools@13 deploy --only hosting:staging --project kailash-29111 --non-interactive
 
   # Confirms staging actually serves what was just deployed, BEFORE anything
   # touches production. Its exit code is the job's exit code; a failure here
@@ -226,8 +232,11 @@ jobs:
 
       # kailash-29111 is the project kailash-ai.com actually resolves to.
       # kailash-38268 served a stale "AEGIS HUB" build on no live domain.
+      # hosting:production scopes to the main site's target: a bare
+      # `--only hosting` would deploy every target in firebase.json,
+      # staging site included, from the production job.
       - name: Deploy to Firebase Hosting
-        run: npx --yes firebase-tools@13 deploy --only hosting --project kailash-29111 --non-interactive
+        run: npx --yes firebase-tools@13 deploy --only hosting:production --project kailash-29111 --non-interactive
 
   # Confirms production actually serves what was just deployed. Its exit code
   # is the job's exit code -- that is what "record the outcome in the workflow

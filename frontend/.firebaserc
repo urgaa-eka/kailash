@@ -3,5 +3,13 @@
     "default": "kailash-29111",
     "production": "kailash-29111",
     "staging": "kailash-29111"
+  },
+  "targets": {
+    "kailash-29111": {
+      "hosting": {
+        "production": ["kailash-29111"],
+        "staging": ["kailash-staging"]
+      }
+    }
   }
 }

@@ -810,6 +810,8 @@ def test_property_service_parity_fails_iff_sets_differ(production, staging):
 
 @pytest.mark.parametrize("command", [
     "npx --yes firebase-tools@13 deploy --only hosting --project kailash-29111 --non-interactive",
+    "npx --yes firebase-tools@13 deploy --only hosting:production --project kailash-29111 --non-interactive",
+    "npx --yes firebase-tools@13 deploy --only hosting:staging --project kailash-29111 --non-interactive",
     "npx --yes firebase-tools@13 hosting:channel:deploy staging --expires 30d --project kailash-29111",
     "firebase deploy --only hosting",
 ])
