@@ -1,0 +1,57 @@
+﻿name: Restore ASUS Runner - WhatIf
+
+on:
+  workflow_dispatch:
+
+jobs:
+  restore-whatif:
+    runs-on: [self-hosted, Windows, real-asus]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout eka-agent
+        uses: actions/checkout@v4
+        with:
+          repository: urgaa-eka/eka-agent
+          path: eka-agent
+
+      - name: Collect system identifiers before WhatIf
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cs = Get-CimInstance Win32_ComputerSystem
+          $os = Get-CimInstance Win32_OperatingSystem
+          $props = [ordered]@{
+            Manufacturer  = [string]$cs.Manufacturer
+            Model         = [string]$cs.Model
+            ComputerName  = [string]$env:COMPUTERNAME
+            UserName      = [string]$env:USERNAME
+            UserProfile   = [string]$env:USERPROFILE
+            OsCaption     = [string]$os.Caption
+          }
+          $props | ConvertTo-Json -Depth 3 | Out-File -FilePath "$env:RUNNER_TEMP\system_identifiers_whatif.json" -Encoding utf8
+          $props | ConvertTo-Json -Depth 3
+
+      - name: Upload system identifiers
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-identifiers-whatif-${{ github.run_id }}
+          path: ${{ runner.temp }}/system_identifiers_whatif.json
+          retention-days: 7
+
+      - name: Run restore_asus_jayat_runner.ps1 with -WhatIf
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cd eka-agent
+          Write-Host '=== Running restore_asus_jayat_runner.ps1 -WhatIf ===' -ForegroundColor Cyan
+          $result = .\restore_asus_jayat_runner.ps1 -WhatIf *>&1
+          $result | ForEach-Object { Write-Host $_ }
+          Write-Host '=== WhatIf output saved to $env:RUNNER_TEMP\whatif_output.txt ===' -ForegroundColor Green
+          $result | Out-File -FilePath "$env:RUNNER_TEMP\whatif_output.txt" -Encoding utf8 -Width 4096
+
+      - name: Upload WhatIf output
+        uses: actions/upload-artifact@v4
+        with:
+          name: whatif-output-${{ github.run_id }}
+          path: ${{ runner.temp }}/whatif_output.txt
+          retention-days: 7
