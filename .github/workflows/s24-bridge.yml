@@ -1,0 +1,61 @@
+name: S24 Bridge (real-asus)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  s24-bridge:
+    runs-on: [self-hosted, Windows, real-asus, jayti-asus]
+    timeout-minutes: 15
+    steps:
+      - name: Environment snapshot
+        shell: powershell
+        run: |
+          Write-Host "=== HOST ==="
+          hostname
+          Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer, Model | Format-List
+          Write-Host "=== IPs ==="
+          Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' } | Select-Object InterfaceAlias, IPAddress | Format-Table
+
+      - name: ARP snapshot
+        shell: powershell
+        run: arp -a
+
+      - name: Scan LAN for S24 (5555 adb / 8022 ssh)
+        shell: powershell
+        run: |
+          $sub = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like '192.168.*' -or $_.IPAddress -like '10.*' } | Select-Object -First 1).IPAddress
+          if (-not $sub) { $sub = '192.168.1.1' }
+          $prefix = $sub.Substring(0, $sub.LastIndexOf('.') + 1)
+          Write-Host "Scanning $prefix 0-254 for 5555/8022..."
+          $found = @()
+          foreach ($i in 1..254) {
+            foreach ($p in @(5555, 8022)) {
+              $tcp = New-Object Net.Sockets.TcpClient
+              try {
+                $async = $tcp.BeginConnect("$prefix$i", $p, $null, $null)
+                if ($async.AsyncWaitHandle.WaitOne(200)) {
+                  if ($tcp.Connected) { $found += "$prefix$i : $p OPEN" }
+                }
+              } catch {} finally { $tcp.Close() }
+            }
+          }
+          if ($found.Count -gt 0) { $found } else { Write-Host "No S24-style ports found on LAN." }
+
+      - name: Try adb connect to found hosts
+        shell: powershell
+        run: |
+          $adb = Get-Command adb -ErrorAction SilentlyContinue
+          if (-not $adb) { Write-Host "adb not installed on ASUS"; exit 0 }
+          & adb devices
+          foreach ($host in $foundHosts) { & adb connect "$host:5555" }
+          & adb devices
+        env:
+          foundHosts: ""
+
+      - name: Report
+        shell: powershell
+        run: Write-Host "Bridge job completed on real-asus host"
