@@ -27,34 +27,44 @@ jobs:
       - name: Scan LAN for S24 (5555 adb / 8022 ssh)
         shell: powershell
         run: |
-          $sub = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like '192.168.*' -or $_.IPAddress -like '10.*' } | Select-Object -First 1).IPAddress
-          if (-not $sub) { $sub = '192.168.1.1' }
-          $prefix = $sub.Substring(0, $sub.LastIndexOf('.') + 1)
-          Write-Host "Scanning $prefix 0-254 for 5555/8022..."
+          $conn = Get-NetIPConfiguration | Where-Object { $_.IPv4DefaultGateway } | Select-Object -First 1
+          if (-not $conn) { $conn = Get-NetIPConfiguration | Select-Object -First 1 }
+          $ip = $conn.IPv4Address.IPAddress
+          if (-not $ip) { $ip = '192.168.1.1' }
+          $prefix = $ip.Substring(0, $ip.LastIndexOf('.') + 1)
+          Write-Host "Using interface $($conn.InterfaceAlias) / scanning $prefix 0-254 for 5555/8022..."
           $found = @()
           foreach ($i in 1..254) {
             foreach ($p in @(5555, 8022)) {
               $tcp = New-Object Net.Sockets.TcpClient
               try {
                 $async = $tcp.BeginConnect("$prefix$i", $p, $null, $null)
-                if ($async.AsyncWaitHandle.WaitOne(200)) {
-                  if ($tcp.Connected) { $found += "$prefix$i : $p OPEN" }
+                if ($async.AsyncWaitHandle.WaitOne(250)) {
+                  if ($tcp.Connected) { $found += "$prefix$i" }
                 }
               } catch {} finally { $tcp.Close() }
             }
           }
-          if ($found.Count -gt 0) { $found } else { Write-Host "No S24-style ports found on LAN." }
+          $found = $found | Select-Object -Unique
+          if ($found.Count -gt 0) {
+            $found | ForEach-Object { Write-Host "S24-style host: $_" }
+            Set-Content -Path "$env:GITHUB_WORKSPACE\found_hosts.txt" -Value ($found -join ',')
+          } else {
+            Write-Host "No S24-style ports found on LAN."
+            Set-Content -Path "$env:GITHUB_WORKSPACE\found_hosts.txt" -Value ""
+          }
 
       - name: Try adb connect to found hosts
         shell: powershell
         run: |
+          $foundHosts = (Get-Content "$env:GITHUB_WORKSPACE\found_hosts.txt" -ErrorAction SilentlyContinue).Trim()
           $adb = Get-Command adb -ErrorAction SilentlyContinue
           if (-not $adb) { Write-Host "adb not installed on ASUS"; exit 0 }
           & adb devices
-          foreach ($host in $foundHosts) { & adb connect "$host:5555" }
+          if ($foundHosts) {
+            foreach ($h in $foundHosts.Split(',')) { & adb connect "$h`:5555" }
+          }
           & adb devices
-        env:
-          foundHosts: ""
 
       - name: Report
         shell: powershell
