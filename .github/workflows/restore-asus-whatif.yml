@@ -1,4 +1,4 @@
-﻿name: Restore ASUS Runner - WhatIf
+name: Restore ASUS Runner - WhatIf
 
 on:
   workflow_dispatch:
@@ -13,6 +13,7 @@ jobs:
         with:
           repository: urgaa-eka/eka-agent
           path: eka-agent
+          token: ${{ secrets.CROSS_REPO_PAT }}
 
       - name: Collect system identifiers before WhatIf
         shell: powershell
