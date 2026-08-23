@@ -10,7 +10,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from scripts.verify import build_audit
-from scripts.verify.common import Exit, Report, git_top_level, tracked_files
+from scripts.verify.common import Exit, Report, project_root, tracked_files
 
 # The nine platform services docker-compose.yml builds from Dockerfile.service.
 NINE_SERVICES = (
@@ -264,7 +264,7 @@ class TestRealRepository:
     def test_compose_builds_dockerfile_service_with_all_nine_values(self):
         """The task's list of nine, verified against the compose file that is
         actually deployed rather than against this test's opinion."""
-        root = git_top_level()
+        root = project_root()
         report = Report()
         refs = build_audit.parse_compose(
             (root / "docker-compose.yml").read_text(encoding="utf-8"), report)
@@ -284,7 +284,7 @@ class TestRealRepository:
         check must exit 0. After 8.2 the first branch is unreachable and this
         becomes the sibling-style clean-repo test.
         """
-        root = git_top_level()
+        root = project_root()
         rc = build_audit.main(["--root", str(root), "--json"])
         data = json.loads(capsys.readouterr().out)
 

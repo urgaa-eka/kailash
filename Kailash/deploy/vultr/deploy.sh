@@ -6,6 +6,11 @@
 set -euo pipefail
 
 APP_DIR="/opt/kailash"
+# The git checkout lives at APP_DIR; the project itself is nested under the
+# Kailash/ master folder (see RULES.md), so compose files, scripts.verify and
+# the deploy/ configs are resolved from PROJECT_DIR. git operations
+# (clone/reset/clean) still run against APP_DIR, the repository root.
+PROJECT_DIR="${APP_DIR}/Kailash"
 REPO_URL="https://github.com/urgaa-eka/kailash.git"
 BRANCH="${DEPLOY_BRANCH:-main}"
 COMPOSE_FILE="docker-compose.yml"
@@ -151,7 +156,7 @@ update_code() {
     # those edits into the running containers, so the deploy terminates and
     # prints each modified path instead (Requirement 9.2).
     if command -v python3 >/dev/null 2>&1; then
-        if ! (cd "$APP_DIR" && python3 -m scripts.verify.repo_state); then
+        if ! (cd "$PROJECT_DIR" && python3 -m scripts.verify.repo_state); then
             echo "  ✖ Working tree on the server does not match the committed state; refusing to deploy." >&2
             return 1
         fi
@@ -164,17 +169,17 @@ update_code() {
 
 check_env() {
     echo "▶ Checking environment..."
-    if [ ! -f "${APP_DIR}/backend/.env" ]; then
+    if [ ! -f "${PROJECT_DIR}/backend/.env" ]; then
         echo "  ⚠️  No .env found. Copying example..."
-        cp "${APP_DIR}/backend/.env.example" "${APP_DIR}/backend/.env"
-        echo "  ❗ EDIT ${APP_DIR}/backend/.env with production values!"
+        cp "${PROJECT_DIR}/backend/.env.example" "${PROJECT_DIR}/backend/.env"
+        echo "  ❗ EDIT ${PROJECT_DIR}/backend/.env with production values!"
     fi
     echo "  ✅ Environment file present"
 }
 
 deploy_containers() {
     echo "▶ Building and deploying ${#PROD_SERVICES[@]} containers..."
-    cd "$APP_DIR"
+    cd "$PROJECT_DIR"
     # The commit actually checked out, exported so compose substitutes it into
     # the backend environment (docker-compose.yml: GIT_COMMIT=${GIT_COMMIT:-unknown})
     # and /api/health reports what is running (Requirement 6.6). Read from the
@@ -240,14 +245,14 @@ setup_nginx() {
     # fresh box killed the deploy before setup_ssl ever ran. setup_ssl issues
     # certificates with `certonly` (no config edits) and re-runs this.
     if [ -f /etc/letsencrypt/live/api.kailash-ai.in/fullchain.pem ]; then
-        cp "${APP_DIR}/deploy/vultr/nginx-api.conf" /etc/nginx/sites-available/kailash-api
+        cp "${PROJECT_DIR}/deploy/vultr/nginx-api.conf" /etc/nginx/sites-available/kailash-api
         ln -sf /etc/nginx/sites-available/kailash-api /etc/nginx/sites-enabled/kailash-api
     else
         echo "  ⏭  api certificate absent; config deferred until setup_ssl issues it"
     fi
     if [ -f /etc/letsencrypt/live/staging-api.kailash-ai.in/fullchain.pem ] \
-        && [ -f "${APP_DIR}/deploy/staging/nginx-staging-api.conf" ]; then
-        cp "${APP_DIR}/deploy/staging/nginx-staging-api.conf" \
+        && [ -f "${PROJECT_DIR}/deploy/staging/nginx-staging-api.conf" ]; then
+        cp "${PROJECT_DIR}/deploy/staging/nginx-staging-api.conf" \
             /etc/nginx/sites-available/kailash-staging-api
         ln -sf /etc/nginx/sites-available/kailash-staging-api \
             /etc/nginx/sites-enabled/kailash-staging-api

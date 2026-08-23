@@ -9,6 +9,10 @@ on:
   # for CI instead of running as an independent, separately-triggered workflow.
   workflow_call:
 
+defaults:
+  run:
+    working-directory: Kailash
+
 jobs:
   # Must exist before any check below is wired as a gate: a check whose own
   # tests fail is not something to trust with a deployment decision.
@@ -110,7 +114,7 @@ jobs:
           - automobile-llm
     defaults:
       run:
-        working-directory: backend/services/${{ matrix.service }}
+        working-directory: Kailash/backend/services/${{ matrix.service }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -141,7 +145,7 @@ jobs:
           --health-retries 10
     defaults:
       run:
-        working-directory: backend/services/company
+        working-directory: Kailash/backend/services/company
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -160,7 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: infra/company
+        working-directory: Kailash/infra/company
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -179,14 +183,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: Kailash/backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: Kailash/backend/requirements.txt
       # emergentintegrations is not on public PyPI, so a plain
       # `pip install -r requirements.txt` fails here and this job never reaches
       # its test step. Same carve-out the image build uses (see Dockerfile).
@@ -214,7 +218,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: Kailash/frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -225,7 +229,7 @@ jobs:
           # is never built on.
           node-version: "20"
           cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          cache-dependency-path: Kailash/frontend/yarn.lock
       # No `|| yarn install` fallback: the lockfile determines what production
       # installs, so drift must fail here rather than be silently resolved into
       # a different dependency set than the one deploy-frontend.yml pins.

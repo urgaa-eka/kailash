@@ -20,6 +20,13 @@ from scripts.verify.common import Exit, Report
 
 FIXTURES = Path(__file__).parent / "fixtures" / "workflows"
 REPO_ROOT = Path(__file__).resolve().parents[2]
+# `.github/workflows/` and the `uses: ./...` references in it resolve against
+# the git top level, which is the parent of the `Kailash/` master folder every
+# other project path lives under (see RULES.md). A flat checkout keeps both at
+# REPO_ROOT.
+GIT_ROOT = (REPO_ROOT.parent
+            if (REPO_ROOT.parent / ".github" / "workflows").is_dir()
+            else REPO_ROOT)
 
 
 def _graph(yaml_text: str, tmp_path: Path, name: str = "w.yml") -> wg.Graph:
@@ -302,7 +309,7 @@ class TestGatingAcrossTheWorkflowCallBoundary:
         """The regression guard for the defect itself: `backend` and `frontend`
         in ci.yml -- the jobs tasks 2.2/2.3 unmasked -- must be inside the
         gating set of both real deploy workflows."""
-        root = REPO_ROOT
+        root = GIT_ROOT
         for name in ("deploy-backend.yml", "deploy-frontend.yml"):
             g = wg.load_graph(root / ".github" / "workflows" / name, root=root)
             deploys = {j.name for j in g.jobs.values() if j.deploys}
@@ -378,8 +385,8 @@ class TestGateConditions:
 
     def test_the_real_workflow_conditions_are_benign(self):
         for name in ("deploy-backend.yml", "deploy-frontend.yml", "ci.yml"):
-            g = wg.load_graph(REPO_ROOT / ".github" / "workflows" / name,
-                              root=REPO_ROOT)
+            g = wg.load_graph(GIT_ROOT / ".github" / "workflows" / name,
+                              root=GIT_ROOT)
             for job in g.jobs.values():
                 assert job.defeating_condition is None, (name, job.name)
 
@@ -403,8 +410,8 @@ class TestJobIntrospection:
     def test_the_real_production_deploy_jobs_do_not_verify_themselves(self):
         for name, job in (("deploy-backend.yml", "deploy"),
                           ("deploy-frontend.yml", "build-and-deploy")):
-            g = wg.load_graph(REPO_ROOT / ".github" / "workflows" / name,
-                              root=REPO_ROOT)
+            g = wg.load_graph(GIT_ROOT / ".github" / "workflows" / name,
+                              root=GIT_ROOT)
             assert not g.jobs[job].verifies, name
 
     def test_every_mask_in_a_job_is_returned(self, tmp_path):

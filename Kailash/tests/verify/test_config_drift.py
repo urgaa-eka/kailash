@@ -414,8 +414,8 @@ class TestFirebaseAppIdentity:
 def test_passes_on_real_repository(capsys):
     """Task 5.3. If this fails the finding is a real defect: fix the
     disagreeing file, do not relax the rule."""
-    from scripts.verify.common import git_top_level
-    root = git_top_level()
+    from scripts.verify.common import project_root
+    root = project_root()
     rc = config_drift.main(["--root", str(root)])
     out = capsys.readouterr().out
     assert rc == int(Exit.OK), f"real repository has drift:\n{out}"

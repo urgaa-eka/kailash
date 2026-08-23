@@ -154,6 +154,33 @@ def git_top_level(start: Path | None = None) -> Path:
     return Path(out.stdout.strip())
 
 
+# The project name, and the single master folder every substantive path lives
+# under. Kept as one constant so the nested-layout rule below is stated once.
+MASTER_FOLDER = "Kailash"
+
+
+def project_root(start: Path | None = None) -> Path:
+    """The project's master folder inside the git work tree.
+
+    RULES.md nests the entire project under a single `Kailash/` master folder;
+    only `.github/`, `.gitignore` and `RULES.md` sit at the git top level
+    (GitHub Actions must read `.github/workflows/` from the repository root, so
+    it cannot move). Every check resolves its paths against the master folder,
+    not the git root.
+
+    Falls back to the git root for a flat checkout -- the synthetic test
+    corpora build repositories without the master folder -- so one code path
+    drives both layouts. The `scripts/verify` probe distinguishes the real
+    nested project from a stray directory that merely happens to be named
+    `Kailash`.
+    """
+    top = git_top_level(start)
+    master = top / MASTER_FOLDER
+    if master.is_dir() and (master / "scripts" / "verify").is_dir():
+        return master
+    return top
+
+
 def tracked_files(root: Path) -> list[str]:
     """Repo-relative paths of every file tracked by git, in sorted order.
 
@@ -183,11 +210,25 @@ class Corpus:
     skipped_names: list[str] = field(default_factory=list)
 
     def read(self, rel: str) -> str | None:
-        """UTF-8 text of a tracked file, or None if it does not decode."""
-        p = self.root / rel
-        try:
-            data = p.read_bytes()
-        except (OSError, IsADirectoryError):
+        """UTF-8 text of a tracked file, or None if it does not decode.
+
+        `.github/` cannot live inside the `Kailash/` master folder -- GitHub
+        Actions reads it from the git top level -- so a `.github/...` path that
+        is absent under the master folder is retried against its parent. Only
+        `.github/` is retried, and only when the primary lookup misses, so a
+        flat checkout (where the master folder is the git root) is unaffected.
+        """
+        candidates = [self.root / rel]
+        if rel.startswith(".github/"):
+            candidates.append(self.root.parent / rel)
+        data = None
+        for p in candidates:
+            try:
+                data = p.read_bytes()
+                break
+            except (OSError, IsADirectoryError):
+                continue
+        if data is None:
             return None
         if b"\0" in data[:8192]:
             return None
@@ -248,7 +289,7 @@ def base_parser(description: str) -> argparse.ArgumentParser:
 
 def resolve_root(value: Path | None) -> Path:
     if value is None:
-        return git_top_level()
+        return project_root()
     root = Path(value).resolve()
     if not root.is_dir():
         raise Usage(f"--root {value} is not a directory")

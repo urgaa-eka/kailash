@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'frontend/**'
+      - 'Kailash/frontend/**'
   workflow_dispatch:
     inputs:
       # Read by build-and-deploy's `if:` below. It was declared here and then
@@ -18,6 +18,10 @@ on:
         options:
           - production
           - staging
+
+defaults:
+  run:
+    working-directory: Kailash
 
 jobs:
   # Repository-state checks that must hold before anything is built. These are
@@ -67,7 +71,7 @@ jobs:
       id-token: write
     defaults:
       run:
-        working-directory: frontend
+        working-directory: Kailash/frontend
 
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +83,7 @@ jobs:
         with:
           node-version: '20'
           cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          cache-dependency-path: Kailash/frontend/yarn.lock
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile || yarn install
@@ -103,7 +107,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: asset-manifest-staging
-          path: frontend/build/asset-manifest.json
+          path: Kailash/frontend/build/asset-manifest.json
           if-no-files-found: error
 
       # Org policy forbids both key creation and key upload
@@ -186,7 +190,7 @@ jobs:
       id-token: write
     defaults:
       run:
-        working-directory: frontend
+        working-directory: Kailash/frontend
 
     steps:
       - uses: actions/checkout@v4
@@ -198,7 +202,7 @@ jobs:
         with:
           node-version: '20'
           cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          cache-dependency-path: Kailash/frontend/yarn.lock
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile || yarn install
@@ -220,7 +224,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: asset-manifest
-          path: frontend/build/asset-manifest.json
+          path: Kailash/frontend/build/asset-manifest.json
           if-no-files-found: error
 
       - id: auth

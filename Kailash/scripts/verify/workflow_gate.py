@@ -692,7 +692,14 @@ def check_graph(g: Graph, report: Report, *, require_staging: bool = False) -> N
 
 def build_report(args) -> Report:
     root = resolve_root(args.root)
-    wf_dir = root / ".github" / "workflows"
+    # GitHub Actions reads `.github/workflows/` from the git top level, which
+    # is the parent of the `Kailash/` master folder every other path resolves
+    # under. `uses: ./...` references also resolve against that git root, never
+    # against the master folder, so the workflow graph is anchored there while
+    # the compose base and staging overlay stay under the master folder. A flat
+    # checkout (the synthetic corpora) keeps both at the same directory.
+    wf_root = root if (root / ".github" / "workflows").is_dir() else root.parent
+    wf_dir = wf_root / ".github" / "workflows"
     if not wf_dir.is_dir():
         raise Unavailable(f"{wf_dir} does not exist")
 
@@ -702,7 +709,7 @@ def build_report(args) -> Report:
         raise Unavailable(f"no workflow files in {wf_dir}")
 
     for path in files:
-        check_graph(load_graph(path, root=root), report,
+        check_graph(load_graph(path, root=wf_root), report,
                     require_staging=args.require_staging)
 
     # Property 5, repo-level parts: hostname disjointness from the table the

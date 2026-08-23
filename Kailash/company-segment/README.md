@@ -5,7 +5,7 @@ It is designed as a **full double-entry system-of-record** that migrates from, a
 reconciles against, the CA's **Tally** books, and produces **FY-wise financials at Indian
 statutory standard** (sales, purchase, GSTR-1/3B/9, TDS, ROC, Schedule III statements) end-to-end.
 
-The full design rationale is in **`../Company_Segment_Technical_Specification.md`**. This folder
+The full design rationale is in **`Company_Segment_Technical_Specification.md`**. This folder
 is the code-side starting point you can commit into the `Kailash-Ai` repo.
 
 ## Contents

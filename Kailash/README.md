@@ -15,6 +15,13 @@
 
 ---
 
+> **Project structure & rules.** The entire project lives inside this `Kailash/`
+> master folder; the repository root holds only [`RULES.md`](../RULES.md) and this
+> folder. **Read [`../RULES.md`](../RULES.md) first** — it is the project
+> constitution. Run every command below **from inside `Kailash/`**. The single
+> agent brief is [`AGENT.md`](./AGENT.md); the single BRD/TRD/PRD are in
+> [`docs/`](./docs/).
+
 Kailash is **not** a product sold to customers. It is the shared AI engine
 that powers URGAA, GSTSAAS, Ignition, ARJUN, and the Kailash operations
 dashboard — all calling into a single unified backend.

@@ -4,10 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - 'backend/**'
-      - 'docker-compose.yml'
-      - 'deploy/vultr/**'
+      - 'Kailash/backend/**'
+      - 'Kailash/docker-compose.yml'
+      - 'Kailash/deploy/vultr/**'
   workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: Kailash
 
 jobs:
   # Repository-state checks that must hold before anything is deployed.
@@ -38,14 +42,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: Kailash/backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: Kailash/backend/requirements.txt
 
       # emergentintegrations is not on public PyPI, so a plain
       # `pip install -r requirements.txt` fails and this job never reaches its
@@ -112,6 +116,7 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
+            cd /opt/kailash/Kailash  # project master folder: compose + deploy files live here
 
             # The staging service set is production's, by requirement (8.2):
             # the kailash-ai profile's 15 services minus `frontend`, decided
@@ -200,6 +205,7 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
+            cd /opt/kailash/Kailash  # project master folder: compose + deploy files live here
 
             # The service set production runs, decided in
             # docs/records/profiled-services-scope.md: the kailash-ai profile's
