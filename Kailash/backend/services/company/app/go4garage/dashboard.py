@@ -159,6 +159,13 @@ def render_fy(provider: FinancialDataProvider, fy: str, *, today: date | None = 
             f"<td>{_esc(q.question)}</td><td>{_esc(q.owner)}</td></tr>"
             for q in _defects.OPEN_DECISIONS)
 
+    flags_html = ""
+    if fin.flags:
+        items = "".join(f"<li>{_esc(f)}</li>" for f in fin.flags)
+        flags_html = (f"<div class='card'><h2>Flagged for FY {_esc(fy)} — "
+                      "contradictions &amp; caveats (surfaced, not resolved)</h2>"
+                      f"<ul class='flags'>{items}</ul></div>")
+
     kpi_html = "".join(
         f"<div class='kpi'><div class='kpi-label'>{_esc(k)}</div>"
         f"<div class='kpi-value'>{v}</div></div>" for k, v in kpis)
@@ -196,6 +203,8 @@ def render_fy(provider: FinancialDataProvider, fy: str, *, today: date | None = 
   tr.sub td:first-child {{ padding-left:22px; color:var(--dim); }}
   tr.tot td {{ font-weight:600; border-top:1px solid #2a3b58; }}
   .await {{ color:var(--dim); font-style:italic; font-size:12px; }}
+  .flags {{ margin:0; padding-left:18px; }}
+  .flags li {{ margin:4px 0; color:var(--warn); white-space:normal; }}
   .pill {{ padding:2px 8px; border-radius:99px; font-size:12px; }}
   .pill.ok {{ background:#052e16; color:var(--ok); }}
   .pill.warn {{ background:#3b2405; color:var(--warn); }}
@@ -224,6 +233,8 @@ def render_fy(provider: FinancialDataProvider, fy: str, *, today: date | None = 
 </div>
 
 <div class="kpis">{kpi_html}</div>
+
+{flags_html}
 
 <div class="grid2">
   <div class="card"><h2>Dept 2 · Vendor / Workshop Settlement — Net Payable</h2>

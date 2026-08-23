@@ -443,7 +443,7 @@ def register(app: FastAPI) -> None:
     # defects/decisions). Fed by a data provider; NullProvider until a real
     # source (Zoho org 60083342031, Supabase, or the ledger) is wired, so the
     # structure renders now and the figures load after deployment.
-    _g4g_provider = go4garage.NullProvider()
+    _g4g_provider = go4garage.KnowledgePackProvider()
 
     @app.get("/dashboard/fy", response_class=HTMLResponse, tags=["dashboard"])
     async def go4garage_dashboard(fy: str | None = None):
