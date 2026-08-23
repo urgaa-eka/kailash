@@ -466,6 +466,20 @@ def register(app: FastAPI) -> None:
         """All five FYs in one self-contained page (client-side switcher)."""
         return HTMLResponse(content=go4garage.render_static(_g4g_provider))
 
+    # ---- Go4Garage JSON API (the React frontend / Zoho-mapping seam) ------
+    # Same key shape the store accepts, so a displayed figure maps 1:1 onto
+    # POST /go4garage/fy/{fy} and onward to Zoho. Reads through the same provider.
+    @app.get("/go4garage/api/overview", response_model=ApiResponse, tags=["go4garage"])
+    async def go4garage_api_overview():
+        return ApiResponse(data=go4garage.api.overview_payload(_g4g_provider))
+
+    @app.get("/go4garage/api/fy/{fy}", response_model=ApiResponse, tags=["go4garage"])
+    async def go4garage_api_fy(fy: str):
+        if fy not in {m.fy for m in go4garage.model.FINANCIAL_YEARS}:
+            raise ValidationError(f"unknown FY {fy!r}")
+        fin = _g4g_provider.fy_financials(fy)
+        return ApiResponse(data=go4garage.api.fy_payload(fin))
+
     # ---- Go4Garage data store (so the company can load / edit its figures) --
     @app.post("/go4garage/admin/init", response_model=ApiResponse,
               dependencies=protected, tags=["go4garage"])

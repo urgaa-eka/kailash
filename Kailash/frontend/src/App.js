@@ -30,6 +30,7 @@ import GaneshaChatV2 from "./pages/GaneshaChatV2";
 import GapsTasksManagement from "./pages/GapsTasksManagement";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import GaneshaAnalytics from "./pages/GaneshaAnalytics";
+import Go4GarageFinancials from "./pages/Go4GarageFinancials";
 
 // Import theme
 import "./styles/theme.css";
@@ -237,6 +238,18 @@ function App() {
             <Route path="/ganesha-analytics" element={
               <ProtectedRoute noLayout={true}>
                 <GaneshaAnalytics />
+              </ProtectedRoute>
+            } />
+
+            {/* Go4Garage Financial Controller — FY financial dashboard */}
+            <Route path="/financials" element={
+              <ProtectedRoute noLayout={true}>
+                <Go4GarageFinancials />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/financials" element={
+              <ProtectedRoute noLayout={true}>
+                <Go4GarageFinancials />
               </ProtectedRoute>
             } />
 

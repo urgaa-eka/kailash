@@ -30,9 +30,32 @@ The dashboard ships as routes on the company service:
 
 | Route | What |
 | --- | --- |
-| `GET /dashboard/fy?fy=2023-24` | One FY, server-rendered |
-| `GET /dashboard/fy/all` | All five FYs in one page (client-side switcher) |
+| `GET /dashboard/fy?fy=2023-24` | One FY, server-rendered (HTML) |
+| `GET /dashboard/fy/all` | All five FYs in one page (client-side switcher, HTML) |
+| `GET /go4garage/api/overview` | JSON — entity, model spine, departments, defects, decisions, five-year trend, provider status, rates |
+| `GET /go4garage/api/fy/{fy}` | JSON — one FY in the **store's key shape** (Zoho-mappable) |
 | `GET /dashboard` | The existing Kailash ledger dashboard (unchanged) |
+
+The two HTML routes and the React frontend share one "Eames" visual identity —
+warm paper ground, espresso rail, burnished-gold data-viz — carrying the
+GO4GARAGE brand colours (navy `#0A3D62`, amber `#FFC312`).
+
+### The React frontend (in the app)
+
+The company frontend ships an enterprise FY dashboard at **`/financials`**
+(`src/pages/Go4GarageFinancials.jsx`). It reads the JSON API above through
+`src/services/go4garageApi.js` and renders the KPIs, the Net Payable waterfall,
+the GST cockpit, treasury, the five-year trend, and the audit gate — with the
+FY switcher in the rail. Point it at the company service with one env var
+(falls back to the main backend URL, then same-origin):
+
+```bash
+REACT_APP_COMPANY_API_URL=https://<company-service-host>
+```
+
+Because `/go4garage/api/fy/{fy}` returns the same keys the store accepts, a
+figure the frontend shows maps 1:1 onto `POST /go4garage/fy/{fy}` and onward to
+Zoho — the "take a file out, drop it straight in" path.
 
 **Data source** is chosen by one environment variable:
 
