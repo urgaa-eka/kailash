@@ -157,7 +157,13 @@ services:
     ports:
       - "127.0.0.1:8110:8110"
     environment:
-      - COMPANY_DB_URL=postgresql://kailash:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/kailash
+      # Ledger Postgres. Defaults to the local `postgres` container; set
+      # COMPANY_DB_URL in .env to an external managed Postgres (e.g. Supabase)
+      # to run the statutory ledger there instead — the value is supplied at
+      # deploy time, not committed. When COMPANY_DB_URL is unset the default
+      # still requires POSTGRES_PASSWORD, so a missing local credential aborts
+      # `up` exactly as before.
+      - COMPANY_DB_URL=${COMPANY_DB_URL:-postgresql://kailash:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/kailash}
       - COMPANY_SCAFFOLD_DIR=/srv/company-segment
       - ENV=${ENV:-dev}
       - PLATFORM_INTERNAL_TOKEN=${PLATFORM_INTERNAL_TOKEN:?PLATFORM_INTERNAL_TOKEN must be set}
@@ -199,7 +205,10 @@ services:
       # is a safe value for a non-credential, not a masked failure.
       - GIT_COMMIT=${GIT_COMMIT:-unknown}
       - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
-      - POSTGRES_URL=postgresql+asyncpg://kailash:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/kailash
+      # Backend Postgres. Same override contract as COMPANY_DB_URL: set
+      # POSTGRES_URL in .env to point at an external managed Postgres (e.g.
+      # Supabase) at deploy time; otherwise the local container is used.
+      - POSTGRES_URL=${POSTGRES_URL:-postgresql+asyncpg://kailash:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/kailash}
     depends_on:
       mongo:
         condition: service_healthy

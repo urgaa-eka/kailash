@@ -95,6 +95,10 @@ Per-platform or per-module requirements are **sections inside** these files, not
 separate documents. Do not create `BRD_<anything>.md`, a per-app spec, or a
 duplicate under another folder. Edit the single document.
 
+This rule is **enforced**: `scripts/verify/doc_singletons.py` fails CI if a
+canonical document is missing or if any tracked file is named like a BRD/TRD/PRD
+anywhere else in the tree.
+
 ## Rule 4 — One agent copy
 
 There is a **single agent definition**, [`Kailash/AGENT.md`](./Kailash/AGENT.md),
@@ -124,8 +128,9 @@ pipeline, never a new workflow file.
 These rules are checked, not trusted:
 
 - **`scripts/verify/`** gates run in CI (`config_drift`, `repo_state`,
-  `secret_scan`, `workflow_gate`, `build_audit`) and resolve their paths against
-  the `Kailash/` master folder.
+  `secret_scan`, `workflow_gate`, `build_audit`, `doc_singletons`) and resolve
+  their paths against the `Kailash/` master folder. Each rule that can be checked
+  is checked — `doc_singletons` enforces Rule 3.
 - **`repo_state`** refuses to deploy from a working tree with uncommitted
   changes under a deployment-critical path, because `deploy/vultr/deploy.sh`
   runs `git reset --hard` + `git clean -fd` on the production host.
