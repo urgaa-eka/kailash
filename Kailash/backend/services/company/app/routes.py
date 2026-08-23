@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from backend.shared import ApiResponse, ValidationError, require_internal_token
 
-from . import compliance, dashboard, gst, ingest, posting, recon, reports
+from . import compliance, dashboard, go4garage, gst, ingest, posting, recon, reports
 from .db import audit, fy_for, get_conn, init_schema, seed_all
 
 GSTIN_RE = r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$"
@@ -436,6 +436,19 @@ def register(app: FastAPI) -> None:
     async def dashboard_route(fy: str | None = None):
         with get_conn() as conn:
             html = dashboard.render(conn, fy or fy_for(date.today()))
+        return HTMLResponse(content=html)
+
+    # ---- L4 Go4Garage FY dashboard --------------------------------------
+    # The financial-controller view (ten departments, Net Payable, GST cockpit,
+    # defects/decisions). Fed by a data provider; NullProvider until a real
+    # source (Zoho org 60083342031, Supabase, or the ledger) is wired, so the
+    # structure renders now and the figures load after deployment.
+    _g4g_provider = go4garage.NullProvider()
+
+    @app.get("/dashboard/fy", response_class=HTMLResponse, tags=["dashboard"])
+    async def go4garage_dashboard(fy: str | None = None):
+        default_fy = go4garage.model.FINANCIAL_YEARS[-1].fy
+        html = go4garage.render_fy(_g4g_provider, fy or default_fy)
         return HTMLResponse(content=html)
 
     # convenience: current FY label
