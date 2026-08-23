@@ -5,7 +5,7 @@ provider after deployment (see provider.py). Grounded on the Go4Garage Agent
 Knowledge Pack.
 """
 from . import dashboard, defects, kp_data, logic, model, provider
-from .dashboard import render_fy
+from .dashboard import render_fy, render_static
 from .provider import (
     FinancialDataProvider,
     FYFinancials,
@@ -15,6 +15,6 @@ from .provider import (
 
 __all__ = [
     "defects", "dashboard", "kp_data", "logic", "model", "provider",
-    "render_fy", "FinancialDataProvider", "FYFinancials",
+    "render_fy", "render_static", "FinancialDataProvider", "FYFinancials",
     "KnowledgePackProvider", "NullProvider",
 ]

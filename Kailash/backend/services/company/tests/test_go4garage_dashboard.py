@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from app.go4garage import model, render_fy
+from app.go4garage import model, render_fy, render_static
 from app.go4garage.provider import (
     FYFinancials,
+    KnowledgePackProvider,
     NullProvider,
     PurchaseSummary,
     SalesSummary,
@@ -64,6 +65,17 @@ def test_populated_provider_shows_numbers():
     assert "Cr" in html                  # ₹ scaled figure rendered
 
 
+def test_static_bakes_in_all_five_years_with_a_switcher():
+    html = render_static(KnowledgePackProvider(), default_fy="2023-24")
+    assert html.startswith("<!DOCTYPE html>")
+    # Every FY's panel is embedded, plus the client-side switcher.
+    for m in model.FINANCIAL_YEARS:
+        assert f"data-fy='{m.fy}'" in html
+    assert "function showFy" in html
+    assert "location.href" not in html   # standalone: no server navigation
+    assert "1,363" in html               # FY2023-24 real figures baked in
+
+
 def test_route_serves_dashboard(client):
     r = client.get("/dashboard/fy")
     assert r.status_code == 200
@@ -72,3 +84,11 @@ def test_route_serves_dashboard(client):
 
     r2 = client.get("/dashboard/fy", params={"fy": "2024-25"})
     assert r2.status_code == 200
+
+
+def test_route_serves_all_years_page(client):
+    r = client.get("/dashboard/fy/all")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "function showFy" in r.text
+    assert r.text.count("data-fy='") == len(model.FINANCIAL_YEARS)

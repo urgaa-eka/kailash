@@ -6,6 +6,7 @@ other platform services.
 """
 from __future__ import annotations
 
+import os
 from datetime import date
 
 from fastapi import Depends, FastAPI, Query
@@ -440,16 +441,29 @@ def register(app: FastAPI) -> None:
 
     # ---- L4 Go4Garage FY dashboard --------------------------------------
     # The financial-controller view (ten departments, Net Payable, GST cockpit,
-    # defects/decisions). Fed by a data provider; NullProvider until a real
-    # source (Zoho org 60083342031, Supabase, or the ledger) is wired, so the
-    # structure renders now and the figures load after deployment.
-    _g4g_provider = go4garage.KnowledgePackProvider()
+    # defects/decisions). The data source is chosen by the G4G_PROVIDER env var:
+    #   knowledge-pack (default) — the confirmed Knowledge-Pack figures
+    #   null                     — structure only, "awaiting source"
+    # Zoho org 60083342031 / Supabase providers slot in here once their data is
+    # populated (the target org is a near-empty rebuild today).
+    _g4g_providers = {
+        "knowledge-pack": go4garage.KnowledgePackProvider,
+        "null": go4garage.NullProvider,
+    }
+    _g4g_provider = _g4g_providers.get(
+        os.environ.get("G4G_PROVIDER", "knowledge-pack"),
+        go4garage.KnowledgePackProvider)()
 
     @app.get("/dashboard/fy", response_class=HTMLResponse, tags=["dashboard"])
     async def go4garage_dashboard(fy: str | None = None):
         default_fy = go4garage.model.FINANCIAL_YEARS[-1].fy
         html = go4garage.render_fy(_g4g_provider, fy or default_fy)
         return HTMLResponse(content=html)
+
+    @app.get("/dashboard/fy/all", response_class=HTMLResponse, tags=["dashboard"])
+    async def go4garage_dashboard_all():
+        """All five FYs in one self-contained page (client-side switcher)."""
+        return HTMLResponse(content=go4garage.render_static(_g4g_provider))
 
     # convenience: current FY label
     @app.get("/meta/fy", response_model=ApiResponse, tags=["meta"])
