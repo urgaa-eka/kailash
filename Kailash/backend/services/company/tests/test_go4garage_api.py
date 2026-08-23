@@ -49,6 +49,17 @@ def test_null_provider_is_all_awaiting():
     assert p["gst"] == [] and p["bank"] == []
 
 
+def test_export_csv_is_flat_store_shape():
+    text = api.export_csv(KnowledgePackProvider())
+    lines = text.strip().splitlines()
+    header = lines[0].split(",")
+    assert header == api.EXPORT_FIELDS
+    assert len(lines) == 1 + len(model.FINANCIAL_YEARS)   # header + one row per FY
+    # FY2023-24 row carries the confirmed net payable as an exact string.
+    row = next(ln for ln in lines[1:] if ln.startswith("2023-24,"))
+    assert "16865684.42" in row
+
+
 def test_routes_serve_json(client):
     r = client.get("/go4garage/api/overview")
     assert r.status_code == 200
@@ -60,3 +71,9 @@ def test_routes_serve_json(client):
 
     r3 = client.get("/go4garage/api/fy/1990-91")
     assert r3.status_code >= 400                      # unknown FY rejected
+
+    r4 = client.get("/go4garage/api/export.csv")
+    assert r4.status_code == 200
+    assert "text/csv" in r4.headers["content-type"]
+    assert "attachment" in r4.headers.get("content-disposition", "")
+    assert r4.text.splitlines()[0].startswith("fy,audit_status,posture")

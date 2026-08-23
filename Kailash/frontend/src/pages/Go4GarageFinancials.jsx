@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getOverview, getFy } from '../services/go4garageApi';
+import { getOverview, getFy, fetchExportCsv } from '../services/go4garageApi';
 import './Go4GarageFinancials.css';
 
 /* =========================================================================
@@ -52,6 +52,19 @@ const STATUS_CLS = { open: 'bad', mitigated: 'warn', fixed: 'ok', withdrawn: 'ok
 const titleCase = (s) => (s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const Pill = ({ kind, children }) => <span className={`pill ${kind || ''}`}>{children}</span>;
+
+// ---- client-side file download (works in the deployed app, not a sandbox) --
+function downloadBlob(filename, text, mime = 'text/plain') {
+  const blob = new Blob([text], { type: `${mime};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 // ---- Net Payable waterfall (SVG) ------------------------------------------
 function Waterfall({ purchase, rates }) {
@@ -192,6 +205,7 @@ export default function Go4GarageFinancials() {
   const [fyLoading, setFyLoading] = useState(false);
   const [error, setError] = useState(null);
   const [active, setActive] = useState('overview');
+  const [exporting, setExporting] = useState(false);
 
   const pickDefaultFy = (years) => {
     const has = years.find((y) => y.fy === '2023-24');
@@ -233,6 +247,25 @@ export default function Go4GarageFinancials() {
     setActive(id);
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // The store-ready payload for this FY — re-importable via POST /go4garage/fy/{fy}.
+  const exportFyJson = () => {
+    if (!fyData) return;
+    downloadBlob(`go4garage_${fy}.json`, JSON.stringify(fyData, null, 2), 'application/json');
+  };
+
+  // All five FYs as one flat CSV (store column shape) for Zoho column-mapping.
+  const exportAllCsv = async () => {
+    setExporting(true);
+    try {
+      const csv = await fetchExportCsv();
+      downloadBlob('go4garage_fy_export.csv', csv, 'text/csv');
+    } catch (e) {
+      setError('Could not download the export. Check the connection and retry.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const connPill = useMemo(() => {
@@ -290,6 +323,20 @@ export default function Go4GarageFinancials() {
                 {y.fy}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="fybox export-box">
+          <label>Export · maps to store / Zoho</label>
+          <div className="fybtns">
+            <button className="fybtn" onClick={exportFyJson} disabled={!fyData}
+              title={`Download FY ${fy} in the store's shape (re-importable via POST /go4garage/fy/${fy})`}>
+              This year · JSON
+            </button>
+            <button className="fybtn" onClick={exportAllCsv} disabled={exporting}
+              title="Download all five FYs as one flat CSV — column-map into Zoho's importer">
+              {exporting ? 'Preparing…' : 'All years · CSV'}
+            </button>
           </div>
         </div>
 

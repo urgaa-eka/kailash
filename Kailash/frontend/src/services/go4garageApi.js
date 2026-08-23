@@ -30,5 +30,11 @@ export async function getFy(fy) {
   return unwrap(await client.get(`/go4garage/api/fy/${encodeURIComponent(fy)}`));
 }
 
-const go4garageApi = { getOverview, getFy };
+/** All five FYs as flat CSV text (store column shape) — for Zoho column-mapping. */
+export async function fetchExportCsv() {
+  const res = await client.get('/go4garage/api/export.csv', { responseType: 'text' });
+  return res.data;
+}
+
+const go4garageApi = { getOverview, getFy, fetchExportCsv };
 export default go4garageApi;

@@ -10,7 +10,7 @@ import os
 from datetime import date
 
 from fastapi import Depends, FastAPI, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field, field_validator
 
 from backend.shared import ApiResponse, ValidationError, require_internal_token
@@ -479,6 +479,16 @@ def register(app: FastAPI) -> None:
             raise ValidationError(f"unknown FY {fy!r}")
         fin = _g4g_provider.fy_financials(fy)
         return ApiResponse(data=go4garage.api.fy_payload(fin))
+
+    @app.get("/go4garage/api/export.csv", tags=["go4garage"])
+    async def go4garage_export_csv():
+        """The five FYs as one flat CSV in the store's column shape — download it,
+        column-map into Zoho's importer, or re-load the store. Not envelope-wrapped
+        (it's a file)."""
+        return PlainTextResponse(
+            content=go4garage.api.export_csv(_g4g_provider),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=go4garage_fy_export.csv"})
 
     # ---- Go4Garage data store (so the company can load / edit its figures) --
     @app.post("/go4garage/admin/init", response_model=ApiResponse,

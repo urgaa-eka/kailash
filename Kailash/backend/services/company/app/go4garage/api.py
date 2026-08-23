@@ -99,6 +99,55 @@ def _trend(provider: FinancialDataProvider) -> list[dict]:
     return out
 
 
+# Flat, one-row-per-FY export in the store's column shape — for column-mapping
+# into Zoho's importer or re-loading the store. Money as exact strings; blank
+# means "not yet sourced".
+EXPORT_FIELDS = [
+    "fy", "audit_status", "posture",
+    "revenue", "pat",
+    "sales_invoices", "sales_total_sales", "sales_receivable",
+    "purchase_rows", "purchase_approved", "purchase_commission", "purchase_tds",
+    "purchase_igst_deducted", "purchase_net_payable", "purchase_paid",
+    "purchase_outstanding", "purchase_zero_commission_rows",
+    "tax_tds_26as", "tax_itr_status",
+]
+
+
+def export_rows(provider: FinancialDataProvider) -> list[dict]:
+    """One flat dict per FY, keyed by EXPORT_FIELDS (Zoho-mappable / store-shape)."""
+    rows = []
+    for m in _model.FINANCIAL_YEARS:
+        fin = provider.fy_financials(m.fy)
+        p, s, t = fin.purchase, fin.sales, fin.tax
+        rows.append({
+            "fy": m.fy, "audit_status": m.audit_status, "posture": m.posture,
+            "revenue": _s(fin.revenue), "pat": _s(fin.pat),
+            "sales_invoices": s.invoices, "sales_total_sales": _s(s.total_sales),
+            "sales_receivable": _s(s.receivable),
+            "purchase_rows": p.rows, "purchase_approved": _s(p.approved),
+            "purchase_commission": _s(p.commission), "purchase_tds": _s(p.tds),
+            "purchase_igst_deducted": _s(p.igst_deducted),
+            "purchase_net_payable": _s(p.net_payable), "purchase_paid": _s(p.paid),
+            "purchase_outstanding": _s(p.outstanding),
+            "purchase_zero_commission_rows": p.zero_commission_rows,
+            "tax_tds_26as": _s(t.tds_26as), "tax_itr_status": t.itr_status,
+        })
+    return rows
+
+
+def export_csv(provider: FinancialDataProvider) -> str:
+    """The five-year flat export as CSV text (RFC 4180). Blank = not yet sourced."""
+    import csv
+    import io
+
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=EXPORT_FIELDS, extrasaction="ignore")
+    w.writeheader()
+    for r in export_rows(provider):
+        w.writerow({k: ("" if r.get(k) is None else r.get(k)) for k in EXPORT_FIELDS})
+    return buf.getvalue()
+
+
 def overview_payload(provider: FinancialDataProvider) -> dict:
     """Everything FY-independent: entity, model spine, governance, trend, status."""
     return {

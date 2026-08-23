@@ -53,6 +53,9 @@
 .g4g .fybtn.on { background: linear-gradient(150deg, var(--amber), var(--gold-2));
   color: #241B10; border-color: transparent; font-weight: 600; }
 
+.g4g .export-box { border-top: 1px solid rgba(255, 255, 255, .08); margin-top: 6px; padding-top: 12px; }
+.g4g .fybtn:disabled { opacity: .5; cursor: default; }
+
 .g4g .nav { padding: 12px; display: flex; flex-direction: column; gap: 2px; }
 .g4g .nav .grp { font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
   color: #8C7D5E; padding: 14px 12px 6px; }
