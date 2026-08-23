@@ -4,9 +4,10 @@ Structure and confirmed logic live here; financial values are supplied by a data
 provider after deployment (see provider.py). Grounded on the Go4Garage Agent
 Knowledge Pack.
 """
-from . import dashboard, defects, kp_data, logic, model, provider
+from . import dashboard, defects, kp_data, logic, model, provider, store
 from .dashboard import render_fy, render_static
 from .provider import (
+    DbProvider,
     FinancialDataProvider,
     FYFinancials,
     KnowledgePackProvider,
@@ -14,7 +15,7 @@ from .provider import (
 )
 
 __all__ = [
-    "defects", "dashboard", "kp_data", "logic", "model", "provider",
+    "defects", "dashboard", "kp_data", "logic", "model", "provider", "store",
     "render_fy", "render_static", "FinancialDataProvider", "FYFinancials",
-    "KnowledgePackProvider", "NullProvider",
+    "DbProvider", "KnowledgePackProvider", "NullProvider",
 ]

@@ -449,6 +449,7 @@ def register(app: FastAPI) -> None:
     _g4g_providers = {
         "knowledge-pack": go4garage.KnowledgePackProvider,
         "null": go4garage.NullProvider,
+        "db": lambda: go4garage.DbProvider(get_conn),
     }
     _g4g_provider = _g4g_providers.get(
         os.environ.get("G4G_PROVIDER", "knowledge-pack"),
@@ -464,6 +465,27 @@ def register(app: FastAPI) -> None:
     async def go4garage_dashboard_all():
         """All five FYs in one self-contained page (client-side switcher)."""
         return HTMLResponse(content=go4garage.render_static(_g4g_provider))
+
+    # ---- Go4Garage data store (so the company can load / edit its figures) --
+    @app.post("/go4garage/admin/init", response_model=ApiResponse,
+              dependencies=protected, tags=["go4garage"])
+    async def go4garage_init():
+        """Create the g4g_* tables and seed them from the confirmed figures.
+        Idempotent. Set G4G_PROVIDER=db to serve the dashboard from here."""
+        with get_conn() as conn:
+            go4garage.store.init_schema(conn)
+            seeded = go4garage.store.seed_from_kp(conn)
+        return ApiResponse(data={"schema": "applied", "years_seeded": seeded})
+
+    @app.post("/go4garage/fy/{fy}", response_model=ApiResponse,
+              dependencies=protected, tags=["go4garage"])
+    async def go4garage_upsert_fy(fy: str, data: dict):
+        """Upsert one financial year's figures (partial payloads allowed)."""
+        if fy not in {m.fy for m in go4garage.model.FINANCIAL_YEARS}:
+            raise ValidationError(f"unknown FY {fy!r}")
+        with get_conn() as conn:
+            go4garage.store.upsert_fy(conn, fy, data)
+        return ApiResponse(data={"fy": fy, "upserted": True})
 
     # convenience: current FY label
     @app.get("/meta/fy", response_model=ApiResponse, tags=["meta"])

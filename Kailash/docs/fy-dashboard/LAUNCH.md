@@ -58,20 +58,58 @@ docker compose --profile kailash-ai up -d --build company postgres
 4. Leave `G4G_PROVIDER=knowledge-pack` for now — it is the richest source until a
    live one is populated.
 
-## Connecting a live data source (later)
+## Working on your data — the built-in database (recommended)
+
+The dashboard has its own store (`g4g_*` tables) in the same PostgreSQL database
+as the ledger — so it works against local Postgres or the **Supabase** Postgres
+you point `COMPANY_DB_URL` at. This is where your real figures live and are
+edited.
+
+**One-time set-up** (creates the tables and seeds them from the confirmed
+figures, so nothing starts blank — idempotent):
+
+```bash
+curl -X POST http://<host>:8110/go4garage/admin/init \
+     -H "X-Platform-Token: $PLATFORM_INTERNAL_TOKEN"
+# -> { "schema": "applied", "years_seeded": 5 }
+```
+
+**Serve the dashboard from the database** — set one env var and restart:
+
+```bash
+G4G_PROVIDER=db      # was knowledge-pack; now reads live from g4g_* tables
+```
+
+**Edit / load a year's figures** (partial payloads allowed; the dashboard
+reflects it immediately):
+
+```bash
+curl -X POST http://<host>:8110/go4garage/fy/2024-25 \
+     -H "X-Platform-Token: $PLATFORM_INTERNAL_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"sales": {"invoices": 142, "total_sales": "7151744.25"},
+          "purchase": {"approved": "110753.00", "net_payable": "108537.94"}}'
+```
+
+Accepted keys per FY: `audit_status, posture, note, revenue, pat`,
+`purchase{rows,approved,commission,tds,net_payable,paid,outstanding,zero_commission_rows}`,
+`sales{invoices,total_sales,receivable}`, `tax{tds_26as,itr_status}`,
+`bank[{bank,debit,credit,excluded_rows}]`,
+`gst[{gstin,r1_taxable,output_tax,itc_2b,r3b_filed,vendor_3b_defaults}]`,
+`flags[...]`. The Net Payable IGST line is derived so the waterfall always ties.
+
+## Other live sources (optional)
 
 The dashboard reads through a `FinancialDataProvider`
-(`app/go4garage/provider.py`). To move from the confirmed snapshot to live data,
-implement one provider and register it in the `_g4g_providers` map in
-`app/routes.py`:
+(`app/go4garage/provider.py`). Beyond `db`, you can add:
 
-- **Supabase** — read the financial tables from Supabase Postgres.
 - **Zoho Books** — read org `60083342031`. Note: today that org is a near-empty
   rebuild (six summary journals for the closed years; the open years are still to
-  be built), so it currently holds *less* than the Knowledge-Pack snapshot.
+  be built), so it currently holds *less* than the seeded database.
 
-Whichever you implement, the rendering and the confirmed logic
-(`app/go4garage/logic.py`) do not change — only the numbers' origin.
+Register any new provider in the `_g4g_providers` map in `app/routes.py`. The
+rendering and the confirmed logic (`app/go4garage/logic.py`) never change — only
+the numbers' origin.
 
 ## What is deliberately *not* wired
 

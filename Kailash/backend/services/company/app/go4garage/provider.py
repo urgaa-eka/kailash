@@ -168,3 +168,29 @@ class KnowledgePackProvider:
             fy=fy, sales=sales, purchase=purchase, gst=gst, bank=bank, tax=tax,
             revenue=_d(audited.get("revenue")), pat=_d(audited.get("pat")),
             flags=list(row.get("flags") or []))
+
+
+class DbProvider:
+    """Reads live per-FY figures from the g4g_* tables (see store.py).
+
+    Backed by the same PostgreSQL database as the ledger, so it serves whatever
+    the company has loaded / edited — local Postgres or Supabase. `conn_factory`
+    is a context manager yielding a connection (the service's get_conn).
+    """
+
+    def __init__(self, conn_factory):
+        self._conn_factory = conn_factory
+
+    def name(self) -> str:
+        return "db"
+
+    def source_label(self) -> str:
+        return "company database (live) — editable via the ingest endpoints"
+
+    def connected(self) -> bool:
+        return True
+
+    def fy_financials(self, fy: str) -> FYFinancials:
+        from . import store
+        with self._conn_factory() as conn:
+            return store.read_fy(conn, fy)
