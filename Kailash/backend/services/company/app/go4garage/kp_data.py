@@ -67,7 +67,7 @@ KP_FY: dict[str, dict] = {
         "audited": None,                       # no financial statements (§2.1)
         "purchase": {"rows": 136, "approved": "110753.00", "commission": "0",
                      "tds": "2215.06", "igst": "0", "net_payable": "108537.94"},
-        "sales": {"invoices": 91, "total_sales": "8021661.25"},
+        "sales": {"invoices": 91, "total_sales": "8021661.25", "receivable": "13071497.61"},
         "bank": [{"bank": "ICICI", "debit": "1602875.61", "credit": None},
                  {"bank": "YES", "debit": "1587585", "credit": None}],
         "gst": {"gstin": "09AAICG9768N1ZI", "r1_taxable": "5612348.22",
@@ -77,6 +77,12 @@ KP_FY: dict[str, dict] = {
             "Date-derived sales 91 inv / 80,21,661.25 vs compiled workbook 137 inv / "
             "71,51,744.25 — date-derived is authoritative (KP §2.8#10)",
             "Invoice PDFs stop 14-10-2024; Nov'24–Mar'25 sales have no document support (KP §2.9)",
+            "Receivable ₹1,30,71,497.61 outstanding across 212 unpaid Zoomcar invoices "
+            "(cumulative from FY22-23); a further ₹21,90,056.79 MSME-interest claim brings the "
+            "demand to ₹1,52,61,554.40 (FY24-25 workbook)",
+            "Workshop-outstanding sample (20 workshops) totals ₹37,37,507.17 in the register's "
+            "Outstanding column — per defect D2 that column is unreliable; recompute Total Payable "
+            "− Paid before use, so it is not loaded as the vendor outstanding (FY24-25 workbook)",
         ],
     },
     "2025-26": {

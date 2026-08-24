@@ -52,6 +52,12 @@ def test_seed_and_read_round_trip(raw_conn):
     p = fin.purchase
     assert p.approved - p.commission - p.tds - p.igst_deducted == p.net_payable
 
+    # FY24-25 workbook detail seeds through to the store: the Zoomcar receivable is
+    # loaded; the register's unreliable Outstanding column (defect D2) is not.
+    fy2425 = store.read_fy(raw_conn, "2024-25")
+    assert fy2425.sales.receivable == Decimal("13071497.61")
+    assert fy2425.purchase.outstanding is None
+
 
 def test_upsert_edits_a_year(raw_conn):
     store.init_schema(raw_conn)
