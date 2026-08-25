@@ -247,8 +247,12 @@ jobs:
       # hosting:production scopes to the main site's target: a bare
       # `--only hosting` would deploy every target in firebase.json,
       # staging site included, from the production job.
+      # Two production sites, one build: `production` is the default site
+      # (kailash-29111.web.app); `production-ai` is the kailash-ai site the
+      # custom domains (kailash-ai.in / .com) are attached to. Firebase allows
+      # only one site per target, so they are separate targets deployed together.
       - name: Deploy to Firebase Hosting
-        run: npx --yes firebase-tools@13 deploy --only hosting:production --project kailash-29111 --non-interactive
+        run: npx --yes firebase-tools@13 deploy --only hosting:production,production-ai --project kailash-29111 --non-interactive
 
   # Confirms production actually serves what was just deployed. Its exit code
   # is the job's exit code -- that is what "record the outcome in the workflow
