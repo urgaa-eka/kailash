@@ -199,10 +199,17 @@ def build_report(args) -> Report:
         except (OSError, json.JSONDecodeError) as exc:
             raise Usage(f"--manifest {args.manifest} unreadable: {exc}") from exc
 
+    # A frontend-only (serverless) deploy has no backend, so the `api` health
+    # endpoint is intentionally absent; --skip-role api lets that deploy verify
+    # its own frontend without failing on a host that is not meant to exist.
+    skip_roles = set(getattr(args, "skip_role", None) or ())
     report = Report()
     if manifest is None:
         report.notes.append("no --manifest given; asset containment not checked")
     for ep in ENVIRONMENTS[args.env]:
+        if ep.role in skip_roles:
+            report.notes.append(f"skipped {ep.url} (role={ep.role})")
+            continue
         check_endpoint(ep, report, manifest)
     return report
 
@@ -212,6 +219,10 @@ def main(argv=None) -> int:
     parser.add_argument("--env", required=True, choices=sorted(ENVIRONMENTS))
     parser.add_argument("--manifest", type=Path, default=None,
                         help="asset-manifest.json from the deploying build")
+    parser.add_argument("--skip-role", action="append", default=[], metavar="ROLE",
+                        help="endpoint role to skip (repeatable): apex, www, api. "
+                             "A frontend-only deploy with no backend uses "
+                             "--skip-role api so the absent API host does not fail it.")
     return run(build_report, argv, parser)
 
 
