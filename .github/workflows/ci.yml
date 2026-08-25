@@ -67,6 +67,20 @@ jobs:
         with: { python-version: "3.11" }
       - run: python -m scripts.verify.doc_singletons
 
+  # RULES.md Rule 5, membership clause: `.github/workflows/` holds exactly the
+  # one gated pipeline (ci.yml + the two deploy entrypoints) and no auxiliary or
+  # one-off workflow file. workflow-gate below checks the pipeline's topology;
+  # this checks its file set, the way doc-singletons checks Rule 3's.
+  workflow-singletons:
+    name: Workflow singletons (Rule 5)
+    runs-on: ubuntu-latest
+    needs: verify-scripts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: python -m scripts.verify.workflow_singletons
+
   # --require-staging (spec task 12.9): task 12.6 added deploy-staging and
   # verify-staging to both deploy workflows, so production deploy jobs must
   # now have both as transitive `needs`, staging and production hostname and
