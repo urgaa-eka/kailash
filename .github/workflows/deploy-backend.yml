@@ -227,7 +227,13 @@ jobs:
 
             # Rebuild and restart containers. $PROD_SERVICES is deliberately
             # unquoted: compose takes the service names as separate arguments.
-            docker compose -f docker-compose.yml --profile kailash-ai up -d --build --remove-orphans $PROD_SERVICES
+            # --env-file backend/.env: docker-compose.yml interpolates
+            # ${POSTGRES_PASSWORD:?} etc. at parse time from the project-dir .env
+            # or the shell, NOT from the backend service's env_file. This job
+            # (unlike deploy-staging, which exports the STAGING_* values) has no
+            # such env, so it reads the host's backend/.env -- the same file
+            # deploy/host/deploy.sh uses. Without it, `up` aborts at parse time.
+            docker compose --env-file backend/.env -f docker-compose.yml --profile kailash-ai up -d --build --remove-orphans $PROD_SERVICES
 
             # Task 10.4 / Requirement 6.4: tag the image the backend container
             # runs with the deployed commit, then verify the tag exists on the
@@ -254,14 +260,14 @@ jobs:
             sleep 15
             curl -sf http://127.0.0.1:8000/api/health || {
               echo "Health check failed!"
-              docker compose -f docker-compose.yml logs --tail=50 backend
+              docker compose --env-file backend/.env -f docker-compose.yml logs --tail=50 backend
               exit 1
             }
 
             echo "✅ Deployment successful!"
             # --profile is required here too: `ps` filters by active profile, so
             # without it this line reports 4 containers out of 14.
-            docker compose -f docker-compose.yml --profile kailash-ai ps
+            docker compose --env-file backend/.env -f docker-compose.yml --profile kailash-ai ps
 
   # Confirms the VPS actually serves what was just deployed. Its exit code is
   # the job's exit code. UNAVAILABLE (2) is reported distinctly from FAILED

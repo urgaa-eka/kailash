@@ -15,6 +15,16 @@ REPO_URL="https://github.com/urgaa-eka/kailash.git"
 BRANCH="${DEPLOY_BRANCH:-main}"
 COMPOSE_FILE="docker-compose.yml"
 COMPOSE_PROFILE="kailash-ai"
+# docker-compose.yml interpolates ${POSTGRES_PASSWORD:?}, ${REDIS_PASSWORD:?}
+# and ${PLATFORM_INTERNAL_TOKEN:?} at parse time. Compose reads those from a
+# `.env` in the project directory (here PROJECT_DIR) or the shell -- NOT from
+# the backend service's `env_file: backend/.env`, which only populates the
+# container. So the env lives in backend/.env and every compose call is pointed
+# at it with --env-file; without this, `compose up` aborts with
+# "PLATFORM_INTERNAL_TOKEN must be set" even though backend/.env is present.
+# --env-file (compose's own parser) is used rather than sourcing the file, so a
+# value with spaces/braces (e.g. FIREBASE_SERVICE_ACCOUNT_JSON) is not mangled.
+ENV_FILE="backend/.env"
 
 # The service set production runs. Decided in
 # docs/records/profiled-services-scope.md: the kailash-ai profile's full
@@ -188,11 +198,11 @@ deploy_containers() {
     # .github/workflows/deploy-backend.yml.
     GIT_COMMIT="$(git rev-parse HEAD)"
     export GIT_COMMIT
-    docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" \
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" \
         pull --ignore-buildable "${PROD_SERVICES[@]}" 2>/dev/null || true
-    docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" \
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" \
         up -d --build --remove-orphans "${PROD_SERVICES[@]}"
-    docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" ps
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILE" ps
     echo "  ✅ Containers deployed"
 }
 
