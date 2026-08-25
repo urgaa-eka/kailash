@@ -1,4 +1,4 @@
-name: Deploy Backend → Vultr
+name: Deploy Backend → managed host
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
     paths:
       - 'Kailash/backend/**'
       - 'Kailash/docker-compose.yml'
-      - 'Kailash/deploy/vultr/**'
+      - 'Kailash/deploy/host/**'
   workflow_dispatch:
 
 defaults:
@@ -102,10 +102,10 @@ jobs:
       - name: Deploy staging via SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.STAGING_VULTR_HOST }}
-          username: ${{ secrets.STAGING_VULTR_USER }}
-          key: ${{ secrets.STAGING_VULTR_SSH_KEY }}
-          port: ${{ secrets.STAGING_VULTR_SSH_PORT || 22 }}
+          host: ${{ secrets.STAGING_BACKEND_SSH_HOST }}
+          username: ${{ secrets.STAGING_BACKEND_SSH_USER }}
+          key: ${{ secrets.STAGING_BACKEND_SSH_KEY }}
+          port: ${{ secrets.STAGING_BACKEND_SSH_PORT || 22 }}
           script_stop: true
           envs: STAGING_POSTGRES_PASSWORD,STAGING_REDIS_PASSWORD,STAGING_PLATFORM_INTERNAL_TOKEN
           script: |
@@ -121,7 +121,7 @@ jobs:
             # The staging service set is production's, by requirement (8.2):
             # the kailash-ai profile's 15 services minus `frontend`, decided
             # in docs/records/profiled-services-scope.md. Keep in step with
-            # PROD_SERVICES below and in deploy/vultr/deploy.sh.
+            # PROD_SERVICES below and in deploy/host/deploy.sh.
             STAGING_SERVICES="backend mongo postgres redis company document-ai forecasting anomaly rag vision-gateway speech model-registry knowledge-graph automobile-llm"
 
             GIT_COMMIT="$(git rev-parse HEAD)"
@@ -173,7 +173,7 @@ jobs:
       - run: python -m scripts.verify.deployment_check --env staging
 
   deploy:
-    name: Deploy to Vultr VPS
+    name: Deploy to the managed host
     runs-on: ubuntu-latest
     # Production is reachable only through green staging verification (spec
     # task 12.6, Requirement 8.8); workflow_gate.py --require-staging asserts
@@ -187,16 +187,16 @@ jobs:
 
       - name: Record deployed commit
         run: |
-          echo "Deploying \`${{ github.sha }}\` to the Vultr VPS." >> "$GITHUB_STEP_SUMMARY"
+          echo "Deploying \`${{ github.sha }}\` to the managed host." >> "$GITHUB_STEP_SUMMARY"
           echo "Backend image tagged \`kailash-backend:${{ github.sha }}\` on the host (task 10.4)." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Deploy to Vultr via SSH
+      - name: Deploy to the host via SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VULTR_HOST }}
-          username: ${{ secrets.VULTR_USER }}
-          key: ${{ secrets.VULTR_SSH_KEY }}
-          port: ${{ secrets.VULTR_SSH_PORT || 22 }}
+          host: ${{ secrets.BACKEND_SSH_HOST }}
+          username: ${{ secrets.BACKEND_SSH_USER }}
+          key: ${{ secrets.BACKEND_SSH_KEY }}
+          port: ${{ secrets.BACKEND_SSH_PORT || 22 }}
           script_stop: true
           script: |
             cd /opt/kailash
@@ -214,14 +214,14 @@ jobs:
             # started four containers and left every platform service inert.
             # `frontend` is excluded because Firebase Hosting serves the SPA;
             # naming services also keeps --build from building the CRA image on
-            # the VPS. Keep in step with PROD_SERVICES in deploy/vultr/deploy.sh.
+            # the VPS. Keep in step with PROD_SERVICES in deploy/host/deploy.sh.
             PROD_SERVICES="backend mongo postgres redis company document-ai forecasting anomaly rag vision-gateway speech model-registry knowledge-graph automobile-llm"
 
             # The commit actually checked out, exported so compose substitutes
             # it into the backend environment (docker-compose.yml:
             # GIT_COMMIT=${GIT_COMMIT:-unknown}) and /api/health reports what
             # is running (Requirement 6.6). Keep in step with the same export
-            # in deploy/vultr/deploy.sh.
+            # in deploy/host/deploy.sh.
             GIT_COMMIT="$(git rev-parse HEAD)"
             export GIT_COMMIT
 
@@ -241,7 +241,7 @@ jobs:
             # default until the task 4.5 disk-headroom record justifies more
             # (the design proposed 10). Only full 40-hex tags are candidates,
             # so :latest is left alone, as is the tag just written. Keep in
-            # step with RETAINED_IMAGE_TAGS in deploy/vultr/deploy.sh.
+            # step with RETAINED_IMAGE_TAGS in deploy/host/deploy.sh.
             docker image ls kailash-backend --format '{{.Tag}}' \
               | grep -E '^[0-9a-f]{40}$' | grep -vx "$GIT_COMMIT" \
               | tail -n +3 \

@@ -5,7 +5,7 @@ Two properties:
 1. No uncommitted modification under a Deployment_Critical_Path. `deploy.sh`
    runs `git reset --hard` and `git clean -fd` on the target host, so anything
    uncommitted there is deleted with nothing to recover from.
-2. `deploy/vultr/deploy.sh` names this repository. It resolves that URL and
+2. `deploy/host/deploy.sh` names this repository. It resolves that URL and
    hard-resets against it; a wrong slug means resetting production to someone
    else's code. That exact defect was live until recently -- the script said
    `flywithvvk/kailash` while origin was `urgaa-eka/kailash`.  # secret-scan: allow documents the slug defect this rule detects
@@ -37,7 +37,7 @@ EXPECTED_SLUG = "urgaa-eka/kailash"
 
 # Every URL form git accepts for the same repository. Deliberately as
 # permissive as the `case` statement in normalise_remote() in
-# deploy/vultr/deploy.sh, which the parity test in tests/verify/test_repo_state.py
+# deploy/host/deploy.sh, which the parity test in tests/verify/test_repo_state.py
 # holds this to: any scheme, optional userinfo, optional port, and the two
 # scp-like forms with and without a user.
 _SLUG_RX = re.compile(
@@ -60,7 +60,7 @@ def normalise_remote(url: str) -> str | None:
     silently returns the URL unchanged makes the deploy guard reject every
     valid checkout, turning a safety feature into an outage.
 
-    Kept in step with the bash `normalise_remote()` in `deploy/vultr/deploy.sh`,
+    Kept in step with the bash `normalise_remote()` in `deploy/host/deploy.sh`,
     which guards `git reset --hard` and `git clean -fd` on the production host.
     The two must agree, and where they cannot -- input that is not a two-segment
     repository path at all -- both must still refuse: bash echoes the input
@@ -236,7 +236,7 @@ def check_critical_paths_clean(root: Path, report: Report) -> None:
 
 
 def check_deploy_script_slug(root: Path, report: Report) -> None:
-    rel = "deploy/vultr/deploy.sh"
+    rel = "deploy/host/deploy.sh"
     script = root / rel
     if not script.is_file():
         report.add(Finding(rule="deploy-slug", path=rel, observed="<absent>",

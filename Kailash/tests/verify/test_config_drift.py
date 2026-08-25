@@ -352,7 +352,7 @@ class TestRepoSlug:
         """deploy.sh with no repository URL at all is the most dangerous
         outcome: it runs git reset --hard against whatever it resolves."""
         _minimal(tmp_repo)
-        tmp_repo.write("deploy/vultr/deploy.sh", "#!/bin/bash\necho hi\n")
+        tmp_repo.write("deploy/host/deploy.sh", "#!/bin/bash\necho hi\n")
         rc, out = _run(tmp_repo.root, capsys)
         assert rc == int(Exit.FAILED)
         assert "no match" in out
@@ -367,14 +367,14 @@ class TestRepoSlug:
         the one file that runs git reset --hard and git clean -fd. Requirement
         9.2 is an exact-match obligation there, so the marker is refused."""
         _minimal(tmp_repo)
-        tmp_repo.write("deploy/vultr/deploy.sh",
+        tmp_repo.write("deploy/host/deploy.sh",
                        "#!/usr/bin/env bash\n"
                        "# verify: allow legacy remote kept for reference\n"
                        'REPO_URL="https://github.com/flywithvvk/kailash.git"\n'  # secret-scan: allow negative fixture for the slug rule
                        "git reset --hard origin/main\n")
         rc, out = _run(tmp_repo.root, capsys)
         assert rc == int(Exit.FAILED)
-        assert "deploy/vultr/deploy.sh" in out
+        assert "deploy/host/deploy.sh" in out
         assert "flywithvvk/kailash" in out  # secret-scan: allow negative fixture for the slug rule
         assert "suppression ignored" in out
 

@@ -117,7 +117,7 @@ Every module uses the same foundation:
   MongoDB, PostgreSQL, and Redis alongside.
 - **CI** — `.github/workflows/ci.yml` runs a 6-job matrix: lint, shared,
   services (9-way), backend, frontend, compose-build.
-- **Prod** — Docker Compose on Vultr VPS behind Nginx reverse proxy with
+- **Prod** — Docker Compose on managed host behind Nginx reverse proxy with
   Let's Encrypt SSL. Health check endpoint monitored.
 - **Firebase** — Frontend deployed to Firebase Hosting with CI/CD
   auto-deploy on push to main.

@@ -203,7 +203,7 @@ services:
       # deploy, never committed.
       - MONGO_URL=${MONGO_URL:-mongodb://mongo:27017}
       - DATABASE_NAME=kailash
-      # The deployed commit, exported by deploy/vultr/deploy.sh and the
+      # The deployed commit, exported by deploy/host/deploy.sh and the
       # deploy-backend.yml SSH step so /api/health reports what is running
       # (Requirement 6.6). A `:-` default rather than `:?` because "unknown"
       # is a safe value for a non-credential, not a masked failure.

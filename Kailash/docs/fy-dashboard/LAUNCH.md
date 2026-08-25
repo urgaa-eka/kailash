@@ -74,7 +74,7 @@ docker compose --profile kailash-ai up -d --build company postgres
 ### Deploying to production
 
 1. **Merge PR #11** into `main` (the `Kailash/` restructure + this dashboard).
-2. Deploy the company service the usual way (`deploy/vultr/deploy.sh` brings up
+2. Deploy the company service the usual way (`deploy/host/deploy.sh` brings up
    the `company` service; or host it wherever the backend runs).
 3. Put it behind the reverse proxy / a route on the app so staff can reach
    `/dashboard/fy/all`.

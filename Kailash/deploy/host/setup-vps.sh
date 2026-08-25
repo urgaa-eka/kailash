@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# KAILASH — Vultr VPS Initial Setup (run ONCE on fresh Ubuntu 22.04/24.04)
+# KAILASH — Host Initial Setup (run ONCE on fresh Ubuntu 22.04/24.04)
 # ==============================================================================
 set -euo pipefail
 
 echo "═══════════════════════════════════════════════════"
-echo " KAILASH — Vultr VPS Initial Setup"
+echo " KAILASH — Host Initial Setup"
 echo "═══════════════════════════════════════════════════"
 
 # Non-negotiable on an unattended run: a fresh image's pending updates can
@@ -79,5 +79,5 @@ echo "   1. Point DNS: api.kailash-ai.in → $(curl -s ifconfig.me)"
 echo "   2. cd /opt/kailash && git clone https://github.com/urgaa-eka/kailash.git ."
 echo "   3. cp backend/.env.example backend/.env"
 echo "   4. nano backend/.env  (fill production secrets)"
-echo "   5. bash deploy/vultr/deploy.sh"
+echo "   5. bash deploy/host/deploy.sh"
 echo "═══════════════════════════════════════════════════"

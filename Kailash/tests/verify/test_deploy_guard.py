@@ -1,4 +1,4 @@
-"""The destructive-operation guard in deploy/vultr/deploy.sh (task 7.2).
+"""The destructive-operation guard in deploy/host/deploy.sh (task 7.2).
 
 The two guard functions are *extracted* and evaluated in isolation. Sourcing
 deploy.sh is not an option: it ends with `main "$@"`, so sourcing it would
@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[2] / "deploy" / "vultr" / "deploy.sh"
+SCRIPT = Path(__file__).resolve().parents[2] / "deploy" / "host" / "deploy.sh"
 
 
 def _find_bash() -> str | None:

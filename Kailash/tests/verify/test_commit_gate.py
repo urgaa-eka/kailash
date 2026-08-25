@@ -37,9 +37,9 @@ def test_critical_path_without_token_is_refused_naming_the_path():
 
 def test_critical_path_with_token_proceeds_and_says_so():
     code, lines = commit_gate.gate(
-        ["deploy/vultr/deploy.sh"], env={"CONFIRM_CRITICAL_PATH": "1"})
+        ["deploy/host/deploy.sh"], env={"CONFIRM_CRITICAL_PATH": "1"})
     assert code == 0
-    assert "deploy/vultr/deploy.sh" in "\n".join(lines)
+    assert "deploy/host/deploy.sh" in "\n".join(lines)
 
 
 def test_prefix_matching_is_segment_aware():

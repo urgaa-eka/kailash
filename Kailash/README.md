@@ -138,7 +138,7 @@ Each service module follows `routes.py` → `service.py` pattern, wired through
 │   └── rag_upload_script.py
 ├── deploy/
 │   ├── docker/                 # Docker Compose variants
-│   └── vultr/                  # VPS setup & deploy scripts
+│   └── host/                  # VPS setup & deploy scripts
 ├── infra/
 │   └── company/                # CDK app: KailashCompanyStack (AWS backend
 │                               #   for the Company segment ledger)

@@ -4,7 +4,7 @@
 
 ```
 ┌─────────────────────┐       HTTPS        ┌──────────────────────────────┐
-│   Firebase Hosting   │ ───────────────► │      Vultr VPS                │
+│   Firebase Hosting   │ ───────────────► │      managed host                │
 │   (Frontend React)   │   API calls      │  ┌──────────────────────┐    │
 │                      │                   │  │  Nginx (SSL/proxy)   │    │
 │  kailash-ai.in       │                   │  └──────────┬───────────┘    │
@@ -81,7 +81,7 @@ defaults remain allowed.
 ### Creating the file
 
 ```bash
-bash deploy/vultr/bootstrap-env.sh          # defaults to /opt/kailash
+bash deploy/host/bootstrap-env.sh          # defaults to /opt/kailash
 cd /opt/kailash && docker compose config --quiet && echo OK
 ```
 
@@ -93,7 +93,7 @@ that cannot authenticate against its own databases.
 ### Rotating on a stack that is already running
 
 ```bash
-bash deploy/vultr/rotate-credentials.sh
+bash deploy/host/rotate-credentials.sh
 ```
 
 `POSTGRES_PASSWORD` and the Redis `requirepass` are read **only when the
@@ -145,7 +145,7 @@ Do it in this order:
 
 | # | Step | Blocked on |
 |---|---|---|
-| 1 | `bash deploy/vultr/bootstrap-env.sh` on the VPS | nothing |
+| 1 | `bash deploy/host/bootstrap-env.sh` on the VPS | nothing |
 | 2 | Confirm `git remote -v` in `/opt/kailash` is `urgaa-eka/kailash` | nothing |
 | 3 | Bring the stack up, confirm `curl -sf localhost:8000/api/health` | 1, 2 |
 | 4 | Point an `A` record at the VPS for the API hostname | 3 |
@@ -205,16 +205,16 @@ blocks both.
 
 ---
 
-## 2. Backend → Vultr VPS
+## 2. Backend → managed host
 
 ### Prerequisites
-- Vultr VPS (Ubuntu 22.04/24.04, minimum 2GB RAM)
-- Domain DNS: `api.kailash-ai.in` → Vultr VPS IP
+- managed host (Ubuntu 22.04/24.04, minimum 2GB RAM)
+- Domain DNS: `api.kailash-ai.in` → managed host IP
 
 ### Initial VPS Setup (One-Time)
 ```bash
-# SSH into your Vultr VPS, then:
-curl -fsSL https://raw.githubusercontent.com/urgaa-eka/kailash/main/deploy/vultr/setup-vps.sh | bash
+# SSH into your managed host, then:
+curl -fsSL https://raw.githubusercontent.com/urgaa-eka/kailash/main/deploy/host/setup-vps.sh | bash
 ```
 
 This installs: Docker, Nginx, Certbot, UFW firewall, fail2ban, 2GB swap.
@@ -226,14 +226,14 @@ cd /opt/kailash
 git clone https://github.com/urgaa-eka/kailash.git .
 cp apps/backend/.env.example apps/backend/.env
 nano apps/backend/.env  # Fill in production secrets
-bash deploy/vultr/deploy.sh
+bash deploy/host/deploy.sh
 ```
 
 ### Subsequent Deployments
 ```bash
 # On the VPS:
 cd /opt/kailash
-bash deploy/vultr/deploy.sh
+bash deploy/host/deploy.sh
 ```
 
 ### CI/CD (Automatic)
@@ -242,10 +242,10 @@ Pushes to `main` that modify `apps/backend/` trigger the `deploy-backend.yml` wo
 **Required GitHub Secrets:**
 | Secret | Description |
 |--------|-------------|
-| `VULTR_HOST` | VPS IP address |
-| `VULTR_USER` | SSH username (usually `root`) |
-| `VULTR_SSH_KEY` | SSH private key for the VPS |
-| `VULTR_SSH_PORT` | SSH port (default: 22) |
+| `BACKEND_SSH_HOST` | VPS IP address |
+| `BACKEND_SSH_USER` | SSH username (usually `root`) |
+| `BACKEND_SSH_KEY` | SSH private key for the VPS |
+| `BACKEND_SSH_PORT` | SSH port (default: 22) |
 
 ### Container Management
 ```bash
@@ -275,7 +275,7 @@ docker compose -f deploy/docker/docker-compose.prod.yml up -d --build
 |--------|------|-------|
 | `kailash-ai.in` | A / CNAME | Firebase Hosting (follow Firebase custom domain setup) |
 | `www.kailash-ai.in` | CNAME | `kailash-ai.in` |
-| `api.kailash-ai.in` | A | `<Vultr VPS IP>` |
+| `api.kailash-ai.in` | A | `<managed host IP>` |
 
 ---
 
@@ -285,9 +285,9 @@ Go to: `https://github.com/urgaa-eka/kailash/settings/secrets/actions`
 
 | Secret | For |
 |--------|-----|
-| `VULTR_HOST` | Backend deploy |
-| `VULTR_USER` | Backend deploy |
-| `VULTR_SSH_KEY` | Backend deploy |
+| `BACKEND_SSH_HOST` | Backend deploy |
+| `BACKEND_SSH_USER` | Backend deploy |
+| `BACKEND_SSH_KEY` | Backend deploy |
 
 Frontend deploys need no secret: Workload Identity Federation covers both the
 production and staging Firebase jobs (see §CI/CD above).
@@ -302,10 +302,10 @@ require a reviewer):
 
 | Secret | For |
 |--------|-----|
-| `STAGING_VULTR_HOST` | Backend staging deploy (same VPS under Option D; distinct declaration) |
-| `STAGING_VULTR_USER` | Backend staging deploy |
-| `STAGING_VULTR_SSH_KEY` | Backend staging deploy |
-| `STAGING_VULTR_SSH_PORT` | Backend staging deploy (optional; defaults to 22) |
+| `STAGING_BACKEND_SSH_HOST` | Backend staging deploy (same VPS under Option D; distinct declaration) |
+| `STAGING_BACKEND_SSH_USER` | Backend staging deploy |
+| `STAGING_BACKEND_SSH_KEY` | Backend staging deploy |
+| `STAGING_BACKEND_SSH_PORT` | Backend staging deploy (optional; defaults to 22) |
 | `STAGING_POSTGRES_PASSWORD` | Staging compose credentials (`deploy/staging/docker-compose.staging.yml`) |
 | `STAGING_REDIS_PASSWORD` | Staging compose credentials |
 | `STAGING_PLATFORM_INTERNAL_TOKEN` | Staging compose credentials |
@@ -316,7 +316,7 @@ Operational detail: `docs/runbooks/staging.md`.
 
 ## 5. Backend Environment Variables
 
-Edit `/opt/kailash/apps/backend/.env` on the Vultr VPS:
+Edit `/opt/kailash/apps/backend/.env` on the managed host:
 
 ```env
 # Required
@@ -360,5 +360,5 @@ docker cp kailash-mongo:/data/backup ./backups/
 
 ### Update
 ```bash
-cd /opt/kailash && bash deploy/vultr/deploy.sh
+cd /opt/kailash && bash deploy/host/deploy.sh
 ```

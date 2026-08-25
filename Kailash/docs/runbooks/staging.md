@@ -60,7 +60,7 @@ environment and on the VPS. Never write a value into a tracked file.
 | `POSTGRES_PASSWORD` | `STAGING_POSTGRES_PASSWORD` |
 | `REDIS_PASSWORD` | `STAGING_REDIS_PASSWORD` |
 | `PLATFORM_INTERNAL_TOKEN` | `STAGING_PLATFORM_INTERNAL_TOKEN` |
-| `VULTR_HOST` / `VULTR_USER` / `VULTR_SSH_KEY` / `VULTR_SSH_PORT` | `STAGING_VULTR_HOST` / `STAGING_VULTR_USER` / `STAGING_VULTR_SSH_KEY` / `STAGING_VULTR_SSH_PORT` (same host under Option D — distinct declaration, so flipping to Option C later is a secret-value change, not a workflow change) |
+| `BACKEND_SSH_HOST` / `BACKEND_SSH_USER` / `BACKEND_SSH_KEY` / `BACKEND_SSH_PORT` | `STAGING_BACKEND_SSH_HOST` / `STAGING_BACKEND_SSH_USER` / `STAGING_BACKEND_SSH_KEY` / `STAGING_BACKEND_SSH_PORT` (same host under Option D — distinct declaration, so flipping to Option C later is a secret-value change, not a workflow change) |
 
 Firebase deploys carry **no secret at all**: both `deploy-frontend.yml` jobs
 authenticate with `google-github-actions/auth@v2` via Workload Identity
@@ -163,7 +163,7 @@ Sequence, in order:
 6. **Verify:** `curl -sf http://127.0.0.1:9000/api/health` and
    `python -m scripts.verify.deployment_check --env staging`.
 
-`deploy/vultr/rotate-credentials.sh` implements this ordering for production;
+`deploy/host/rotate-credentials.sh` implements this ordering for production;
 it operates on `/opt/kailash/.env` and the production containers, so do not
 point it at staging without adapting both.
 
@@ -230,7 +230,7 @@ in the served HTML (frontend) before trusting a stale-looking staging.
 ## `docker-compose.override.yml` stays local-only — do not "fix" this
 
 `docker-compose.override.yml` is auto-merged by a bare `docker compose up`
-locally, but **not** in production or staging: `deploy/vultr/deploy.sh`, the
+locally, but **not** in production or staging: `deploy/host/deploy.sh`, the
 `deploy` job and the `deploy-staging` job all pass `-f docker-compose.yml`
 explicitly (staging adds `-f deploy/staging/docker-compose.staging.yml`),
 which suppresses the automatic merge. The override publishes the database

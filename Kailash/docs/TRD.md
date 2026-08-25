@@ -212,7 +212,7 @@ Three architectural decisions define the platform:
 | Vector store (optional) | **Pinecone** — `PINECONE_API_KEY`, `PINECONE_INDEX=kailashai`, `PINECONE_HOST` (blank in the template) |
 | Containers | **Docker**, **Docker Compose** |
 | Reverse proxy | **Nginx** with **Let's Encrypt / certbot** |
-| Compute | **Vultr VPS** |
+| Compute | **managed host** |
 | Static hosting | **Firebase Hosting**, project `kailash-38268` |
 | CI/CD | **GitHub Actions** (`ci.yml`, `deploy-backend.yml`, `deploy-frontend.yml`) |
 | Metrics | Prometheus text-format exposition at `/metrics` |
@@ -461,7 +461,7 @@ Each of the nine services under `backend/services/` exposes the standard contrac
 | **Firebase (client SDK)** | Frontend client features | `firebase@11.7.1` in the SPA | Present |
 | **Pinecone** | Optional durable vector index | `PINECONE_API_KEY`, `PINECONE_INDEX=kailashai`, `PINECONE_HOST` | Placeholders blank — **not active** |
 | **AWS** | Cloud SDK access | `boto3` | Present as a dependency; specific usage not documented |
-| **Let's Encrypt / certbot** | TLS certificate issuance and renewal | `deploy/vultr/nginx-api.conf`, `setup-vps.sh` | Configured for `api.kailash-ai.in` |
+| **Let's Encrypt / certbot** | TLS certificate issuance and renewal | `deploy/host/nginx-api.conf`, `setup-vps.sh` | Configured for `api.kailash-ai.in` |
 | **GitHub Actions** | CI and deployment automation | `.github/workflows/` | Configured |
 | **Email provider** | Transactional email | `app/services/email_service.py` | Service module present; provider binding via environment |
 
@@ -492,11 +492,11 @@ All four use `restart: unless-stopped`. The backend declares `depends_on` with `
 
 Additional Compose variants exist under `deploy/docker/`: `docker-compose.prod.yml` and `docker-compose.platform.yml`, plus an `nginx.conf`.
 
-### 8.3 VPS deployment (Vultr)
+### 8.3 VPS deployment (managed host)
 
-`deploy/vultr/setup-vps.sh` provisions the host; `deploy/vultr/deploy.sh` runs on the server, installing Docker, the Compose plugin, Nginx and certbot if absent, then syncing `/opt/kailash` from Git (`git fetch` plus `git reset --hard origin/<branch>` plus `git clean -fd`), verifying `backend/.env` exists (copying from `.env.example` with a loud warning if not), and bringing the stack up.
+`deploy/host/setup-vps.sh` provisions the host; `deploy/host/deploy.sh` runs on the server, installing Docker, the Compose plugin, Nginx and certbot if absent, then syncing `/opt/kailash` from Git (`git fetch` plus `git reset --hard origin/<branch>` plus `git clean -fd`), verifying `backend/.env` exists (copying from `.env.example` with a loud warning if not), and bringing the stack up.
 
-`deploy/vultr/nginx-api.conf` terminates TLS for `api.kailash-ai.in` with Let's Encrypt certificates, redirects HTTP to HTTPS, applies TLS 1.2/1.3 with `HIGH:!aNULL:!MD5` ciphers and session caching, sets security headers, defines two rate-limit zones (`api_limit` at 30 r/s, `auth_limit` at 5 r/s, each with a 10 MB state zone) and proxies to an upstream `kailash_backend` at `127.0.0.1:8000` with `keepalive 32`.
+`deploy/host/nginx-api.conf` terminates TLS for `api.kailash-ai.in` with Let's Encrypt certificates, redirects HTTP to HTTPS, applies TLS 1.2/1.3 with `HIGH:!aNULL:!MD5` ciphers and session caching, sets security headers, defines two rate-limit zones (`api_limit` at 30 r/s, `auth_limit` at 5 r/s, each with a 10 MB state zone) and proxies to an upstream `kailash_backend` at `127.0.0.1:8000` with `keepalive 32`.
 
 ### 8.4 Frontend hosting
 
@@ -512,13 +512,13 @@ Additional Compose variants exist under `deploy/docker/`: `docker-compose.prod.y
 |---|---|---|
 | **Local developer** | `docker compose up -d --build`, or `uvicorn` plus `yarn start` directly | **Confirmed working.** `backend/.venv/` is populated; `frontend/node_modules/` and `frontend/build/` exist. |
 | **CI** | GitHub-hosted runners executing the six-job matrix | Configured in the repository |
-| **Production backend** | Docker Compose on a Vultr VPS behind Nginx at `api.kailash-ai.in` | **Tooling present; live status not verified from this working copy.** |
+| **Production backend** | Docker Compose on a managed host behind Nginx at `api.kailash-ai.in` | **Tooling present; live status not verified from this working copy.** |
 | **Production frontend** | Firebase Hosting, project `kailash-38268`, domains `kailash-ai.in` / `www.kailash-ai.in` / `kailash-38268.web.app` | **Configuration present; live status not verified from this working copy.** |
 | **Staging** | Not defined in this repository | Absent |
 
 ### 8.7 Source control reality
 
-The local working copy is a Git repository on branch `main` with an `origin/main` tracking ref. `origin` is configured as `https://github.com/urgaa-eka/kailash.git`, and every in-repo reference (CI badges in `README.md`, `REPO_URL` in `deploy/vultr/deploy.sh`, `deploy/vultr/setup-vps.sh`, `docs/DEPLOYMENT.md`, `CHANGELOG.md` compare links) now points at that same remote. This was previously inconsistent and deploy-relevant, because `deploy.sh` clones and hard-resets from `REPO_URL`.
+The local working copy is a Git repository on branch `main` with an `origin/main` tracking ref. `origin` is configured as `https://github.com/urgaa-eka/kailash.git`, and every in-repo reference (CI badges in `README.md`, `REPO_URL` in `deploy/host/deploy.sh`, `deploy/host/setup-vps.sh`, `docs/DEPLOYMENT.md`, `CHANGELOG.md` compare links) now points at that same remote. This was previously inconsistent and deploy-relevant, because `deploy.sh` clones and hard-resets from `REPO_URL`.
 
 The most recent commit is `40cca17` — *"refactor: introduce top-level database/ folder, fix corrupted seed scripts"* — dated 2026-07-31 02:53 +0530, preceded by `92adca5` (frontend lockfile sync) and `07ea50f` (consolidation into a single backend and single frontend). Development is active as of today.
 
@@ -641,7 +641,7 @@ No change merges to `main` unless `lint`, `shared`, `services` (all nine), `back
 | Installed dependency trees | `backend/.venv/` (Lib, Scripts, pyvenv.cfg) and `frontend/node_modules/` (roughly 1,000 entries) |
 | Database tooling | `database/` (init, seed, populate, RAG upload, health check, backup ×2) |
 | Container and Compose definitions | `Dockerfile`, `docker-compose.yml`, `deploy/docker/` |
-| VPS and proxy configuration | `deploy/vultr/{setup-vps.sh,deploy.sh,nginx-api.conf}` |
+| VPS and proxy configuration | `deploy/host/{setup-vps.sh,deploy.sh,nginx-api.conf}` |
 | Firebase Hosting configuration | `frontend/firebase.json` |
 | CI/CD workflows | `.github/workflows/{ci.yml,deploy-backend.yml,deploy-frontend.yml}` |
 | Test suites | `tests/{platform,backend,integration,scripts}/` |
@@ -662,7 +662,7 @@ No change merges to `main` unless `lint`, `shared`, `services` (all nine), `back
 | Consumer-product integrations | The `KAILASH_AI_URL` contract is specified. `ev-vidya-arjun` in this workspace contains only empty scaffolding folders — the integration could not be verified here. URGAA, GSTSAAS and Ignition integrations were likewise not verifiable from this copy. |
 | Department count | Code registers 20; `README.md` and `ARCHITECTURE.md` state 24; knowledge digests reference 4 additional deity names (`marut`, `pragya`, `rudra`, `tvashta`) with no matching classes. Unreconciled. |
 | Test counts | README publishes 5 / 53 / 10+ / 3+; suites exist but were not re-executed for this assessment. |
-| Git remote | Resolved — `urgaa-eka/kailash` is canonical (matches `origin`); README badges, `deploy/vultr/*.sh` and `docs/DEPLOYMENT.md` all updated. |
+| Git remote | Resolved — `urgaa-eka/kailash` is canonical (matches `origin`); README badges, `deploy/host/*.sh` and `docs/DEPLOYMENT.md` all updated. |
 | `CORS_ORIGINS` default | `Settings.CORS_ORIGINS` defaults to `"*"` in `core/config.py`, with the restrictive list living in `.env.example`. The permissive default must not reach production. |
 | `SECRET_KEY` default | Falls back to `dev-secret-key-change-in-production` if unset. Production startup must reject this. |  <!-- secret-scan: allow documents the credential incident being remediated -->
 | Startup permission check | Currently logs a critical block and continues; the hard-fail line is commented out in `main.py`. |
@@ -680,7 +680,7 @@ The technical foundation is real, coherent and unusually well-structured for an 
 
 | ID | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
-| TR-1 | **Deploy script pulls from the wrong repository** because `REPO_URL` in `deploy/vultr/deploy.sh` does not match the configured `origin`. `deploy.sh` performs `git reset --hard` plus `git clean -fd`, so a wrong-source deploy is destructive. | Medium | High | Reconcile all three references to one canonical remote before the next deploy; parameterise `REPO_URL` from the environment; add a pre-deploy assertion that the resolved remote matches an allowlist. |
+| TR-1 | **Deploy script pulls from the wrong repository** because `REPO_URL` in `deploy/host/deploy.sh` does not match the configured `origin`. `deploy.sh` performs `git reset --hard` plus `git clean -fd`, so a wrong-source deploy is destructive. | Medium | High | Reconcile all three references to one canonical remote before the next deploy; parameterise `REPO_URL` from the environment; add a pre-deploy assertion that the resolved remote matches an allowlist. |
 | TR-2 | **Permissive development defaults reach production** — `CORS_ORIGINS="*"`, `SECRET_KEY="dev-secret-key-change-in-production"`, `require_internal_token` being a no-op in dev mode. | Medium | High | Fail fast at startup when `ENV=production` and any of these hold an unsafe value; add a CI check on production configuration. |  <!-- secret-scan: allow documents the credential incident being remediated -->
 | TR-3 | **Startup permission validation is advisory, not blocking** — the hard-fail is commented out, so the app can start into a state where authentication is guaranteed to fail. | Medium | High | Enable the hard-fail in production; add a synthetic login probe to monitoring so the failure is detected in seconds, not by users. |
 | TR-4 | **In-memory RAG and knowledge graph lose state on restart** and cannot scale beyond a single process. | High | Medium | Move to a persistent vector store (the Pinecone configuration is already scaffolded) and a durable graph representation. |
@@ -707,7 +707,7 @@ The technical foundation is real, coherent and unusually well-structured for an 
 | Redis 7 | Cache/broker | High | Background tasks stall; cache misses increase load |
 | Firebase Hosting | Frontend CDN | High | Dashboard unreachable; backend API unaffected |
 | Firebase Admin SDK | Backend identity | Medium | Disable via `FIREBASE_DISABLED`; related features degrade |
-| Vultr | Compute host | Critical | Backend unavailable |
+| managed host | Compute host | Critical | Backend unavailable |
 | Let's Encrypt | TLS certificates | High | Certificate expiry breaks HTTPS; automate renewal monitoring |
 | GitHub Actions | CI/CD | High | Manual deploy required |
 | Pinecone | Vector index | Low today | Not active; would become High after TR-4 remediation |
@@ -760,7 +760,7 @@ Kailash-Ai/
 │                     rag_upload_script.py · backup_mongodb.py · mongodb_backup.sh ·
 │                     mongodb_health_check.sh
 ├── deploy/           docker/ (compose.prod, compose.platform, nginx.conf)
-│                     vultr/  (setup-vps.sh, deploy.sh, nginx-api.conf)
+│                     host/  (setup-vps.sh, deploy.sh, nginx-api.conf)
 ├── docs/             architecture/ · api/ · guides/ · business/ · archived/
 ├── tests/            platform/ · backend/ · integration/ · scripts/
 ├── scripts/          generate_services.ps1 · health_check.sh
@@ -809,7 +809,7 @@ Kailash-Ai/
 ### 13.6 Open technical questions
 
 1. What is the intended responsibility split between MongoDB and PostgreSQL?
-2. Which Git remote is canonical, and who owns updating `deploy/vultr/deploy.sh`?
+2. Which Git remote is canonical, and who owns updating `deploy/host/deploy.sh`?
 3. Is a persistent vector store approved (Pinecone versus a self-hosted alternative), given the data-residency position in NFR-C3?
 4. Should the startup permission hard-fail be enabled now, and behind which environment flag?
 5. Which ASR/TTS provider will replace the speech stubs, and does it satisfy Indic language coverage and residency requirements?
@@ -1280,7 +1280,7 @@ For completeness, and to make the contrast explicit:
 
 | Component | Deployment status |
 |---|---|
-| Backend | Docker/Compose and Vultr VPS tooling present; **live status not verified** from this working copy |
+| Backend | Docker/Compose and managed host tooling present; **live status not verified** from this working copy |
 | Frontend | Firebase Hosting configuration present (project `kailash-38268`), built bundle present; **live status not verified** |
 | Android app | **Does not exist** — nothing to deploy |
 | iOS app | **Does not exist** — nothing to deploy |
@@ -1471,7 +1471,7 @@ The four bolded OEM rows exist solely because of the notification-suppression pr
 | **FastAPI backend** | **Built, dependencies installed, run locally.** Roughly 24 API routers, 20 registered department agents, 3 guardian agents, 9 platform services, populated `backend/.venv/`. |
 | **React 19 web app** | **Built and compiled.** Roughly 70 page modules, roughly 1,000 installed packages, compiled `frontend/build/` output, Firebase Hosting configuration with SPA rewrites and five security headers. |
 | **Firebase relationship** | **Exists** — project `kailash-38268` for hosting, Firebase Admin SDK configuration in the backend. **This lowers the barrier to FCM specifically.** |
-| **Docker / Compose / Vultr / Nginx tooling** | **Present.** Live deployment status unverified from this copy. |
+| **Docker / Compose / managed host / Nginx tooling** | **Present.** Live deployment status unverified from this copy. |
 | **CI pipeline** | **Present** — six jobs, none mobile. |
 | **Android client** | **Absent.** |
 
@@ -2078,7 +2078,7 @@ For completeness, and to make the contrast explicit:
 
 | Component | Deployment status |
 |---|---|
-| Backend | Docker/Compose and Vultr VPS tooling present; **live status not verified** from this working copy |
+| Backend | Docker/Compose and managed host tooling present; **live status not verified** from this working copy |
 | Frontend | Firebase Hosting configuration present (project `kailash-38268`), built bundle present; **live status not verified** |
 | iOS app | **Does not exist** — nothing to deploy |
 | Android app | **Does not exist** — nothing to deploy |
@@ -2244,7 +2244,7 @@ Note: the parent TRD records that **no staging environment exists** for Kailash.
 |---|---|
 | **FastAPI backend** | **Built, dependencies installed, run locally.** Roughly 24 API routers, 20 registered department agents, 3 guardian agents, 9 platform services, populated `backend/.venv/`. |
 | **React 19 web app** | **Built and compiled.** Roughly 70 page modules, roughly 1,000 installed packages, compiled `frontend/build/` output, Firebase Hosting configuration with SPA rewrites and five security headers. |
-| **Docker / Compose / Vultr / Nginx tooling** | **Present.** Live deployment status unverified from this copy. |
+| **Docker / Compose / managed host / Nginx tooling** | **Present.** Live deployment status unverified from this copy. |
 | **CI pipeline** | **Present** — six jobs, none mobile. |
 | **iOS client** | **Absent.** |
 

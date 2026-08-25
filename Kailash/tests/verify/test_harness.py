@@ -126,7 +126,7 @@ class TestTmpRepo:
         tmp_repo.deploy_sh("https://github.com/urgaa-eka/kailash.git")
         tracked = tmp_repo.git("ls-files").split()
         assert "docker-compose.yml" in tracked
-        assert "deploy/vultr/deploy.sh" in tracked
+        assert "deploy/host/deploy.sh" in tracked
 
     def test_arbitrary_workflow_writer_appends_the_extension(self, tmp_repo):
         tmp_repo.workflow("ci", "jobs:\n  lint:\n    steps: []\n")

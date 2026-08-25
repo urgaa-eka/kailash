@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# KAILASH Backend — Vultr VPS Deployment Script
-# Run on the Vultr server: bash deploy.sh
+# KAILASH Backend — Managed-host Deployment Script
+# Run on the deployment host (any Docker-capable Linux server): bash deploy.sh
 # ==============================================================================
 set -euo pipefail
 
@@ -42,7 +42,7 @@ PROD_SERVICES=(
 )
 
 echo "═══════════════════════════════════════════════════"
-echo " Kailash — Vultr Deployment"
+echo " Kailash — Backend Deployment"
 echo " Branch: ${BRANCH}"
 echo "═══════════════════════════════════════════════════"
 
@@ -245,7 +245,7 @@ setup_nginx() {
     # fresh box killed the deploy before setup_ssl ever ran. setup_ssl issues
     # certificates with `certonly` (no config edits) and re-runs this.
     if [ -f /etc/letsencrypt/live/api.kailash-ai.in/fullchain.pem ]; then
-        cp "${PROJECT_DIR}/deploy/vultr/nginx-api.conf" /etc/nginx/sites-available/kailash-api
+        cp "${PROJECT_DIR}/deploy/host/nginx-api.conf" /etc/nginx/sites-available/kailash-api
         ln -sf /etc/nginx/sites-available/kailash-api /etc/nginx/sites-enabled/kailash-api
     else
         echo "  ⏭  api certificate absent; config deferred until setup_ssl issues it"

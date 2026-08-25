@@ -29,7 +29,7 @@ for the entire staging environment on an assumption.
 
 ### Neither deploy path enables the profile
 
-`deploy_containers()` in `deploy/vultr/deploy.sh`, before this task:
+`deploy_containers()` in `deploy/host/deploy.sh`, before this task:
 
 ```bash
 docker compose -f "$COMPOSE_FILE" pull --ignore-buildable 2>/dev/null || true
@@ -92,7 +92,7 @@ backend" meant deploying the backend and none of the services it talks to.
 
 `docker compose -f docker-compose.yml ps` on the VPS was not run.
 `api.kailash-ai.in` does not resolve from this workstation (`nslookup` →
-non-existent domain), and `VULTR_HOST`, `VULTR_USER` and `VULTR_SSH_KEY` are
+non-existent domain), and `BACKEND_SSH_HOST`, `BACKEND_SSH_USER` and `BACKEND_SSH_KEY` are
 GitHub Actions secrets not available locally. The static evidence is decisive
 on its own: the resolver output above shows the deployed command could only
 ever have created four containers.
@@ -173,14 +173,14 @@ named subset does not make the unnamed services orphans.
 
 **Known cost of explicit naming:** a service added to `docker-compose.yml` is
 not deployed until the list is updated in both deploy paths. Two places now
-carry the list: `PROD_SERVICES` in `deploy/vultr/deploy.sh` and `PROD_SERVICES`
+carry the list: `PROD_SERVICES` in `deploy/host/deploy.sh` and `PROD_SERVICES`
 in the SSH script block of `.github/workflows/deploy-backend.yml`. Both carry a
 comment pointing at this record and at each other. Collapsing them to one
 source is what the `local-ui` profile follow-up would achieve.
 
 ## Edits made under this decision
 
-`deploy/vultr/deploy.sh`:
+`deploy/host/deploy.sh`:
 
 - Added `COMPOSE_PROFILE="kailash-ai"` and the `PROD_SERVICES` array.
 - `deploy_containers()` now passes `--profile "$COMPOSE_PROFILE"` and

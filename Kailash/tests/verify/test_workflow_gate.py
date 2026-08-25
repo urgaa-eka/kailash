@@ -532,7 +532,7 @@ class TestEnvironmentIsolation:
         assert report.exit_code() is Exit.FAILED
         rendered = report.render()
         assert "shared-environment-secret" in rendered
-        assert "VULTR_SSH_KEY" in rendered and "VULTR_HOST" in rendered
+        assert "BACKEND_SSH_KEY" in rendered and "BACKEND_SSH_HOST" in rendered
         # The fixture is otherwise fully gated, so the shared names are the
         # only findings -- a second rule firing would mean the fixture no
         # longer isolates this one.
@@ -544,7 +544,7 @@ class TestEnvironmentIsolation:
               deploy-staging:
                 steps:
                   - uses: appleboy/ssh-action@v1
-                    with: {key: "${{ secrets.STAGING_VULTR_SSH_KEY }}"}
+                    with: {key: "${{ secrets.STAGING_BACKEND_SSH_KEY }}"}
               verify-staging:
                 needs: deploy-staging
                 steps: [{run: python -m scripts.verify.deployment_check --env staging}]
@@ -552,7 +552,7 @@ class TestEnvironmentIsolation:
                 needs: verify-staging
                 steps:
                   - uses: appleboy/ssh-action@v1
-                    with: {key: "${{ secrets.VULTR_SSH_KEY }}"}
+                    with: {key: "${{ secrets.BACKEND_SSH_KEY }}"}
               verify-production:
                 needs: deploy
                 steps: [{run: python -m scripts.verify.deployment_check --env production}]

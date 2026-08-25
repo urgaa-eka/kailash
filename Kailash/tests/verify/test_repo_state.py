@@ -96,7 +96,7 @@ class TestPorcelainParsing:
 
 class TestPrefixMatching:
     def test_directory_prefix_matches_children(self):
-        assert repo_state._under_critical_path("deploy/vultr/deploy.sh") == "deploy/"
+        assert repo_state._under_critical_path("deploy/host/deploy.sh") == "deploy/"
 
     def test_prefix_is_segment_aware(self):
         """`deploy/` must not match `deployment-notes.md`. A check that fires
@@ -231,7 +231,7 @@ class TestEndToEnd:
 
     def test_rename_under_a_critical_path_fails(self, tmp_repo, capsys):
         self._clean(tmp_repo)
-        tmp_repo.git("mv", "deploy/vultr/deploy.sh", "deploy/vultr/renamed.sh")
+        tmp_repo.git("mv", "deploy/host/deploy.sh", "deploy/host/renamed.sh")
         rc = repo_state.main(["--root", str(tmp_repo.root)])
         out = capsys.readouterr().out
         assert rc == int(Exit.FAILED), out
@@ -268,7 +268,7 @@ class TestEndToEnd:
         rc = repo_state.main(["--root", str(tmp_repo.root)])
         out = capsys.readouterr().out
         assert rc == int(Exit.FAILED)
-        assert "deploy/vultr/deploy.sh" in out
+        assert "deploy/host/deploy.sh" in out
 
 
 # --------------------------------------------------------------------------
@@ -309,7 +309,7 @@ def test_property_shell_and_python_normalisers_agree(bash_normalise, pairs):
 # Property 17: working-tree cleanliness
 # --------------------------------------------------------------------------
 
-_CRITICAL = ("deploy/vultr/deploy.sh", "docker-compose.yml",
+_CRITICAL = ("deploy/host/deploy.sh", "docker-compose.yml",
              ".github/workflows/ci.yml", "frontend/.firebaserc",
              "frontend/.env.production", "deploy/staging/compose.yml")
 _INNOCENT = ("README.md", "deployment-notes.md", "frontend/src/App.js",

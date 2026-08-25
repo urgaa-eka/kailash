@@ -132,7 +132,7 @@ These rules are checked, not trusted:
   their paths against the `Kailash/` master folder. Each rule that can be checked
   is checked — `doc_singletons` enforces Rule 3.
 - **`repo_state`** refuses to deploy from a working tree with uncommitted
-  changes under a deployment-critical path, because `deploy/vultr/deploy.sh`
+  changes under a deployment-critical path, because `deploy/host/deploy.sh`
   runs `git reset --hard` + `git clean -fd` on the production host.
 - A **pre-commit hook** blocks commits that touch a critical path unless
   `CONFIRM_CRITICAL_PATH=1` is set.

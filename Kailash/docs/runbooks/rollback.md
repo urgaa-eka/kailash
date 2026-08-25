@@ -2,7 +2,7 @@
 
 How to roll production back to a previously deployed version, within the
 10-minute bound of Requirement 6.3. Two independent targets: the frontend on
-Firebase Hosting, the backend on the Vultr VPS. Each command below is
+Firebase Hosting, the backend on the managed host. Each command below is
 executable without modification apart from a single substitutable token —
 `<VERSION_ID>` for the frontend, `<COMMIT_SHA>` for the backend.
 
@@ -53,10 +53,10 @@ firebase hosting:clone kailash-29111:live@<VERSION_ID> kailash-29111:live
 Propagation is seconds to a couple of minutes, comfortably inside the
 10-minute bound (Requirement 6.3).
 
-## 2. Backend — Vultr VPS
+## 2. Backend — managed host
 
 Every deploy tags the backend image with the commit it was built from
-(`kailash-backend:<full 40-hex sha>`), in `deploy/vultr/deploy.sh` and the
+(`kailash-backend:<full 40-hex sha>`), in `deploy/host/deploy.sh` and the
 `deploy-backend.yml` SSH step. On the VPS (`/opt/kailash`), start the tagged
 image without rebuilding:
 
@@ -74,7 +74,7 @@ short SHA does not select the image a deploy tagged.
 > Deployment_Critical_Path, so that edit requires the Requirement 9.4
 > confirmation gate. Until it lands, the backend has tagged images to roll
 > back to but no compose key to run them with, and a backend rollback means
-> re-deploying the target commit via `deploy/vultr/deploy.sh` with the branch
+> re-deploying the target commit via `deploy/host/deploy.sh` with the branch
 > reset to it.
 
 ### Image retention
@@ -83,7 +83,7 @@ Deploys retain the **3** most recent commit-tagged backend images (including
 the one just deployed); older commit tags are pruned. Three is a conservative
 default chosen because the task 4.5 disk-headroom record that is supposed to
 size this number does not exist yet — the design proposed 10. When that
-record lands, revisit `RETAINED_IMAGE_TAGS` in `deploy/vultr/deploy.sh` and
+record lands, revisit `RETAINED_IMAGE_TAGS` in `deploy/host/deploy.sh` and
 the matching prune in `.github/workflows/deploy-backend.yml`. A target older
 than the retention window fails the precondition check and cannot be rolled
 back to without a rebuild.

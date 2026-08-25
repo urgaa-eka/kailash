@@ -53,7 +53,7 @@ Kailash is Go4Garage's internal ML/AI platform — described in its own README a
 
 Architecturally, Kailash is a Python 3.11 FastAPI backend paired with a React 19 single-page frontend, storing operational data in MongoDB. The backend is organised in a distinctive "department-style AI agent" model: the application package `backend/app/` is split into `agents`, `api`, `automobile`, `core`, `departments`, `guardians`, `middleware`, `models`, `schemas`, `services` and `tasks`. Twenty deity-named department agents (VISHWAKARMA, LAKSHMI, SURYA, SARASWATI, VAYU, KUBERA, INDRA, YAMA, VARUNA, AGNI, CHANDRA, BRIHASPATI, VISHNU, BRAHMA, KARTIKEYA, DURGA, HANUMAN, NARADA, ASHWINI, DHARMA) are registered through `backend/app/departments/registry.py`, and three "guardian" agents — GANESHA (orchestration), SHIV (security / auto-rectification) and PARVATI (workload) — sit above them. A separate tier of nine platform AI services (`document-ai`, `forecasting`, `anomaly`, `rag`, `vision-gateway`, `speech`, `model-registry`, `knowledge-graph`, `automobile-llm`) lives under `backend/services/`, each following a consistent `routes.py` → `service.py` pattern built on a shared `build_app()` factory.
 
-A knowledge/RAG layer (`backend/knowledge/` plus `app/services/rag_service.py` and `rag_knowledge_base.py`) provides retrieval-augmented context to the departments, fed by dated daily-digest JSON payloads and an API-source manifest. A dedicated top-level `database/` folder carries MongoDB initialisation, seeding, health-check, backup and RAG-upload tooling. Deployment tooling exists for Docker (a single-container `Dockerfile` plus a four-service `docker-compose.yml`) and for a Vultr VPS behind Nginx with Let's Encrypt TLS, with the frontend targeted at Firebase Hosting (project `kailash-38268`).
+A knowledge/RAG layer (`backend/knowledge/` plus `app/services/rag_service.py` and `rag_knowledge_base.py`) provides retrieval-augmented context to the departments, fed by dated daily-digest JSON payloads and an API-source manifest. A dedicated top-level `database/` folder carries MongoDB initialisation, seeding, health-check, backup and RAG-upload tooling. Deployment tooling exists for Docker (a single-container `Dockerfile` plus a four-service `docker-compose.yml`) and for a managed host behind Nginx with Let's Encrypt TLS, with the frontend targeted at Firebase Hosting (project `kailash-38268`).
 
 The platform has genuinely been built and run locally: a populated Python virtual environment exists at `backend/.venv/`, and the frontend has both an installed `node_modules/` tree (~1,000 packages) and a produced `frontend/build/` output including compiled static assets and brand video files. Development is active — the most recent commit landed on 2026-07-31 (today).
 
@@ -138,7 +138,7 @@ Kailash is the "horizontal" in a portfolio of "verticals." Its business value is
 - **React 19 web dashboard** with roughly 21 authenticated application routes and roughly 35 legal/compliance/policy pages.
 - **Identity, authorisation and account security** — JWT sessions, bcrypt password hashing, TOTP-based 2FA fields with backup codes, a five-tier role model (super_admin, admin, manager, operator, viewer) and granular permission strings.
 - **MongoDB data platform operations** — initialisation, index creation, seeding, health checks, scheduled backups.
-- **Deployment tooling** — Dockerfile, Docker Compose (backend plus MongoDB 7, PostgreSQL 16, Redis 7), Vultr VPS setup/deploy scripts, Nginx reverse-proxy configuration with rate limiting and TLS, and Firebase Hosting configuration for the frontend.
+- **Deployment tooling** — Dockerfile, Docker Compose (backend plus MongoDB 7, PostgreSQL 16, Redis 7), managed host setup/deploy scripts, Nginx reverse-proxy configuration with rate limiting and TLS, and Firebase Hosting configuration for the frontend.
 - **CI pipeline** — lint, shared-library tests, a nine-way platform-service test matrix, backend smoke tests, frontend build, and a Compose build sanity check.
 - **Scheduled/background work** — Celery and APScheduler wiring, plus a daily-learning task.
 
@@ -261,7 +261,7 @@ Kailash is the "horizontal" in a portfolio of "verticals." Its business value is
 | C-1 | Proprietary licence — the codebase cannot be open-sourced or shared externally without approval. | Legal |
 | C-2 | No secrets in version control; every module ships a `.env.example` and real values are supplied at deploy time. | Policy (`SECURITY.md`) |
 | C-3 | Backend is Python 3.11 / FastAPI; frontend is React 19 built through CRA plus CRACO. Substituting either is a major undertaking. | Technical |
-| C-4 | Single-VPS deployment shape (Vultr, Nginx, Docker Compose) caps horizontal scale until orchestration is introduced. | Infrastructure |
+| C-4 | Single-VPS deployment shape (managed host, Nginx, Docker Compose) caps horizontal scale until orchestration is introduced. | Infrastructure |
 | C-5 | Small platform team — scope must favour depth on the shared engine over breadth of new surfaces. | Resource |
 | C-6 | Upstream model rate limits, token costs and latency bound what the platform can promise. | Vendor |
 | C-7 | Compliance surface spans GST/HSN treatment, DISCOM-adjacent obligations for charger/energy data, and Indian personal-data expectations. | Regulatory |
@@ -286,7 +286,7 @@ Kailash is the "horizontal" in a portfolio of "verticals." Its business value is
 | R-11 | **Over-broad CORS or permissive defaults** carried from development into production. | Medium | High | Environment-driven allowed-origins list; production configuration review as a deploy gate; security headers enforced at the proxy and hosting layers. |
 | R-12 | **Cost overrun on model spend** as usage grows across four products. | Medium | Medium | Per-product usage attribution, token accounting in metrics, tiered model routing (cheap model first, escalate only when needed). |
 | R-13 | **Data-residency challenge** — personal or commercially sensitive Indian data processed by offshore model providers. | Medium | High | Minimise and redact payloads sent upstream; document sub-processors publicly; prioritise in-region or self-hosted inference for sensitive classes. |
-| R-14 | **Repository/remote ambiguity** — deploy tooling and README reference a different GitHub remote than the one configured locally, risking a deploy from the wrong source. | Medium | Medium | Reconcile the remote in `README.md`, `deploy/vultr/deploy.sh` and the local Git configuration to a single canonical URL before the next production deploy. |
+| R-14 | **Repository/remote ambiguity** — deploy tooling and README reference a different GitHub remote than the one configured locally, risking a deploy from the wrong source. | Medium | Medium | Reconcile the remote in `README.md`, `deploy/host/deploy.sh` and the local Git configuration to a single canonical URL before the next production deploy. |
 
 ---
 
@@ -308,7 +308,7 @@ Kailash is the "horizontal" in a portfolio of "verticals." Its business value is
 | React 19 frontend | **Built and compiled** | `frontend/src/pages/` with roughly 70 page modules; `frontend/build/` contains compiled `static/`, `index.html`, brand video and OG assets; `node_modules/` populated (roughly 1,000 entries). |
 | MongoDB operations tooling | **Built** | `database/{mongodb_init.js,seed_data.py,populate_department_data.py,backup_mongodb.py,mongodb_backup.sh,mongodb_health_check.sh}`. |
 | Containerisation | **Built** | `Dockerfile` (python:3.11-slim, non-root `appuser`) and `docker-compose.yml` (backend, mongo:7, postgres:16-alpine, redis:7-alpine, all with healthchecks). |
-| VPS deploy tooling | **Built (scripts exist)** | `deploy/vultr/{setup-vps.sh,deploy.sh,nginx-api.conf}`, `deploy/docker/{docker-compose.prod.yml,docker-compose.platform.yml,nginx.conf}`. |
+| VPS deploy tooling | **Built (scripts exist)** | `deploy/host/{setup-vps.sh,deploy.sh,nginx-api.conf}`, `deploy/docker/{docker-compose.prod.yml,docker-compose.platform.yml,nginx.conf}`. |
 | Firebase Hosting config | **Built** | `frontend/firebase.json` with SPA rewrite, immutable static caching and security headers; project `kailash-38268` referenced in `backend/.env.example`. |
 | CI pipeline | **Built** | `.github/workflows/{ci.yml,deploy-backend.yml,deploy-frontend.yml}`; `ci.yml` defines `lint`, `shared`, `services`, `backend`, `frontend`, `compose-build` jobs. |
 | Test suites | **Built** | `tests/{platform,backend,integration,scripts}/` with pytest suites plus ad-hoc scripts. |
@@ -328,7 +328,7 @@ Kailash is the "horizontal" in a portfolio of "verticals." Its business value is
 | **Speech service** | Described in the README as provider-agnostic stubs with Indic locales — that is, the interface exists ahead of a production ASR/TTS provider binding. |
 | **Knowledge graph and RAG index** | Documented as in-memory structures (typed graph with BFS lookup; cosine index with a SHA-256 hash embedding fallback). Durable, vector-database-backed retrieval is optional (`PINECONE_*` variables exist but are blank in the template) and not evidenced as active. |
 | **PostgreSQL usage** | `postgres_models.py`, `asyncpg` and a Postgres container are present; MongoDB remains the primary described store. The precise split of responsibilities is not fully documented. |
-| **Git remote consistency** | ~~Resolved~~ — `urgaa-eka/kailash` confirmed canonical; all `README.md` badges, `deploy/vultr/*.sh` and `docs/DEPLOYMENT.md` references updated to match `origin`. |
+| **Git remote consistency** | ~~Resolved~~ — `urgaa-eka/kailash` confirmed canonical; all `README.md` badges, `deploy/host/*.sh` and `docs/DEPLOYMENT.md` references updated to match `origin`. |
 | **Mobile clients** | **None exist.** `ios_app_kailash_ai/` and `android_app_kailash_ai/` contain only empty `deployed/` and `not_deployed/` placeholder directories. |
 
 ### 10.3 Summary judgement

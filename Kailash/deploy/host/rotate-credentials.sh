@@ -14,7 +14,7 @@
 #   So the password must be changed INSIDE the running database first, and
 #   only then in .env.
 #
-# Usage:  bash deploy/vultr/rotate-credentials.sh [target-dir]
+# Usage:  bash deploy/host/rotate-credentials.sh [target-dir]
 # ==============================================================================
 set -euo pipefail
 

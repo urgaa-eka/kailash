@@ -436,11 +436,11 @@ def check_production_domain(corpus: Corpus, report: Report) -> None:
 def check_github_repo_slug(corpus: Corpus, report: Report) -> None:
     """Every reference to a kailash repository must name the same one.
 
-    `deploy/vultr/deploy.sh` is a required source: it runs `git reset --hard`,
+    `deploy/host/deploy.sh` is a required source: it runs `git reset --hard`,
     `git clean -fd` and `git clone` against whatever it resolves, so a
     vacuous pass there is the most dangerous outcome in the whole check.
     """
-    required = "deploy/vultr/deploy.sh"
+    required = "deploy/host/deploy.sh"
     required_hits = 0     # matches in the required source that agree
     required_seen = 0     # matches in the required source, agreeing or not
 

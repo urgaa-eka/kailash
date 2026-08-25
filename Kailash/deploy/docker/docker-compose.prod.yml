@@ -1,4 +1,4 @@
-﻿# Kailash â€” Production Docker Compose for Vultr VPS
+﻿# Kailash â€” Production Docker Compose for managed host
 # Usage: docker compose -f docker-compose.prod.yml up -d
 
 version: '3.8'

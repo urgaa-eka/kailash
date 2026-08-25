@@ -83,14 +83,14 @@ keyword fallback, so services degrade rather than hard-fail without keys.
 
 Enforcement, not ordinary tooling: CI runs each as `python -m scripts.verify.<name>`
 (config_drift, repo_state, secret_scan, workflow_gate, build_audit,
-deployment_check). They exist because `deploy/vultr/deploy.sh` does
+deployment_check). They exist because `deploy/host/deploy.sh` does
 `git reset --hard` + `git clean -fd` on the production host.
 
 Because the project is nested, the gates resolve their paths against the
 **`Kailash/` master folder** (`common.project_root()`), while `.github/workflows/`
 is resolved against the **git top level** (it cannot move — GitHub Actions reads
 it from the repo root). `repo_state.py` keeps `normalise_remote()` byte-for-byte
-in step with the bash `normalise_remote()` in `deploy/vultr/deploy.sh`
+in step with the bash `normalise_remote()` in `deploy/host/deploy.sh`
 (property-tested) — change one, change the other. Committing a critical-path
 file (`deploy/`, `docker-compose.yml`, workflows, `frontend/.firebaserc`,
 `frontend/.env.production`) triggers the `commit_gate` pre-commit hook, which

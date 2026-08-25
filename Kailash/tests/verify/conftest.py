@@ -48,7 +48,7 @@ def _have(cmd: str) -> bool:
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_DEPLOY_SH = REPO_ROOT / "deploy" / "vultr" / "deploy.sh"
+SCRIPT_DEPLOY_SH = REPO_ROOT / "deploy" / "host" / "deploy.sh"
 
 
 def find_bash() -> str | None:
@@ -98,7 +98,7 @@ def _posix(p: Path | str) -> str:
 
 @pytest.fixture(scope="session")
 def bash_normalise(tmp_path_factory):
-    """The bash `normalise_remote()` from `deploy/vultr/deploy.sh`, batched.
+    """The bash `normalise_remote()` from `deploy/host/deploy.sh`, batched.
 
     One process per *call*, not per URL: the parity property compares many URLs
     per example, and a bash process each would dominate the suite's runtime.
@@ -214,7 +214,7 @@ class Repo:
                    "};\n")
 
     def deploy_sh(self, url: str) -> None:
-        self.write("deploy/vultr/deploy.sh",
+        self.write("deploy/host/deploy.sh",
                    "#!/usr/bin/env bash\n"
                    f'REPO_URL="{url}"\n'
                    "git reset --hard origin/main\n")

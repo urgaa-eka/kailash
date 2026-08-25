@@ -83,7 +83,7 @@ What changed in the repository:
   `production-domain` rule in `scripts/verify/config_drift.py`
   (`EXPECTED_PRODUCTION_DOMAIN`). It is the app's own idea of its identity,
   not a routing rule — the other domain works either way.
-- `backend/.env.example` and `deploy/vultr/bootstrap-env.sh` now list every
+- `backend/.env.example` and `deploy/host/bootstrap-env.sh` now list every
   origin the SPA can be served from: both apexes, both `www` forms, both
   Firebase default hosts, and the named staging channel
   `kailash-29111--staging.web.app`.
@@ -109,11 +109,11 @@ production check reports that host as a finding, which is accurate.
 
 ### Certbot coverage
 
-TLS on the VPS is issued by `deploy/vultr/deploy.sh` for `api.kailash-ai.in`
+TLS on the VPS is issued by `deploy/host/deploy.sh` for `api.kailash-ai.in`
 only, and no additional **production** hostname needs certbot: the four web
 hosts are terminated by Firebase Hosting. One staging gap remains and is not
 addressed here — `staging-api.kailash-ai.in`, which the staging table verifies,
-has no certbot invocation in `deploy/vultr/deploy.sh` or `nginx-api.conf`.
+has no certbot invocation in `deploy/host/deploy.sh` or `nginx-api.conf`.
 Issuing it is operator work on the VPS (spec task 12.5).
 
 ## Certificate margin
@@ -129,7 +129,7 @@ renew automatically.
   nameserver and propagated to public resolvers. Operator action 1 above is
   discharged. `staging-api.kailash-ai.in` points at the same VPS (Option D).
 - The VPS (`140.82.62.136`, fresh Ubuntu 22.04) is being provisioned from
-  `deploy/vultr/setup-vps.sh` + `bootstrap-env.sh` + `deploy.sh`. Until that
+  `deploy/host/setup-vps.sh` + `bootstrap-env.sh` + `deploy.sh`. Until that
   completes, the API hostnames resolve but nothing answers on 443 — the check
   correctly reports them unreachable.
 - `kailash-ai.in` was attached as a custom domain on `kailash-29111` in the

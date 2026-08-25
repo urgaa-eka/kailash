@@ -2,7 +2,7 @@
 
 - **Date:** 2026-08-01
 - **Repository state:** `9340f44`. Under Deployment_Critical_Path the working tree
-  carries the uncommitted task-3.2 edits to `deploy/vultr/deploy.sh` and
+  carries the uncommitted task-3.2 edits to `deploy/host/deploy.sh` and
   `.github/workflows/deploy-backend.yml`, and nothing else
 - **Spec task:** production-readiness 3.3
 - **Requirements:** 1.3, 2.3
