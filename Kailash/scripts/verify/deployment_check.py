@@ -48,20 +48,27 @@ class Endpoint:
     content_type: str | None = None
     check_certificate: bool = False
     parse_assets: bool = False
-    # What this host is for, not which host it is. Production has two apexes
-    # and staging one, so the "staging is verified by the same rules as
-    # production" obligation (Requirement 8.6) is expressed per role rather
-    # than by pairing the two tables position by position.
+    # What this host is for, not which host it is: `apex` (serves the SPA),
+    # `redirect` (a 301 to the canonical apex), `www`, `api`. Production and
+    # staging do not carry the same set of roles -- production has a `.in`
+    # redirect host staging has no equivalent of -- so the "staging is verified
+    # by the same rules as production" obligation (Requirement 8.6) is expressed
+    # per role, on the roles they share, rather than by pairing the two tables
+    # position by position.
     role: str = "apex"
 
 
-# Both apex domains are owned by the operator and both are synced to serve the
-# same site, so both are production and both are verified: `kailash-ai.in` (the
-# domain Requirements 2.1/2.2 name, and the one baked into the bundle as
-# REACT_APP_DOMAIN) and `kailash-ai.com` (observed serving the SPA from
-# Firebase Hosting on 2026-08-01). Neither is a redirect to the other; a host
-# that only bounced would fail its `text/html` assertion here, which is the
-# point.
+# `kailash-ai.com` is the canonical web host: it serves the SPA from Firebase
+# Hosting (200 `text/html`), and its served build is checked against the
+# deploying manifest. `kailash-ai.in` -- the domain Requirements 2.1/2.2 name
+# and the one baked into the bundle as REACT_APP_DOMAIN -- is a deliberate,
+# human-configured 301 redirect to `kailash-ai.com` (operator decision
+# 2026-08-25; see docs/records/production-domain.md). It is verified as a
+# redirect: its status must land in the allowed set (200/301/308) and its
+# certificate must be in margin, but no `text/html`/manifest assertion applies,
+# because a redirect host serves no HTML of its own. Redirects are still never
+# *followed* (see `_NoRedirect`), so this only accepts the bounce -- it does not
+# reach through it and credit whatever `.com` serves to `.in`.
 #
 # The API hostname is `.in` only. `api.kailash-ai.com` has never resolved and
 # nothing in the repository references it, so adding it would assert an
@@ -71,10 +78,10 @@ class Endpoint:
 # docs/records/production-domain.md.
 ENVIRONMENTS: dict[str, tuple[Endpoint, ...]] = {
     "production": (
-        Endpoint("https://kailash-ai.in/", (200,), "text/html",
-                 check_certificate=True, parse_assets=True, role="apex"),
         Endpoint("https://kailash-ai.com/", (200,), "text/html",
                  check_certificate=True, parse_assets=True, role="apex"),
+        Endpoint("https://kailash-ai.in/", (200, 301, 308),
+                 check_certificate=True, role="redirect"),
         Endpoint("https://www.kailash-ai.in/", (200, 301, 308),
                  check_certificate=True, role="www"),
         Endpoint("https://www.kailash-ai.com/", (200, 301, 308),

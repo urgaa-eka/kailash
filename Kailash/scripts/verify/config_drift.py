@@ -46,16 +46,17 @@ EXPECTED_NODE_VERSION = "20"
 
 # The one place the app's own idea of its identity is declared.
 #
-# Both `kailash-ai.in` and `kailash-ai.com` are owned and both are synced to
-# serve the same site, so this constant is not a routing rule -- the other
-# domain keeps working whichever value is chosen. `.in` is canonical because
-# every declaration that already exists says so: both workflow builds,
-# `frontend/.env.production`, the backend health payload
+# This is the app's own idea of its identity, not a routing rule. `.in` is the
+# value because every declaration that already exists says so: both workflow
+# builds, `frontend/.env.production`, the backend health payload
 # (`backend/app/main.py` `"domain": "kailash-ai.in"`), the canonical link and
 # og:url in `frontend/public/index.html`, and the support addresses in LICENSE
-# and `email_service.py`. Choosing `.com` would mean editing all of those for
-# no functional gain. `deployment_check.py` verifies both apexes serve the SPA;
-# that is a separate obligation from which one the bundle names.
+# and `email_service.py`. Choosing `.com` would mean editing all of those for no
+# functional gain. Which host actually *serves* is separate: `kailash-ai.com` is
+# the canonical web host (it serves the SPA) and `kailash-ai.in` 301-redirects
+# to it (operator decision 2026-08-25). `deployment_check.py` accordingly
+# verifies the `.com` apex serves the SPA and treats `.in` as a redirect -- a
+# separate obligation from which host the bundle names as its identity.
 EXPECTED_PRODUCTION_DOMAIN = "kailash-ai.in"
 
 DATA_DIR = Path(__file__).parent / "data"

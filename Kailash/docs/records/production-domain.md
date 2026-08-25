@@ -142,3 +142,43 @@ renew automatically.
   this effort, recurs in unrelated zones (`urgaa.in`, `gstsaas.in`), and
   points at a bulk-import mistake — harmless, but worth deleting when someone
   is next in the zone.
+
+## Addendum — operator decision, 2026-08-25: `.com` canonical, `.in` redirects to it
+
+The serverless Go4Garage dashboard is now live: the React SPA on Firebase
+Hosting reads figures directly from Supabase, and the `/financials` route is
+served on all production hosts. With that live, the operator decided to **keep
+`kailash-ai.com` as the canonical web host and leave `kailash-ai.in` as a 301
+redirect to it** — the domain topology observed on 2026-08-01, not the
+"both apexes serve the SPA" reading of the 2026-08-02 addendum. That earlier
+reading required the `.in` custom-domain sync to take effect in Firebase; it
+never did (every probe since kept showing `.in` → 301), and the operator has
+now chosen not to pursue it. This addendum **supersedes the 2026-08-02 addendum
+for the `.in` apex**; `.com` remains the single SPA-serving host.
+
+Observed 2026-08-25 (`--env production`, `--skip-role api` for the serverless
+frontend deploy):
+
+| Host | Observed | Verdict |
+|---|---|---|
+| `kailash-ai.com` | 200 `text/html`, new build | passes (canonical apex) |
+| `kailash-ai.in` | 301 → `kailash-ai.com` | passes (redirect) |
+| `www.kailash-ai.com` | 301 → apex | passes |
+| `www.kailash-ai.in` | 301 → apex | passes |
+| `api.kailash-ai.in` | skipped (`--skip-role api`) | n/a — no backend in the serverless setup |
+
+What changed in the repository:
+
+- `scripts/verify/deployment_check.py` — the production table now carries
+  `kailash-ai.com` as the only `apex` (200 `text/html`, manifest containment,
+  certificate margin) and `kailash-ai.in` as a new **`role="redirect"`**
+  (200/301/308 + certificate margin, no HTML/manifest assertion). Redirects are
+  still never *followed*, so `.in` is credited only for the bounce, never for
+  what `.com` serves.
+- `tests/verify/test_deployment_check.py` — pinned to the model above.
+- `scripts/verify/config_drift.py` — `EXPECTED_PRODUCTION_DOMAIN` stays
+  `kailash-ai.in` (the app's identity string, unchanged); its comment now
+  distinguishes that identity from which host actually serves.
+
+`REACT_APP_DOMAIN` remains `kailash-ai.in` — it is the app's identity, not a
+routing rule, and the canonical serving host is `.com` either way.
