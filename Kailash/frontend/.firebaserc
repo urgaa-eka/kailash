@@ -7,7 +7,7 @@
   "targets": {
     "kailash-29111": {
       "hosting": {
-        "production": ["kailash-29111"],
+        "production": ["kailash-29111", "kailash-ai"],
         "staging": ["kailash-staging"]
       }
     }
