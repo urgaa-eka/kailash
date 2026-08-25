@@ -197,14 +197,24 @@ services:
       - path: backend/.env
         required: false
     environment:
-      - MONGO_URL=mongodb://mongo:27017
+      # MongoDB. Same override contract as POSTGRES_URL/COMPANY_DB_URL: set
+      # MONGO_URL in .env to a managed cluster (e.g. MongoDB Atlas) at deploy
+      # time; otherwise the local `mongo` container is used. Value supplied at
+      # deploy, never committed.
+      - MONGO_URL=${MONGO_URL:-mongodb://mongo:27017}
       - DATABASE_NAME=kailash
       # The deployed commit, exported by deploy/vultr/deploy.sh and the
       # deploy-backend.yml SSH step so /api/health reports what is running
       # (Requirement 6.6). A `:-` default rather than `:?` because "unknown"
       # is a safe value for a non-credential, not a masked failure.
       - GIT_COMMIT=${GIT_COMMIT:-unknown}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
+      # Redis. Same override contract: set REDIS_URL in .env to a managed Redis
+      # (e.g. Upstash / Redis Cloud) at deploy time; otherwise the local `redis`
+      # container is used. When the local container is kept, its password site
+      # below still requires REDIS_PASSWORD at parse time (as POSTGRES_PASSWORD
+      # does), so set a value even when REDIS_URL points elsewhere, or drop the
+      # `redis` service from the started list.
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0}
       # Backend Postgres. Same override contract as COMPANY_DB_URL: set
       # POSTGRES_URL in .env to point at an external managed Postgres (e.g.
       # Supabase) at deploy time; otherwise the local container is used.
