@@ -153,7 +153,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: asset-manifest-staging
-          path: artifact
+          # Land it under the Kailash/ working-directory these `run` steps use;
+          # download-artifact's path is relative to $GITHUB_WORKSPACE (the git
+          # root), so a bare `artifact` put it where the verify step -- which
+          # runs from Kailash/ -- could not read it, failing every deploy.
+          path: Kailash/artifact
       - run: python -m scripts.verify.deployment_check --env staging --manifest artifact/asset-manifest.json
 
   build-and-deploy:
@@ -259,5 +263,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: asset-manifest
-          path: artifact
+          # See the staging note: download-artifact's path is relative to the
+          # git root, but this verify step runs from Kailash/, so land it there.
+          path: Kailash/artifact
       - run: python -m scripts.verify.deployment_check --env production --manifest artifact/asset-manifest.json
