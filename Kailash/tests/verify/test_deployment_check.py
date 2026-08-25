@@ -33,13 +33,16 @@ class TestEnvironmentTables:
         step by construction, rather than by a parallel implementation that
         drifts.
 
-        Compared by role, not by position: production has two apex domains and
-        staging one, so a positional pairing would have to be loosened the
-        moment a second production domain was verified -- which is exactly the
-        change that prompted this."""
+        Compared by role, not by position, and only on the roles the two
+        environments share: production carries a `redirect` role (`kailash-ai.in`
+        bounces to the canonical `.com`) that staging, with a single domain, has
+        no equivalent of. A positional pairing would have broken the moment the
+        tables stopped matching host-for-host -- which is exactly why the
+        obligation is expressed per shared role."""
         prod, stag = _roles("production"), _roles("staging")
-        assert set(prod) == set(stag) == {"apex", "www", "api"}
-        for role in prod:
+        assert set(stag) == {"apex", "www", "api"}
+        assert set(prod) == {"apex", "redirect", "www", "api"}
+        for role in set(prod) & set(stag):
             for p in prod[role]:
                 for s in stag[role]:
                     assert p.allowed_statuses == s.allowed_statuses
@@ -48,25 +51,37 @@ class TestEnvironmentTables:
 
     def test_redirects_are_not_followed(self):
         """Following a redirect would let a 301 to an unrelated host pass as
-        200. With two apexes serving the same site that is the load-bearing
-        case: an apex reconfigured to bounce to the other would look healthy to
-        a redirect-following client while serving nothing itself."""
+        200. It stays load-bearing with a canonical apex and a redirect host:
+        the `.in` redirect is accepted as a bounce (301 in its allowed set) but
+        never followed, so what `.com` serves is never silently credited to
+        `.in`, and a canonical apex reconfigured to bounce elsewhere still fails
+        its `text/html` assertion instead of looking healthy."""
         assert dc._NoRedirect().redirect_request(None, None, 301, "", {}, "x") is None
 
-    def test_both_apex_domains_are_verified_as_serving_the_spa(self):
-        """Both domains are owned and both are synced to the same site, so
-        neither is a redirect to the other and both must serve the SPA
-        themselves. Recorded in docs/records/production-domain.md; change that
-        record before this table."""
+    def test_canonical_apex_serves_the_spa_and_in_is_a_redirect(self):
+        """`kailash-ai.com` is the canonical web host and must serve the SPA
+        itself (200 `text/html`, manifest-checked). `kailash-ai.in` is a
+        deliberate 301 to `.com`, so it is verified as a redirect only -- no
+        HTML or manifest assertion. Recorded in
+        docs/records/production-domain.md; change that record before this
+        table."""
         apex = {ep.url: ep for ep in _roles("production")["apex"]}
-        assert set(apex) == {"https://kailash-ai.in/", "https://kailash-ai.com/"}
-        for ep in apex.values():
-            assert ep.allowed_statuses == (200,)
-            assert ep.content_type == "text/html"
-            # The served build is checked against the deploying manifest on
-            # both, because "both serve the same site" is an assertion about
-            # the build, not only about the status code.
-            assert ep.parse_assets
+        assert set(apex) == {"https://kailash-ai.com/"}
+        ep = apex["https://kailash-ai.com/"]
+        assert ep.allowed_statuses == (200,)
+        assert ep.content_type == "text/html"
+        # The served build is checked against the deploying manifest on the
+        # canonical apex: "serves the site" is an assertion about the build,
+        # not only about the status code.
+        assert ep.parse_assets
+
+        redirect = {ep.url: ep for ep in _roles("production")["redirect"]}
+        assert set(redirect) == {"https://kailash-ai.in/"}
+        rep = redirect["https://kailash-ai.in/"]
+        assert rep.allowed_statuses == (200, 301, 308)
+        # A redirect host serves no HTML of its own, so neither assertion applies.
+        assert rep.content_type is None
+        assert rep.parse_assets is False
 
     def test_both_www_hosts_are_verified(self):
         www = {ep.url for ep in _roles("production")["www"]}
@@ -141,7 +156,7 @@ class TestProductionTableAgainstALocalServer:
     def _aimed(ep, url):
         return replace(ep, url=url, check_certificate=False)
 
-    @pytest.mark.parametrize("url", ["https://kailash-ai.in/", "https://kailash-ai.com/"])
+    @pytest.mark.parametrize("url", ["https://kailash-ai.com/"])
     def test_apex_serving_html_passes(self, url, local_http_server):
         ep = next(e for e in dc.ENVIRONMENTS["production"] if e.url == url)
         local_http_server.script(status=200, content_type="text/html; charset=utf-8")
@@ -149,17 +164,30 @@ class TestProductionTableAgainstALocalServer:
         dc.check_endpoint(self._aimed(ep, local_http_server.url), report, None)
         assert report.exit_code() is Exit.OK, report.render()
 
-    @pytest.mark.parametrize("url", ["https://kailash-ai.in/", "https://kailash-ai.com/"])
+    @pytest.mark.parametrize("url", ["https://kailash-ai.com/"])
     def test_apex_that_only_redirects_fails(self, url, local_http_server):
-        """Both domains are synced to the same site. One of them answering with
-        a bounce to the other means half the operator's traffic reaches a host
-        that serves nothing -- so 301 is a finding here, not a pass."""
+        """The canonical apex must serve the SPA itself. If it answered with a
+        bounce, the operator's canonical entry point would reach a host that
+        serves nothing -- so 301 is a finding here, not a pass. (`kailash-ai.in`
+        is the opposite case, covered by `test_in_redirect_host_passes`.)"""
         ep = next(e for e in dc.ENVIRONMENTS["production"] if e.url == url)
         local_http_server.script(status=301)
         report = Report()
         dc.check_endpoint(self._aimed(ep, local_http_server.url), report, None)
         assert report.exit_code() is Exit.FAILED
         assert "301" in report.render()
+
+    @pytest.mark.parametrize("status", [200, 301, 308])
+    def test_in_redirect_host_passes(self, status, local_http_server):
+        """`kailash-ai.in` is a deliberate redirect to the canonical `.com`, so
+        a 301/308 is expected and a direct 200 is also tolerated -- the mirror
+        of `test_apex_that_only_redirects_fails` for the redirect role."""
+        ep = next(e for e in dc.ENVIRONMENTS["production"]
+                  if e.url == "https://kailash-ai.in/")
+        local_http_server.script(status=status)
+        report = Report()
+        dc.check_endpoint(self._aimed(ep, local_http_server.url), report, None)
+        assert report.exit_code() is Exit.OK, report.render()
 
     @pytest.mark.parametrize("url", ["https://www.kailash-ai.in/",
                                      "https://www.kailash-ai.com/"])
@@ -181,10 +209,10 @@ class TestProductionTableAgainstALocalServer:
         assert report.exit_code() is Exit.FAILED
         assert "503" in report.render()
 
-    def test_apex_serving_a_foreign_build_fails_on_both_domains(self, local_http_server):
-        """The two apexes are synced, so the manifest containment rule applies
-        to each of them independently: a stale copy on one is exactly the
-        split-brain this catches."""
+    def test_canonical_apex_serving_a_foreign_build_fails(self, local_http_server):
+        """The manifest containment rule applies to the canonical apex: a build
+        served there that the deploying manifest does not know about is exactly
+        the stale-deploy split-brain this catches."""
         local_http_server.script(
             body='<html><script src="/static/js/main.deadbeef99.js"></script></html>')
         manifest = {"files": {"main.js": "/static/js/main.448921c0.js"}}
