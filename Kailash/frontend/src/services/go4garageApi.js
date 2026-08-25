@@ -1,40 +1,118 @@
 /**
- * Go4Garage Financial Controller — API service.
+ * Go4Garage Financial Controller — data service (serverless).
  *
- * Reads the FY financial dashboard from the company service. The payloads carry
- * the same key shape the store accepts (POST /go4garage/fy/{fy}), so every figure
- * shown here maps 1:1 into the store and onward to Zoho Books.
+ * Reads the FY dashboard straight from Supabase Postgres (table
+ * public.g4g_dashboard, one JSON payload per key: "overview" and "fy:<FY>"),
+ * gated by Supabase Auth + Row-Level Security. No application server.
  *
- * Base URL: REACT_APP_COMPANY_API_URL (the company service, e.g. :8110) if set,
- * otherwise the main backend URL, otherwise same-origin.
+ * The payloads carry the same key shape the store/Zoho mapping used, so a figure
+ * shown here still maps 1:1 onto the export columns below.
  */
-import axios from 'axios';
+import { supabase } from './supabaseClient';
 
-const BASE =
-  process.env.REACT_APP_COMPANY_API_URL ||
-  process.env.REACT_APP_BACKEND_URL ||
-  '';
+// ---- auth -----------------------------------------------------------------
+export async function getSession() {
+  const { data } = await supabase.auth.getSession();
+  return data.session || null;
+}
 
-const client = axios.create({ baseURL: BASE, timeout: 20000 });
+export function onAuthChange(cb) {
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => cb(session));
+  return () => data.subscription.unsubscribe();
+}
 
-// Company responses are ApiResponse envelopes: { ok, data, error, request_id }.
-const unwrap = (res) => (res && res.data && 'data' in res.data ? res.data.data : res.data);
+export async function signIn(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data.session;
+}
+
+export async function signOut() {
+  await supabase.auth.signOut();
+}
+
+export async function updatePassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
+// ---- data (RLS returns rows only to the authorised, signed-in owner) -------
+async function readPayload(key) {
+  const { data, error } = await supabase
+    .from('g4g_dashboard')
+    .select('payload')
+    .eq('key', key)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    // Signed in but no row visible => not authorised for these figures, or the
+    // data has not been seeded. Surface a clear, non-technical message.
+    throw new Error('Not authorised to view these figures, or no data has been loaded yet.');
+  }
+  return data.payload;
+}
 
 /** FY-independent: entity, model spine, departments, defects, decisions, trend. */
 export async function getOverview() {
-  return unwrap(await client.get('/go4garage/api/overview'));
+  return readPayload('overview');
 }
 
 /** One financial year in store shape (money as exact strings; null = awaiting). */
 export async function getFy(fy) {
-  return unwrap(await client.get(`/go4garage/api/fy/${encodeURIComponent(fy)}`));
+  return readPayload(`fy:${fy}`);
 }
 
-/** All five FYs as flat CSV text (store column shape) — for Zoho column-mapping. */
+// ---- client-side CSV export (no server) -----------------------------------
+// Column order mirrors the former api.EXPORT_FIELDS so a file taken out here is
+// identical to the old server export — Zoho-mappable / store-shape.
+const EXPORT_FIELDS = [
+  'fy', 'audit_status', 'posture',
+  'revenue', 'pat',
+  'sales_invoices', 'sales_total_sales', 'sales_receivable',
+  'purchase_rows', 'purchase_approved', 'purchase_commission', 'purchase_tds',
+  'purchase_igst_deducted', 'purchase_net_payable', 'purchase_paid',
+  'purchase_outstanding', 'purchase_zero_commission_rows',
+  'tax_tds_26as', 'tax_itr_status',
+];
+
+const flat = (p) => ({
+  fy: p.fy, audit_status: p.audit_status, posture: p.posture,
+  revenue: p.revenue, pat: p.pat,
+  sales_invoices: p.sales?.invoices, sales_total_sales: p.sales?.total_sales,
+  sales_receivable: p.sales?.receivable,
+  purchase_rows: p.purchase?.rows, purchase_approved: p.purchase?.approved,
+  purchase_commission: p.purchase?.commission, purchase_tds: p.purchase?.tds,
+  purchase_igst_deducted: p.purchase?.igst_deducted,
+  purchase_net_payable: p.purchase?.net_payable, purchase_paid: p.purchase?.paid,
+  purchase_outstanding: p.purchase?.outstanding,
+  purchase_zero_commission_rows: p.purchase?.zero_commission_rows,
+  tax_tds_26as: p.tax?.tds_26as, tax_itr_status: p.tax?.itr_status,
+});
+
+// RFC 4180: quote a field only when it contains a comma, quote or newline.
+const csvCell = (v) => {
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+/** All FYs as flat CSV text (store column shape) — built entirely client-side. */
 export async function fetchExportCsv() {
-  const res = await client.get('/go4garage/api/export.csv', { responseType: 'text' });
-  return res.data;
+  const { data, error } = await supabase
+    .from('g4g_dashboard')
+    .select('key,payload')
+    .like('key', 'fy:%');
+  if (error) throw error;
+  const rows = (data || [])
+    .map((r) => flat(r.payload))
+    .sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
+  const lines = [EXPORT_FIELDS.join(',')];
+  for (const r of rows) lines.push(EXPORT_FIELDS.map((k) => csvCell(r[k])).join(','));
+  return `${lines.join('\r\n')}\r\n`;
 }
 
-const go4garageApi = { getOverview, getFy, fetchExportCsv };
+const go4garageApi = {
+  getSession, onAuthChange, signIn, signOut, updatePassword,
+  getOverview, getFy, fetchExportCsv,
+};
 export default go4garageApi;

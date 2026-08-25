@@ -241,17 +241,12 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* Go4Garage Financial Controller — FY financial dashboard */}
-            <Route path="/financials" element={
-              <ProtectedRoute noLayout={true}>
-                <Go4GarageFinancials />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/financials" element={
-              <ProtectedRoute noLayout={true}>
-                <Go4GarageFinancials />
-              </ProtectedRoute>
-            } />
+            {/* Go4Garage Financial Controller — serverless FY dashboard.
+                Self-gates with Supabase Auth (see Go4GarageFinancials), so it
+                does NOT use the app's Firebase ProtectedRoute: it runs on
+                Firebase Hosting + Supabase with no application backend. */}
+            <Route path="/financials" element={<Go4GarageFinancials />} />
+            <Route path="/dashboard/financials" element={<Go4GarageFinancials />} />
 
             {/* Legal Routes - Group 1: General Legal */}
             <Route path="/terms" element={<TermsAndConditions />} />

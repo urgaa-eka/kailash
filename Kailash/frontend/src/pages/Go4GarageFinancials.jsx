@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getOverview, getFy, fetchExportCsv } from '../services/go4garageApi';
+import {
+  getOverview, getFy, fetchExportCsv,
+  getSession, onAuthChange, signIn, signOut,
+} from '../services/go4garageApi';
+import { supabaseConfigured } from '../services/supabaseClient';
 import './Go4GarageFinancials.css';
 
 /* =========================================================================
@@ -196,8 +200,54 @@ const NAV = [
 ];
 
 // ---- page -----------------------------------------------------------------
+// Supabase Auth gate — the confidential figures load only after sign-in (RLS).
+function LoginGate({ onSignedIn }) {
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErr(null);
+    try {
+      const session = await signIn(email.trim(), pw);
+      onSignedIn(session);
+    } catch {
+      setErr('Sign-in failed — check your email and password.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="g4g">
+      <div className="auth-wrap">
+        <form className="auth-card" onSubmit={submit}>
+          <div className="auth-brand">GO4GARAGE</div>
+          <h1 className="auth-title">Financial Controller</h1>
+          <p className="auth-sub">Sign in to view the confidential FY dashboard.</p>
+          <label className="auth-label">Email
+            <input className="auth-input" type="email" autoComplete="username" value={email}
+              onChange={(e) => setEmail(e.target.value)} required />
+          </label>
+          <label className="auth-label">Password
+            <input className="auth-input" type="password" autoComplete="current-password" value={pw}
+              onChange={(e) => setPw(e.target.value)} required />
+          </label>
+          {err && <div className="auth-err">{err}</div>}
+          <button className="auth-btn" type="submit" disabled={busy}>
+            {busy ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Go4GarageFinancials() {
   const navigate = useNavigate();
+  const [session, setSession] = useState(undefined); // undefined=checking, null=out, obj=in
   const [overview, setOverview] = useState(null);
   const [fy, setFy] = useState(null);
   const [fyData, setFyData] = useState(null);
@@ -206,6 +256,19 @@ export default function Go4GarageFinancials() {
   const [error, setError] = useState(null);
   const [active, setActive] = useState('overview');
   const [exporting, setExporting] = useState(false);
+
+  // Track the Supabase session (and react to sign-in / sign-out / refresh).
+  useEffect(() => {
+    getSession().then(setSession);
+    return onAuthChange(setSession);
+  }, []);
+
+  const doSignOut = async () => {
+    await signOut();
+    setSession(null);
+    setOverview(null);
+    setFyData(null);
+  };
 
   const pickDefaultFy = (years) => {
     const has = years.find((y) => y.fy === '2023-24');
@@ -241,7 +304,7 @@ export default function Go4GarageFinancials() {
     }
   }, [loadFy]);
 
-  useEffect(() => { boot(); }, [boot]);
+  useEffect(() => { if (session) boot(); }, [session, boot]);
 
   const goto = (id) => {
     setActive(id);
@@ -274,6 +337,22 @@ export default function Go4GarageFinancials() {
     return <Pill kind={p.connected ? 'ok' : 'warn'}>{p.connected ? 'connected' : 'not connected'}</Pill>;
   }, [overview]);
 
+  if (!supabaseConfigured)
+    return (
+      <div className="g4g"><div className="state">
+        <h2>Not configured</h2>
+        <p>Supabase is not configured for this build (REACT_APP_SUPABASE_URL / _ANON_KEY).</p>
+      </div></div>
+    );
+
+  if (session === undefined)
+    return (
+      <div className="g4g"><div className="state"><div className="spinner" />
+        <div>Checking your session…</div></div></div>
+    );
+
+  if (session === null) return <LoginGate onSignedIn={setSession} />;
+
   if (loading)
     return (
       <div className="g4g"><div className="state"><div className="spinner" />
@@ -297,6 +376,7 @@ export default function Go4GarageFinancials() {
 
   return (
     <div className="g4g">
+      <button className="signout" onClick={doSignOut} title="Sign out">Sign out</button>
       {/* one shared gold gradient for every chart */}
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
         <defs>
