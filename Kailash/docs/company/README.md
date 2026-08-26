@@ -6,5 +6,5 @@ reconciliation. This is the segment that is **live today** (the Go4Garage FY
 dashboard on Firebase + Supabase).
 
 - Technical spec: [`../TRD.md`](../TRD.md) → "Company Segment" sections.
-- Go-live / launch: [`../fy-dashboard/`](../fy-dashboard/).
-- Backend feature: `backend/features/company/`; frontend: `frontend/src/features/company/`.
+- Go-live / launch: [`GO-LIVE.md`](./GO-LIVE.md), [`LAUNCH.md`](./LAUNCH.md).
+- Backend service: `backend/services/company/`; frontend: `frontend/src/features/company/`.

@@ -190,7 +190,7 @@ curl -X POST https://api.kailash-ai.in/go4garage/admin/init \
 
 With `G4G_PROVIDER=db` (step 2), the dashboard now serves live from Supabase.
 Load or edit a year with `POST /go4garage/fy/{fy}` (same token header) — see
-`docs/fy-dashboard/LAUNCH.md` for the accepted keys.
+`docs/company/LAUNCH.md` for the accepted keys.
 
 ---
 
