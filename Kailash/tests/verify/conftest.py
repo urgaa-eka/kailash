@@ -206,7 +206,7 @@ class Repo:
                    f"          projectId: {project}\n")
 
     def firebase_js(self, project: str, app_id: str, sender: str) -> None:
-        self.write("frontend/src/lib/firebase.js",
+        self.write("frontend/src/platform/lib/firebase.js",
                    "const firebaseConfig = {\n"
                    f'  projectId: "{project}",\n'
                    f'  appId: "{app_id}",\n'

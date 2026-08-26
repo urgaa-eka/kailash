@@ -98,8 +98,8 @@ class TestTmpRepo:
     def test_written_files_are_tracked(self, tmp_repo):
         """Every check reads its corpus from `git ls-files`, so an unstaged
         file is a file the check cannot see."""
-        tmp_repo.write("frontend/src/lib/firebase.js", "// x\n")
-        assert "frontend/src/lib/firebase.js" in tmp_repo.git("ls-files")
+        tmp_repo.write("frontend/src/platform/lib/firebase.js", "// x\n")
+        assert "frontend/src/platform/lib/firebase.js" in tmp_repo.git("ls-files")
 
     def test_staging_can_be_declined(self, tmp_repo):
         tmp_repo.write("untracked.txt", "x\n", add=False)

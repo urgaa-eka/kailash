@@ -1,91 +1,91 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
-import { ToastProvider } from "./context/ToastContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import LoginPage from "./pages/LoginPage";
+import { ToastProvider } from "@/platform/context/ToastContext";
+import ProtectedRoute from "@/platform/components/ProtectedRoute";
+import LoginPage from "@/features/auth/LoginPage";
 // ApplicationsHub REMOVED - KAILASH IS the operating system
-import SpiritualKailashDashboard from "./pages/SpiritualKailashDashboard";
-import GSTWebsite from "./pages/GSTWebsite";
-import TattoosTool from "./pages/TattoosTool";
-import IgnitionApp from "./pages/IgnitionApp";
+import SpiritualKailashDashboard from "@/features/kailash-command/SpiritualKailashDashboard";
+import GSTWebsite from "@/features/gst-saas/GSTWebsite";
+import TattoosTool from "@/features/tattoos/TattoosTool";
+import IgnitionApp from "@/features/ignition/IgnitionApp";
 
 // New Pages
-import GaneshaAI from "./pages/GaneshaAI";
-import Departments from "./pages/Departments";
-import Tasks from "./pages/Tasks";
-import Analytics from "./pages/Analytics";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
+import GaneshaAI from "@/features/eka-brain/GaneshaAI";
+import Departments from "@/features/departments/Departments";
+import Tasks from "@/features/tasks/Tasks";
+import Analytics from "@/features/analytics/Analytics";
+import Reports from "@/features/reports/Reports";
+import Settings from "@/features/settings/Settings";
 
 // V2 Feature Pages
-import Chat from "./pages/Chat";
-import Users from "./pages/Users";
-import Urjaa from "./pages/Urjaa";
-import Guardians from "./pages/Guardians";
-import AutomobilePricing from "./pages/AutomobilePricing";
+import Chat from "@/features/eka-brain/Chat";
+import Users from "@/features/users/Users";
+import Urjaa from "@/features/urja/Urjaa";
+import Guardians from "@/features/guardians/Guardians";
+import AutomobilePricing from "@/features/automobile-pricing/AutomobilePricing";
 
 // V3 Feature Pages - Investor Demo
-import InvestorExecutiveDashboard from "./pages/InvestorExecutiveDashboard";
-import DepartmentDetailNew from "./pages/DepartmentDetailNew";
-import GaneshaChatV2 from "./pages/GaneshaChatV2";
-import GapsTasksManagement from "./pages/GapsTasksManagement";
-import KnowledgeBase from "./pages/KnowledgeBase";
-import GaneshaAnalytics from "./pages/GaneshaAnalytics";
-import Go4GarageFinancials from "./pages/Go4GarageFinancials";
+import InvestorExecutiveDashboard from "@/features/executive-dashboard/InvestorExecutiveDashboard";
+import DepartmentDetailNew from "@/features/departments/DepartmentDetailNew";
+import GaneshaChatV2 from "@/features/eka-brain/GaneshaChatV2";
+import GapsTasksManagement from "@/features/management/GapsTasksManagement";
+import KnowledgeBase from "@/features/knowledge-base/KnowledgeBase";
+import GaneshaAnalytics from "@/features/eka-brain/GaneshaAnalytics";
+import Go4GarageFinancials from "@/features/company/Go4GarageFinancials";
 
 // Import theme
-import "./styles/theme.css";
-import "./styles/spiritual-theme.css";
+import "@/platform/styles/theme.css";
+import "@/platform/styles/spiritual-theme.css";
 
 // Legal Pages - Group 1: General Legal
-import TermsAndConditions from "./pages/TermsAndConditions";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import CookiePolicy from "./pages/CookiePolicy";
-import DisclaimerPolicy from "./pages/DisclaimerPolicy";
-import AcceptableUsePolicy from "./pages/AcceptableUsePolicy";
-import IntellectualProperty from "./pages/IntellectualProperty";
-import DMCAPolicy from "./pages/DMCAPolicy";
-import AgeRestrictionPolicy from "./pages/AgeRestrictionPolicy";
+import TermsAndConditions from "@/features/legal/TermsAndConditions";
+import PrivacyPolicy from "@/features/legal/PrivacyPolicy";
+import CookiePolicy from "@/features/legal/CookiePolicy";
+import DisclaimerPolicy from "@/features/legal/DisclaimerPolicy";
+import AcceptableUsePolicy from "@/features/legal/AcceptableUsePolicy";
+import IntellectualProperty from "@/features/legal/IntellectualProperty";
+import DMCAPolicy from "@/features/legal/DMCAPolicy";
+import AgeRestrictionPolicy from "@/features/legal/AgeRestrictionPolicy";
 
 // Legal Pages - Group 2: Data & Privacy
-import GDPRCompliance from "./pages/GDPRCompliance";
-import CCPACompliance from "./pages/CCPACompliance";
-import DataRetentionPolicy from "./pages/DataRetentionPolicy";
-import DataBreachPolicy from "./pages/DataBreachPolicy";
-import DataTransferPolicy from "./pages/DataTransferPolicy";
-import SubprocessorList from "./pages/SubprocessorList";
-import UserRights from "./pages/UserRights";
+import GDPRCompliance from "@/features/legal/GDPRCompliance";
+import CCPACompliance from "@/features/legal/CCPACompliance";
+import DataRetentionPolicy from "@/features/legal/DataRetentionPolicy";
+import DataBreachPolicy from "@/features/legal/DataBreachPolicy";
+import DataTransferPolicy from "@/features/legal/DataTransferPolicy";
+import SubprocessorList from "@/features/legal/SubprocessorList";
+import UserRights from "@/features/legal/UserRights";
 
 // Legal Pages - Group 3: Services & Operations
-import SLA from "./pages/SLA";
-import RefundPolicy from "./pages/RefundPolicy";
-import ShippingPolicy from "./pages/ShippingPolicy";
-import WarrantyPolicy from "./pages/WarrantyPolicy";
-import APITerms from "./pages/APITerms";
-import OEMSGRegistration from "./pages/OEMSGRegistration";
+import SLA from "@/features/legal/SLA";
+import RefundPolicy from "@/features/legal/RefundPolicy";
+import ShippingPolicy from "@/features/legal/ShippingPolicy";
+import WarrantyPolicy from "@/features/legal/WarrantyPolicy";
+import APITerms from "@/features/legal/APITerms";
+import OEMSGRegistration from "@/features/legal/OEMSGRegistration";
 
 // Legal Pages - Group 4: Community & Guidelines
-import CommunityGuidelines from "./pages/CommunityGuidelines";
-import ModeratorGuidelines from "./pages/ModeratorGuidelines";
-import CodeOfConduct from "./pages/CodeOfConduct";
-import Ethics from "./pages/Ethics";
+import CommunityGuidelines from "@/features/legal/CommunityGuidelines";
+import ModeratorGuidelines from "@/features/legal/ModeratorGuidelines";
+import CodeOfConduct from "@/features/legal/CodeOfConduct";
+import Ethics from "@/features/legal/Ethics";
 
 // Legal Pages - Group 5: Security & Compliance
-import SecurityPolicy from "./pages/SecurityPolicy";
-import IncidentResponse from "./pages/IncidentResponse";
-import PenTest from "./pages/PenTest";
-import BugBounty from "./pages/BugBounty";
-import AccessibilityStatement from "./pages/AccessibilityStatement";
-import Compliance from "./pages/Compliance";
+import SecurityPolicy from "@/features/legal/SecurityPolicy";
+import IncidentResponse from "@/features/legal/IncidentResponse";
+import PenTest from "@/features/legal/PenTest";
+import BugBounty from "@/features/legal/BugBounty";
+import AccessibilityStatement from "@/features/legal/AccessibilityStatement";
+import Compliance from "@/features/legal/Compliance";
 
 // Legal Pages - Group 6: About & Transparency
-import Transparency from "./pages/Transparency";
+import Transparency from "@/features/legal/Transparency";
 
 // Components
-import LegalFooter from "./components/LegalFooter";
-import CookieConsent from "./components/CookieConsent";
-import ErrorBoundary from "./components/ErrorBoundary";
-import SessionTimeout from "./components/SessionTimeout";
-import { Toaster } from "./components/UI/sonner";
+import LegalFooter from "@/platform/components/LegalFooter";
+import CookieConsent from "@/platform/components/CookieConsent";
+import ErrorBoundary from "@/platform/components/ErrorBoundary";
+import SessionTimeout from "@/platform/components/SessionTimeout";
+import { Toaster } from "@/platform/components/UI/sonner";
 import "./App.css";
 
 // Check if user is authenticated

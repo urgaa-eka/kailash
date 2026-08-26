@@ -5,7 +5,7 @@ import "@/index.css";
 import App from "@/App";
 
 // Initialize Firebase
-import "@/lib/firebase";
+import "@/platform/lib/firebase";
 
 // Suppress ResizeObserver error in production
 if (process.env.NODE_ENV === 'production') {
