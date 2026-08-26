@@ -56,6 +56,18 @@ jobs:
         with: { python-version: "3.11" }
       - run: python -m scripts.verify.secret_scan
 
+  # RULES.md Rule 1: only RULES.md + Kailash/ + .github/ + .gitignore at the
+  # repository root — nothing loose outside the master folder.
+  root-singletons:
+    name: Root singletons (Rule 1)
+    runs-on: ubuntu-latest
+    needs: verify-scripts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: python -m scripts.verify.root_singletons
+
   # RULES.md Rule 3: exactly one BRD, one TRD, one PRD, and no duplicate copies.
   doc-singletons:
     name: Doc singletons (Rule 3)

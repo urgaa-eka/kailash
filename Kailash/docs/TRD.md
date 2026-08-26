@@ -1,10 +1,48 @@
 # Kailash — Technical Requirements Document (TRD)
 
 > **Single source of truth.** This is the one and only TRD for the entire
-> Kailash project. It consolidates the former company-wide TRD, the
-> per-platform (Android / iOS / Web) TRDs, and the Company-Segment technical
+> Kailash project (RULES.md Rule 3). It consolidates the former company-wide TRD,
+> the per-platform (Android / iOS / Web) TRDs, and the Company-Segment technical
 > and AWS-architecture specifications into one document, organised as sections.
 > Do not create separate or duplicate TRD/spec files — edit this one.
+
+---
+
+## 0. Vision & Canonical Framing (Center Lake)
+
+> The authoritative present-day frame; the grounded technical sections below are
+> read through it. Product context: [`PRD.md`](./PRD.md); business: [`BRD.md`](./BRD.md).
+
+**Center Lake.** Kailash is the central data lake + command center — the data
+"heart"; **Eka Brain** is the AI "mind" orchestrating the agent matrix. All data
+routes through Kailash first. Kailash is internal infrastructure, not a customer
+product.
+
+**Repository structure (RULES.md, enforced).** One master folder `Kailash/`;
+**department → feature** (`frontend/`, `backend/`); one BRD/TRD/PRD; one agent
+file; one gated pipeline. Frontend features live under `frontend/src/features/<feature>/`
+(CRA requires `src/`; the `@` alias is used); backend mirrors the names under
+`backend/features/<feature>/`, with shared code in a `platform/` layer per
+department and the platform microservices under `backend/services/`.
+
+**Data core — four segments**: Product · Sprint · Company · Goal.
+**Command dashboard — three tiers**: Governance & Intelligence (Eka Brain, Shiv,
+Parvati) → Analytics & Telemetry (FE→API→BE pulse) → the six products (Eka AI,
+Website, Urja, EV Vidya, GST SaaS, Ignition).
+
+**Telemetry.** Every service exposes `/health`, `/metrics`, and request-id'd JSON
+logs; the dashboard renders these as a green/red pulse that isolates the failing
+FE / API / BE layer per product.
+
+**Naming map (adopted 2026-08).** Eka Brain ← GANESHA; GST SaaS ← GSTSAAS; Urja ←
+URGAA; Company ← Go4Garage financials. Grounded sections below use the legacy
+names.
+
+**Resource prerequisites** for the full platform (Company/financials already runs
+on Firebase + Supabase): an AI-provider key (`OPENROUTER_API_KEY`/`ANTHROPIC_API_KEY`),
+a backend host (`BACKEND_SSH_*`), `MONGO_URL`, `REDIS_URL`,
+`FIREBASE_SERVICE_ACCOUNT_JSON`, and valid AWS credentials (Route 53 DNS) —
+currently absent/invalid in the environment.
 
 ---
 

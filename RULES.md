@@ -75,12 +75,40 @@ Kailash/
 department it touches, and keep the names identical across departments so a
 feature's frontend and server halves line up one-to-one.
 
+### Concrete realization (the canonical, to-be-locked shape)
+
+The toolchain fixes where features physically sit:
+
+```
+Kailash/
+├── frontend/            ← department
+│   └── src/
+│       ├── platform/    ← shared, non-feature code: ui/ (design system), layout/,
+│       │                  stores/, hooks/, lib/ (api client, firebase), utils, styles, data/
+│       └── features/    ← one folder per feature (CRA requires src/; import via the `@` alias)
+└── backend/             ← department
+    ├── platform/        ← shared library (build_app factory) + core infra (config/db/rbac/firebase)
+    ├── features/        ← one folder per feature, names MIRRORED with frontend/src/features/
+    └── services/        ← the platform microservices (each an independently-built container)
+```
+
+**Canonical feature set** (vision naming; the locked list). Intelligence &
+telemetry: `eka-brain` (the AI orchestrator/mind), `shiv`, `parvati`,
+`analytics`, `kailash-command`. Data-core segment with software: `company`
+(financials). Products: `eka-ai`, `website`, `urja`, `ev-vidya`, `gst-saas`,
+`ignition`. Platform features: `auth`, `users`, `departments`, `knowledge-base`,
+`legal`. Legacy names map in: `eka-brain ← ganesha`, `gst-saas ← gst/GSTSAAS`,
+`urja ← urjaa/URGAA`, `company ← go4garage`. A new feature is added to this set
+deliberately (a reviewed change), never created ad hoc.
+
 > **Migration status:** the existing code was moved wholesale into `Kailash/`
 > and still carries its historical internal layout (`backend/app/`,
-> `backend/services/`, `frontend/src/`, …). Reorganising that legacy code into
-> per-feature folders is an ongoing, incremental effort. New work follows the
-> department→feature rule immediately; legacy code is refactored toward it, not
-> left as a second pattern to copy.
+> `backend/services/`, `frontend/src/`, …). Relocating that legacy code into the
+> shape above is done **feature-by-feature, each move CI-green** (converting
+> imports to the `@/features/…` alias and updating the coupled Docker/CI/verify
+> references in the same change), because a big-bang move breaks the build and
+> deploys silently. New work follows the department→feature rule immediately;
+> legacy code is refactored toward it, not left as a second pattern to copy.
 
 ## Rule 3 — One BRD, one TRD, one PRD
 
@@ -135,10 +163,12 @@ no gate can be silently defeated.
 These rules are checked, not trusted:
 
 - **`scripts/verify/`** gates run in CI (`config_drift`, `repo_state`,
-  `secret_scan`, `workflow_gate`, `workflow_singletons`, `build_audit`,
-  `doc_singletons`) and resolve their paths against the `Kailash/` master folder.
-  Each rule that can be checked is checked — `doc_singletons` enforces Rule 3,
-  and `workflow_singletons` + `workflow_gate` together enforce Rule 5.
+  `secret_scan`, `root_singletons`, `workflow_gate`, `workflow_singletons`,
+  `build_audit`, `doc_singletons`) and resolve their paths against the `Kailash/`
+  master folder (except the root-level ones, which resolve against the git top
+  level). Each rule that can be checked is checked — `root_singletons` enforces
+  Rule 1, `doc_singletons` enforces Rule 3, and `workflow_singletons` +
+  `workflow_gate` together enforce Rule 5.
 - **`repo_state`** refuses to deploy from a working tree with uncommitted
   changes under a deployment-critical path, because `deploy/host/deploy.sh`
   runs `git reset --hard` + `git clean -fd` on the production host.

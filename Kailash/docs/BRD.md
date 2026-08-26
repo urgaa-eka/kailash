@@ -1,9 +1,59 @@
 # Kailash — Business Requirements Document (BRD)
 
 > **Single source of truth.** This is the one and only BRD for the entire
-> Kailash project. It consolidates the former company-wide BRD and the
-> per-platform (Android / iOS / Web) BRDs into one document, organised as
+> Kailash project (RULES.md Rule 3). It consolidates the former company-wide BRD
+> and the per-platform (Android / iOS / Web) BRDs into one document, organised as
 > sections. Do not create separate or duplicate BRD files — edit this one.
+
+---
+
+## 0. Vision & Canonical Framing (Center Lake)
+
+> This section is the **authoritative present-day frame**; the detailed sections
+> below remain the grounded, repo-accurate record and are read through it. The
+> product north-star is [`PRD.md`](./PRD.md).
+
+**Kailash is the central data lake and command center** for the whole Eka
+software ecosystem — the single nexus every component, product, and process
+routes through and is monitored in real time. In the **Center Lake** model,
+**Kailash is the heart** (the data that pumps through the organization) and
+**Eka Brain is the mind** (the AI that orchestrates the agent matrix and
+answers). All data flows into Kailash first; Kailash then dictates where and to
+which agent or interface it is distributed. Kailash is **internal
+infrastructure**, not a product sold to customers.
+
+**The data core has four segments** — the canonical organization of Kailash's
+data and documentation:
+
+| Segment | Function |
+| --- | --- |
+| **Product** | The product lines: per-product scope, deployment status, blueprints, live-vs-pending tracking. |
+| **Sprint** | Agile cycles + critical financial events: the 18-day sprint artifacts, funding-round records. |
+| **Company** | Master operational ledger + statutory financials; the CA-vs-internal reconciliation (the segment that is live today). |
+| **Goal** | Forward-looking strategy: missions, milestones, open-ended planning. |
+
+**The command dashboard has three tiers**: Governance & Intelligence (**Eka
+Brain**, **Shiv**, **Parvati**) → **Analytics & Telemetry** (FE→API→BE pulse;
+green healthy, red isolates the failing layer) → the **Product ecosystem**.
+
+**The six products** (automotive / multi-brand-workshop focus, each AI-driven
+via Eka Brain): **Eka AI**, **Website**, **Urja**, **EV Vidya**, **GST SaaS**,
+**Ignition**.
+
+**Canonical naming (adopted 2026-08).** The repo adopts the vision names; the
+grounded sections below use the legacy names, which map as: **Eka Brain ←
+GANESHA orchestrator**; **GST SaaS ← GSTSAAS**; **Urja ← URGAA**; **Company ←
+the Go4Garage financials segment**; **Eka AI / EV Vidya ← the automobile-LLM /
+`ev-vidya-arjun` surfaces**. Repository structure follows RULES.md
+(department → feature) with these names.
+
+**Resource prerequisites (launch checklist).** The Company/financials segment
+runs today on Firebase + Supabase (provisioned). Running the full platform
+(products + Eka Brain) additionally requires — and these must be supplied before
+that phase: an **AI-provider key** (`OPENROUTER_API_KEY`/`ANTHROPIC_API_KEY`), a
+**backend host** (`BACKEND_SSH_*`), **MongoDB** (`MONGO_URL`), **Redis**
+(`REDIS_URL`), a **Firebase Admin service account**
+(`FIREBASE_SERVICE_ACCOUNT_JSON`), and **valid AWS credentials** (Route 53 DNS).
 
 ---
 
