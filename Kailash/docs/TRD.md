@@ -79,11 +79,11 @@ currently absent/invalid in the environment.
 
 ### 2.1 Shape of the system
 
-Kailash is a **modular monolith with independently testable capability modules**. A single FastAPI application (`backend/app/main.py`) hosts the operational API, the department-agent layer and the guardian layer. Alongside it, nine "platform service" modules under `backend/services/` are each built from a shared `build_app()` factory in `backend/shared/app.py`, which means each can be run and tested as an isolated FastAPI app while still being deployable inside one process today. A React 19 single-page application in `frontend/` is the human surface. MongoDB is the primary datastore, with PostgreSQL and Redis in supporting roles.
+Kailash is a **modular monolith with independently testable capability modules**. A single FastAPI application (`backend/main.py`) hosts the operational API, the department-agent layer and the guardian layer. Alongside it, nine "platform service" modules under `backend/services/` are each built from a shared `build_app()` factory in `backend/platform/app.py`, which means each can be run and tested as an isolated FastAPI app while still being deployable inside one process today. A React 19 single-page application in `frontend/` is the human surface. MongoDB is the primary datastore, with PostgreSQL and Redis in supporting roles.
 
 Three architectural decisions define the platform:
 
-1. **One shared library, one contract.** `backend/shared/` provides `build_app()`, `BaseServiceSettings`, `require_internal_token`, `ApiResponse`/`ErrorDetail`/`HealthResponse` envelopes, a `PlatformError` hierarchy, and structured JSON logging. Every module built through it automatically exposes `/health`, `/`, `/metrics` and `/docs`, and returns identical error shapes.
+1. **One shared library, one contract.** `backend/platform/` provides `build_app()`, `BaseServiceSettings`, `require_internal_token`, `ApiResponse`/`ErrorDetail`/`HealthResponse` envelopes, a `PlatformError` hierarchy, and structured JSON logging. Every module built through it automatically exposes `/health`, `/`, `/metrics` and `/docs`, and returns identical error shapes.
 2. **Agents as first-class modules.** Domain behaviour is decomposed into 20 registered department classes and 3 guardian agents rather than into anonymous service functions, so capability, knowledge slice and ownership align.
 3. **Provider abstraction at the edge.** All upstream model access flows through Kailash with a defined precedence chain, so no consumer product ever holds a model vendor credential.
 
@@ -117,7 +117,7 @@ Three architectural decisions define the platform:
   │  │ MIDDLEWARE   security headers · error handler · CORS · request-id · metrics  │  │
   │  └─────────────────────────────────────────────────────────────────────────────┘  │
   │  ┌─────────────────────────────────────────────────────────────────────────────┐  │
-  │  │ API LAYER  backend/app/api/  (~24 routers)                                  │  │
+  │  │ API LAYER  backend/features/*/api/  (~24 routers)                                  │  │
   │  │ auth · users · rbac · departments · department_intelligence · tasks ·       │  │
   │  │ gaps_tasks_crud · analytics · dashboard · conversations · knowledge ·       │  │
   │  │ knowledge_base · live_data · guardians · ganesha · ganesha_multimodel ·     │  │
@@ -146,7 +146,7 @@ Three architectural decisions define the platform:
   │  │ CORE                 │  └──────────────────────────────────────────────────┘  │
   │  │ config · mongodb     │                                                         │
   │  │ database · rbac      │  ┌──────────────────────────────────────────────────┐  │
-  │  │ permissions          │  │ SHARED LIBRARY  backend/shared/                  │  │
+  │  │ permissions          │  │ PLATFORM LIBRARY backend/platform/                  │  │
   │  │ security · firebase  │  │ build_app() · BaseServiceSettings · auth ·       │  │
   │  │ seeder · db_indexes  │  │ schemas · errors · logging                        │  │
   │  │ celery_app           │  └──────────────────────────────────────────────────┘  │
@@ -196,22 +196,22 @@ Three architectural decisions define the platform:
 |---|---|---|
 | Language / runtime | **Python 3.11** | Container base is `python:3.11-slim` |
 | Web framework | **FastAPI 0.110.1** | ASGI; OpenAPI 3 auto-generated at `/docs` |
-| ASGI server | **Uvicorn** | `uvicorn backend.app.main:app --host 0.0.0.0 --port 8000` |
-| Settings | **pydantic-settings** | `backend/app/core/config.py`, `BaseServiceSettings` in `shared/config.py` |
-| Validation | **Pydantic** | Models under `app/models/`, request/response schemas under `app/schemas/` |
-| Mongo driver | **Motor / PyMongo (async)** | `app/core/mongodb.py`, `app/core/database.py` |
-| Postgres driver | **asyncpg 0.31.0** | `app/models/postgres_models.py`, SQLAlchemy-style async URL |
-| Task queue | **Celery 5.6.0** with **Redis** broker | `app/core/celery_app.py`; `amqp`/`billiard`/`kombu` present |
-| Scheduling | **APScheduler 3.11.1** | `app/services/scheduler.py`, `api/scheduler_api.py`, `app/tasks/daily_learning.py` |
-| Password hashing | **bcrypt 4.1.3** | With `passlib`-style usage in `core/security.py` |
+| ASGI server | **Uvicorn** | `uvicorn backend.main:app --host 0.0.0.0 --port 8000` |
+| Settings | **pydantic-settings** | `backend/platform/core/config.py`, `BaseServiceSettings` in `backend/platform/config.py` |
+| Validation | **Pydantic** | Models under `backend/features/*/models.py`, request/response schemas under `backend/features/*/schemas.py` |
+| Mongo driver | **Motor / PyMongo (async)** | `backend/platform/core/mongodb.py`, `backend/platform/core/database.py` |
+| Postgres driver | **asyncpg 0.31.0** | `backend/platform/models/postgres_models.py`, SQLAlchemy-style async URL |
+| Task queue | **Celery 5.6.0** with **Redis** broker | `backend/platform/core/celery_app.py`; `amqp`/`billiard`/`kombu` present |
+| Scheduling | **APScheduler 3.11.1** | `backend/platform/scheduling/scheduler.py`, `backend/platform/scheduling/scheduler_api.py`, `backend/features/eka_brain/jobs/daily_learning.py` |
+| Password hashing | **bcrypt 4.1.3** | With `passlib`-style usage in `backend/platform/core/security.py` |
 | Tokens | **python-jose / ecdsa**, HS256 JWT | 24-hour access token expiry (`ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24`) |
 | Crypto | **cryptography 46.0.3** | TOTP secrets, backup codes, general primitives |
 | ML / numeric | **NumPy**, **scikit-learn** (`IsolationForest`) | Forecasting (EMA + trend + seasonal) and anomaly detection |
 | Document handling | **pypdf**, **CairoSVG / cairocffi** | `document-ai` service, rendering/export paths |
 | AI SDKs | **anthropic 0.73.0**, **google-genai 1.50.1**, **google-generativeai 0.8.5**, OpenAI-compatible client against OpenRouter | Provider chain |
 | Cloud SDK | **boto3 1.40.67** | AWS access where required |
-| Identity (admin) | **Firebase Admin SDK** | `app/core/firebase.py`; can be disabled via `FIREBASE_DISABLED` |
-| Email | Application email service | `app/services/email_service.py` |
+| Identity (admin) | **Firebase Admin SDK** | `backend/platform/core/firebase.py`; can be disabled via `FIREBASE_DISABLED` |
+| Email | Application email service | `backend/platform/email_service.py` |
 | Lint / format | **ruff**, plus `black` and `flake8` in requirements | `ruff.toml`, `make lint`, `make fmt` |
 | Test | **pytest** | `tests/platform`, `tests/backend`, `tests/integration`, per-service suites |
 
@@ -274,7 +274,7 @@ Three architectural decisions define the platform:
 | **FR-10** | **Provider precedence and fallback.** AI calls shall attempt `OPENROUTER_API_KEY` first, then `ANTHROPIC_API_KEY`, then a non-LLM keyword fallback. Exhausting all options shall raise `UpstreamError`, never an unhandled exception. | Disable each tier in turn; observe the documented order in logs; final state returns the `upstream_error` envelope with a 5xx status, not a stack trace. |
 | **FR-11** | **Retrieval-augmented answers.** The RAG layer shall index ingested documents and the dated per-department digests under `backend/knowledge/post-data/daily-digest/`, and shall return the top-k most similar chunks as context for department and guardian answers. Ingestion shall be possible via `database/rag_upload_script.py` without redeploying. | Ingest a document containing a unique token; query for it; the retrieved context contains the token and the answer reflects it. |
 | **FR-12** | **Automobile domain computation.** The automobile module shall provide a pricing engine, market data lookup, and GST integration, exposed through its own router, returning a priced result with the applicable HSN/GST treatment for a given part or vehicle input. | Post a representative payload; response includes base price, applied market adjustment, HSN code and GST rate/amount. |
-| **FR-13** | **Persistence and indexing.** On startup the application shall initialise the MongoDB connection, create required indexes (`core/db_indexes.py`), optionally seed reference data (`core/seeder.py`), and validate datastore permissions before accepting traffic, logging an explicit, actionable message if read or write permission on critical collections is missing. | Start against a permission-restricted user; the documented critical log block appears with the remediation steps; `SKIP_PERMISSION_CHECK=true` bypasses it in test environments only. |
+| **FR-13** | **Persistence and indexing.** On startup the application shall initialise the MongoDB connection, create required indexes (`backend/platform/core/db_indexes.py`), optionally seed reference data (`backend/platform/core/seeder.py`), and validate datastore permissions before accepting traffic, logging an explicit, actionable message if read or write permission on critical collections is missing. | Start against a permission-restricted user; the documented critical log block appears with the remediation steps; `SKIP_PERMISSION_CHECK=true` bypasses it in test environments only. |
 | **FR-14** | **Scheduled and background work.** Celery (Redis broker) and APScheduler shall be wired, with at least a daily-learning task that refreshes department knowledge, and a scheduler API for inspection and control. | Trigger the daily-learning task; a new dated digest or knowledge update is produced and visible via the scheduler API. |
 | **FR-15** | **Operations dashboard API.** The backend shall serve the SPA's needs across authentication, dashboard rollups, department detail and intelligence, tasks and GAPS CRUD, conversations, analytics, reports, users, RBAC administration, knowledge base, live data, guardians and system health. | Every authenticated SPA route loads with populated data against a seeded database; no route depends on an undocumented endpoint. |
 | **FR-16** | **Health and metrics.** In addition to per-service `/health`, the main application shall expose a simple health endpoint at `/api/health` (used by the container healthcheck) and a richer system-health endpoint reporting datastore connectivity and dependency status. | `docker compose up` reaches a healthy container state; the system-health endpoint reports each dependency individually. |
@@ -306,7 +306,7 @@ Three architectural decisions define the platform:
 | NFR-S2 | The current single-container deployment shall support at least **50 concurrent authenticated users** and **4 consumer products** at portfolio traffic levels; capacity headroom shall be monitored via `/metrics`. |
 | NFR-S3 | Long-running or bursty work shall be offloaded to Celery workers rather than executed inline in a request. |
 | NFR-S4 | Each platform service shall remain independently extractable into its own container without code change, by virtue of the `build_app()` contract. |
-| NFR-S5 | MongoDB indexes required by hot query paths shall be created at startup (`core/db_indexes.py`), not left to ad-hoc creation. |
+| NFR-S5 | MongoDB indexes required by hot query paths shall be created at startup (`backend/platform/core/db_indexes.py`), not left to ad-hoc creation. |
 | NFR-S6 | Scale-out shall be triggered before sustained CPU or memory utilisation exceeds **60%** on the VPS. |
 
 ### 5.3 Security
@@ -369,7 +369,7 @@ Three architectural decisions define the platform:
 | Store | Role | Rationale |
 |---|---|---|
 | **MongoDB 7** (database `kailash`) | Primary operational store: users, departments, tasks, activities, conversations, GANESHA records, system health, knowledge metadata | Document shape fits heterogeneous agent output and evolving schemas |
-| **PostgreSQL 16** | Relational structures defined in `app/models/postgres_models.py` | Where referential integrity and relational querying matter |
+| **PostgreSQL 16** | Relational structures defined in `backend/platform/models/postgres_models.py` | Where referential integrity and relational querying matter |
 | **Redis 7** | Cache and Celery broker/result backend | Bounded memory, LRU eviction |
 | **SQLite** | `model-registry` service-local persistence | Simple, file-backed registry of model versions and evaluations |
 | **Filesystem** | `backend/knowledge/` JSON corpus (config manifest, pre-data, dated daily digests, department-specific data) | Version-controllable, human-reviewable knowledge assets |
@@ -380,11 +380,11 @@ Three architectural decisions define the platform:
 
 | Entity | Key fields | Notes |
 |---|---|---|
-| **User** (`app/models/user.py`) | `id` (UUID string), `email`, `kailash_code`, `full_name`, `hashed_password`, `is_active`, `is_admin`, `role`, `totp_secret`, `is_2fa_enabled`, `backup_codes[]`, `created_at`, `updated_at` | `role` defaults to `viewer`; `kailash_code` is an internal staff identifier; 2FA fields are optional |
-| **Department** (`app/models/department.py`) | Department identity, deity name, domain, status, capability metadata, knowledge linkage | Mirrors the code registry in `departments/registry.py` |
-| **Task** (`app/models/task.py`) | Task identity, title, description, assignee, department, status, priority, timestamps | Backs `/tasks` and the GAPS/task CRUD API |
-| **Activity** (`app/models/activity.py`) | Actor, action, target, department, timestamp, metadata | The audit/activity trail |
-| **GANESHA record** (`app/models/ganesha.py`) | Conversation/orchestration records: prompt, selected departments, model tier, response, timing | Backs conversations, GANESHA analytics and the multimodel strategy |
+| **User** (`backend/features/users/models.py`) | `id` (UUID string), `email`, `kailash_code`, `full_name`, `hashed_password`, `is_active`, `is_admin`, `role`, `totp_secret`, `is_2fa_enabled`, `backup_codes[]`, `created_at`, `updated_at` | `role` defaults to `viewer`; `kailash_code` is an internal staff identifier; 2FA fields are optional |
+| **Department** (`backend/features/departments/models.py`) | Department identity, deity name, domain, status, capability metadata, knowledge linkage | Mirrors the code registry in `backend/features/departments/deities/registry.py` |
+| **Task** (`backend/features/tasks/models.py`) | Task identity, title, description, assignee, department, status, priority, timestamps | Backs `/tasks` and the GAPS/task CRUD API |
+| **Activity** (`backend/features/analytics/models.py`) | Actor, action, target, department, timestamp, metadata | The audit/activity trail |
+| **GANESHA record** (`backend/features/eka_brain/models.py`) | Conversation/orchestration records: prompt, selected departments, model tier, response, timing | Backs conversations, GANESHA analytics and the multimodel strategy |
 
 ### 6.3 Knowledge layer layout
 
@@ -411,13 +411,13 @@ Note: the digest set includes deity names (`marut`, `pragya`, `rudra`, `tvashta`
 
 | Concern | Mechanism |
 |---|---|
-| Collection and index creation | `database/mongodb_init.js` (`createCollection`, `createIndex`) and `backend/app/core/db_indexes.py` at startup |
-| Reference data seeding | `database/seed_data.py` (users, departments, activities), `backend/app/core/seeder.py` |
+| Collection and index creation | `database/mongodb_init.js` (`createCollection`, `createIndex`) and `backend/platform/core/db_indexes.py` at startup |
+| Reference data seeding | `database/seed_data.py` (users, departments, activities), `backend/platform/core/seeder.py` |
 | Department content population | `database/populate_department_data.py` |
 | RAG ingestion | `database/rag_upload_script.py` |
 | Health verification | `database/mongodb_health_check.sh` |
 | Backup | `database/backup_mongodb.py` (in-container daily automation) and `database/mongodb_backup.sh` |
-| Startup permission validation | `validate_database_permissions()` in `backend/app/main.py`, checking read on `users` and write on `system_health`, bypassable with `SKIP_PERMISSION_CHECK=true` for testing only |
+| Startup permission validation | `validate_database_permissions()` in `backend/main.py`, checking read on `users` and write on `system_health`, bypassable with `SKIP_PERMISSION_CHECK=true` for testing only |
 
 ### 6.5 Data retention and classification
 
@@ -451,7 +451,7 @@ Note: the digest set includes deity names (`marut`, `pragya`, `rudra`, `tvashta`
 | `shiv_auto_rectify.py` | Security auto-rectification |
 | `scheduler_api.py` | Scheduled job inspection and control |
 | `system_health.py`, `simple_health.py` | Rich and lightweight health |
-| `automobile.py` plus `app/automobile/router.py` | Pricing, market data, GST integration |
+| `backend/features/automobile_pricing/api/automobile.py` plus `backend/features/automobile_pricing/engine/router.py` | Pricing, market data, GST integration |
 
 ### 7.2 Platform service endpoints
 
@@ -473,8 +473,8 @@ Each of the nine services under `backend/services/` exposes the standard contrac
 
 | Header | Used by | Validated by |
 |---|---|---|
-| `Authorization: Bearer <JWT>` | Human users via the SPA | Auth dependency in `app/api/deps.py` / `core/security.py` |
-| `X-Platform-Token: <value>` | Internal service callers and consumer products | `backend.shared.auth.require_internal_token` against `PLATFORM_INTERNAL_TOKEN`; no-op in dev mode |
+| `Authorization: Bearer <JWT>` | Human users via the SPA | Auth dependency in `backend/platform/deps.py` / `backend/platform/core/security.py` |
+| `X-Platform-Token: <value>` | Internal service callers and consumer products | `backend.platform.auth.require_internal_token` against `PLATFORM_INTERNAL_TOKEN`; no-op in dev mode |
 | `x-request-id` | Optional, any caller | Request-id middleware; echoed on the response |
 
 ### 7.4 Internal Go4Garage integrations
@@ -501,7 +501,7 @@ Each of the nine services under `backend/services/` exposes the standard contrac
 | **AWS** | Cloud SDK access | `boto3` | Present as a dependency; specific usage not documented |
 | **Let's Encrypt / certbot** | TLS certificate issuance and renewal | `deploy/host/nginx-api.conf`, `setup-vps.sh` | Configured for `api.kailash-ai.in` |
 | **GitHub Actions** | CI and deployment automation | `.github/workflows/` | Configured |
-| **Email provider** | Transactional email | `app/services/email_service.py` | Service module present; provider binding via environment |
+| **Email provider** | Transactional email | `backend/platform/email_service.py` | Service module present; provider binding via environment |
 
 ### 7.6 Integrations explicitly NOT present
 
@@ -513,7 +513,7 @@ The following were **not found** in this codebase and must not be assumed: any *
 
 ### 8.1 Container definition
 
-The `Dockerfile` builds from `python:3.11-slim`, installs `gcc`, `libpq-dev` and `curl`, installs `backend/requirements.txt`, copies `backend/` and `database/`, creates a non-root `appuser`, exposes port 8000, and runs `uvicorn backend.app.main:app --host 0.0.0.0 --port 8000`.
+The `Dockerfile` builds from `python:3.11-slim`, installs `gcc`, `libpq-dev` and `curl`, installs `backend/requirements.txt`, copies `backend/` and `database/`, creates a non-root `appuser`, exposes port 8000, and runs `uvicorn backend.main:app --host 0.0.0.0 --port 8000`.
 
 ### 8.2 Compose topology
 
@@ -661,20 +661,20 @@ No change merges to `main` unless `lint`, `shared`, `services` (all nine), `back
 
 | Component | Evidence |
 |---|---|
-| FastAPI application with lifespan startup, CORS, security and error middleware | `backend/app/main.py` |
-| Roughly 24 API router modules | `backend/app/api/*.py` |
-| 20 registered department classes | `backend/app/departments/registry.py` (`DEPARTMENT_CLASSES`) |
-| 3 guardian agents | `backend/app/guardians/{ganesha,shiv,parvati}.py` |
-| Multi-model strategy and prompt library | `backend/app/agents/c5_multimodel_strategy.py`, `backend/app/agents/prompts/` |
+| FastAPI application with lifespan startup, CORS, security and error middleware | `backend/main.py` |
+| Roughly 24 API router modules | `backend/features/*/api/*.py` |
+| 20 registered department classes | `backend/features/departments/deities/registry.py` (`DEPARTMENT_CLASSES`) |
+| 3 guardian agents | `backend/features/guardians/{ganesha,shiv,parvati}.py` |
+| Multi-model strategy and prompt library | `backend/features/eka_brain/agents/c5_multimodel_strategy.py`, `backend/features/eka_brain/agents/prompts/` |
 | 9 platform services, each with `.env.example` | `backend/services/*/` |
-| Automobile module (pricing, market data, GST, router) | `backend/app/automobile/` |
-| Core layer: config, mongodb, database, db_indexes, seeder, firebase, rbac, permissions, security, security_enhancements, performance, celery_app | `backend/app/core/` |
-| Application services: ganesha_ai, orchestrator v1/v2, rag_service, rag_knowledge_base, live_api_connector, email_service, scheduler | `backend/app/services/` |
-| Models: user, department, task, activity, ganesha, postgres_models | `backend/app/models/` |
-| Schemas: auth, ganesha, task | `backend/app/schemas/` |
-| Background task: daily learning | `backend/app/tasks/daily_learning.py` |
+| Automobile module (pricing, market data, GST, router) | `backend/features/automobile_pricing/engine/` |
+| Core layer: config, mongodb, database, db_indexes, seeder, firebase, rbac, permissions, security, security_enhancements, performance, celery_app | `backend/platform/core/` |
+| Application services: ganesha_ai, orchestrator v1/v2, rag_service, rag_knowledge_base, live_api_connector, email_service, scheduler | `backend/features/eka_brain/services/` |
+| Models: user, department, task, activity, ganesha, postgres_models | `backend/features/*/models.py` |
+| Schemas: auth, ganesha, task | `backend/features/*/schemas.py` |
+| Background task: daily learning | `backend/features/eka_brain/jobs/daily_learning.py` |
 | Knowledge corpus with dated digests | `backend/knowledge/` |
-| React 19 SPA with roughly 70 page modules and roughly 21 authenticated routes | `frontend/src/pages/`, `frontend/src/App.js` |
+| React 19 SPA with roughly 70 page modules and roughly 21 authenticated routes | `frontend/src/features/`, `frontend/src/App.js` |
 | Compiled frontend bundle | `frontend/build/` including `static/`, `index.html`, brand video and OG assets |
 | Installed dependency trees | `backend/.venv/` (Lib, Scripts, pyvenv.cfg) and `frontend/node_modules/` (roughly 1,000 entries) |
 | Database tooling | `database/` (init, seed, populate, RAG upload, health check, backup ×2) |
@@ -701,7 +701,7 @@ No change merges to `main` unless `lint`, `shared`, `services` (all nine), `back
 | Department count | Code registers 20; `README.md` and `ARCHITECTURE.md` state 24; knowledge digests reference 4 additional deity names (`marut`, `pragya`, `rudra`, `tvashta`) with no matching classes. Unreconciled. |
 | Test counts | README publishes 5 / 53 / 10+ / 3+; suites exist but were not re-executed for this assessment. |
 | Git remote | Resolved — `urgaa-eka/kailash` is canonical (matches `origin`); README badges, `deploy/host/*.sh` and `docs/DEPLOYMENT.md` all updated. |
-| `CORS_ORIGINS` default | `Settings.CORS_ORIGINS` defaults to `"*"` in `core/config.py`, with the restrictive list living in `.env.example`. The permissive default must not reach production. |
+| `CORS_ORIGINS` default | `Settings.CORS_ORIGINS` defaults to `"*"` in `backend/platform/core/config.py`, with the restrictive list living in `.env.example`. The permissive default must not reach production. |
 | `SECRET_KEY` default | Falls back to `dev-secret-key-change-in-production` if unset. Production startup must reject this. |  <!-- secret-scan: allow documents the credential incident being remediated -->
 | Startup permission check | Currently logs a critical block and continues; the hard-fail line is commented out in `main.py`. |
 | Mobile clients | **None.** `ios_app_kailash_ai/` and `android_app_kailash_ai/` contain only empty `deployed/` and `not_deployed/` directories. |
@@ -755,9 +755,9 @@ The technical foundation is real, coherent and unusually well-structured for an 
 
 | Dependency | Note |
 |---|---|
-| `backend/shared/` | Every module depends on it; a breaking change there breaks everything. Treat as a versioned internal API. |
-| `departments/registry.py` | Single point of truth for department availability; keep documentation generated from it. |
-| `core/config.py` | Single point of truth for settings; environment-variable naming changes are breaking. |
+| `backend/platform/` | Every module depends on it; a breaking change there breaks everything. Treat as a versioned internal API. |
+| `backend/features/departments/deities/registry.py` | Single point of truth for department availability; keep documentation generated from it. |
+| `backend/platform/core/config.py` | Single point of truth for settings; environment-variable naming changes are breaking. |
 | Knowledge corpus | Answer quality depends on SME curation cadence, not on code. |
 | Consumer products | Kailash's API contract is load-bearing for four products; contract changes require coordinated releases. |
 
@@ -2963,7 +2963,7 @@ Today, CI runs `yarn install` and `yarn build` for the frontend and nothing else
 | Item | Evidence |
 |---|---|
 | React 19 application source | `frontend/src/` with `App.js`, `index.js`, `components/`, `pages/`, `services/`, `stores/`, `hooks/`, `context/`, `data/`, `lib/`, `styles/` |
-| Roughly 70 page modules | `frontend/src/pages/` — operational views plus roughly 35 policy pages, with dedicated CSS for Analytics, Chat, Departments, DepartmentDetail, Executive, ExecutiveDashboard, GaneshaAI, GaneshaChat, GaneshaChatV2, Reports, Settings, Tasks, Urjaa, Users and LegalPages |
+| Roughly 70 page modules | `frontend/src/features/` — operational views plus roughly 35 policy pages, with dedicated CSS for Analytics, Chat, Departments, DepartmentDetail, Executive, ExecutiveDashboard, GaneshaAI, GaneshaChat, GaneshaChatV2, Reports, Settings, Tasks, Urjaa, Users and LegalPages |
 | Complete route table | `App.js` — roughly 21 authenticated routes, roughly 35 policy routes, redirects from `/dashboard` and `/applications` |
 | Full dependency set | `package.json` — React 19, CRACO, Tailwind, 26 Radix packages, TanStack Query, Zustand, Axios, Framer Motion, Three.js stack, React Hook Form plus Zod, sonner, next-themes, firebase, lucide-react, date-fns, cmdk, embla, vaul, input-otp, react-resizable-panels |
 | Installed dependencies | `frontend/node_modules/` — roughly 1,000 entries |

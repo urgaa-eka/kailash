@@ -1,3 +1,7 @@
+> **Archived — superseded.** This is the legacy *AEGIS HUB* business requirements
+> (v2.0, Nov 2024). The current, canonical business requirements document is
+> [`../BRD.md`](../BRD.md) (RULES.md Rule 3). Kept for historical reference only.
+
 # Business Requirements Document (BRD)
 # AEGIS HUB - KAILASH AI
 
