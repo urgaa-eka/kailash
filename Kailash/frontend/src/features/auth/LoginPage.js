@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import MinimalHeader from "../components/MinimalHeader";
-import LoginCardOverlay from "../components/LoginCardOverlay";
-import VideoBackground from "../components/VideoBackground";
-import MinimalFooter from "../components/MinimalFooter";
-import TwoFactorModal from "../components/TwoFactorModal";
-import OnboardingOverlay from "../components/OnboardingOverlay";
-import LoadingState from "../components/LoadingState";
+import MinimalHeader from "@/components/MinimalHeader";
+import LoginCardOverlay from "@/components/LoginCardOverlay";
+import VideoBackground from "@/components/VideoBackground";
+import MinimalFooter from "@/components/MinimalFooter";
+import TwoFactorModal from "@/components/TwoFactorModal";
+import OnboardingOverlay from "@/components/OnboardingOverlay";
+import LoadingState from "@/components/LoadingState";
 
 export const LoginPage = () => {
   const [show2FA, setShow2FA] = useState(false);

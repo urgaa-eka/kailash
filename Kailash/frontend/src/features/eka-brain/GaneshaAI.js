@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Cpu, Send, CheckCircle, Check, LayoutDashboard, FileText, Wrench, AlertTriangle } from 'lucide-react';
-import { useToast } from '../context/ToastContext';
-import { Card, CardContent } from '../components/UI/card';
-import { Button } from '../components/UI/button';
-import { Badge } from '../components/UI/badge';
+import { useToast } from '@/context/ToastContext';
+import { Card, CardContent } from '@/components/UI/card';
+import { Button } from '@/components/UI/button';
+import { Badge } from '@/components/UI/badge';
 import './GaneshaAI.css';
 
 const GaneshaAI = () => {

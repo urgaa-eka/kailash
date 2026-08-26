@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Eye, Edit, Settings, Sparkles } from 'lucide-react';
-import { Card, CardContent } from '../components/UI/card';
-import { Button } from '../components/UI/button';
-import { Badge } from '../components/UI/badge';
-import { useToast } from '../context/ToastContext';
-import DeityAvatar from '../components/DeityAvatar';
-import DepartmentTag from '../components/DepartmentTag';
-import '../styles/spiritual-theme.css';
+import { Card, CardContent } from '@/components/UI/card';
+import { Button } from '@/components/UI/button';
+import { Badge } from '@/components/UI/badge';
+import { useToast } from '@/context/ToastContext';
+import DeityAvatar from '@/components/DeityAvatar';
+import DepartmentTag from '@/components/DepartmentTag';
+import '@/styles/spiritual-theme.css';
 import './Departments.css';
 
 const Departments = () => {

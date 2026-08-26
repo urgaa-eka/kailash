@@ -26,10 +26,10 @@ import {
   Globe,
   X
 } from 'lucide-react';
-import { DEPARTMENTS } from '../data/departmentsData';
-import { useAuthStore } from '../stores/authStore';
-import DepartmentDetailsPanel from '../components/DepartmentDetailsPanel';
-import '../styles/spiritual-theme.css';
+import { DEPARTMENTS } from '@/data/departmentsData';
+import { useAuthStore } from '@/stores/authStore';
+import DepartmentDetailsPanel from '@/components/DepartmentDetailsPanel';
+import '@/styles/spiritual-theme.css';
 
 // Spiritual Logo Component - Square Transparent HD
 const SpiritualLogo = ({ size = 40, className = '' }) => (

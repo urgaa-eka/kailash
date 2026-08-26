@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { DEPARTMENT_ICONS, UI_ICONS } from '../data/departmentIcons';
-import { useAuthStore } from '../stores/authStore';
+import { DEPARTMENT_ICONS, UI_ICONS } from '@/data/departmentIcons';
+import { useAuthStore } from '@/stores/authStore';
 import { 
   DataSourceBadge, 
   AutomationBadge, 
   ProblemResolutionCard, 
   AIImpactSummary,
   EnhancedKPICard 
-} from '../components/InvestorDashboard';
+} from '@/components/InvestorDashboard';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 

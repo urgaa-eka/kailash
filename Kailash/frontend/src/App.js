@@ -1,35 +1,35 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ToastProvider } from "./context/ToastContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import LoginPage from "./pages/LoginPage";
+import LoginPage from "@/features/auth/LoginPage";
 // ApplicationsHub REMOVED - KAILASH IS the operating system
-import SpiritualKailashDashboard from "./pages/SpiritualKailashDashboard";
+import SpiritualKailashDashboard from "@/features/kailash-command/SpiritualKailashDashboard";
 import GSTWebsite from "@/features/gst-saas/GSTWebsite";
 import TattoosTool from "@/features/tattoos/TattoosTool";
 import IgnitionApp from "@/features/ignition/IgnitionApp";
 
 // New Pages
-import GaneshaAI from "./pages/GaneshaAI";
-import Departments from "./pages/Departments";
+import GaneshaAI from "@/features/eka-brain/GaneshaAI";
+import Departments from "@/features/departments/Departments";
 import Tasks from "@/features/tasks/Tasks";
 import Analytics from "@/features/analytics/Analytics";
 import Reports from "@/features/reports/Reports";
 import Settings from "@/features/settings/Settings";
 
 // V2 Feature Pages
-import Chat from "./pages/Chat";
-import Users from "./pages/Users";
+import Chat from "@/features/eka-brain/Chat";
+import Users from "@/features/users/Users";
 import Urjaa from "@/features/urja/Urjaa";
-import Guardians from "./pages/Guardians";
-import AutomobilePricing from "./pages/AutomobilePricing";
+import Guardians from "@/features/guardians/Guardians";
+import AutomobilePricing from "@/features/automobile-pricing/AutomobilePricing";
 
 // V3 Feature Pages - Investor Demo
-import InvestorExecutiveDashboard from "./pages/InvestorExecutiveDashboard";
-import DepartmentDetailNew from "./pages/DepartmentDetailNew";
-import GaneshaChatV2 from "./pages/GaneshaChatV2";
-import GapsTasksManagement from "./pages/GapsTasksManagement";
-import KnowledgeBase from "./pages/KnowledgeBase";
-import GaneshaAnalytics from "./pages/GaneshaAnalytics";
+import InvestorExecutiveDashboard from "@/features/executive-dashboard/InvestorExecutiveDashboard";
+import DepartmentDetailNew from "@/features/departments/DepartmentDetailNew";
+import GaneshaChatV2 from "@/features/eka-brain/GaneshaChatV2";
+import GapsTasksManagement from "@/features/management/GapsTasksManagement";
+import KnowledgeBase from "@/features/knowledge-base/KnowledgeBase";
+import GaneshaAnalytics from "@/features/eka-brain/GaneshaAnalytics";
 import Go4GarageFinancials from "@/features/company/Go4GarageFinancials";
 
 // Import theme

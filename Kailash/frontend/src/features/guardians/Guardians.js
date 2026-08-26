@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGuardianStatus } from '../hooks/useApi';
+import { useGuardianStatus } from '@/hooks/useApi';
 import { Shield, Activity, Brain, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 
 const guardianIcons = {
