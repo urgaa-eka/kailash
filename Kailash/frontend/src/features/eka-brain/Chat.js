@@ -3,7 +3,7 @@ import {
   MessageCircle, Send, Trash2, RefreshCw, Plus, 
   Loader2, AlertCircle, CheckCircle, Sparkles 
 } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/platform/stores/authStore';
 import './Chat.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;

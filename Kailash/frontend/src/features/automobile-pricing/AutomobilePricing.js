@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { usePricingTable } from '@/hooks/useApi';
+import { usePricingTable } from '@/platform/hooks/useApi';
 import { Car, TrendingUp, DollarSign, BarChart2, Loader2 } from 'lucide-react';
 
 const vehicleTypes = ['sedan', 'suv', 'hatchback', 'motorcycle', 'truck', 'bus'];

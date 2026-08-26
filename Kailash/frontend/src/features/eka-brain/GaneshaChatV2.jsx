@@ -14,7 +14,7 @@ import {
   quickAction,
   AGENT_ICONS,
   PRODUCT_COLORS 
-} from '@/services/ganeshaV2Api';
+} from './ganeshaV2Api';
 import './GaneshaChatV2.css';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;

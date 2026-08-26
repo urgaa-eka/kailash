@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
-import { ToastProvider } from "./context/ToastContext";
-import ProtectedRoute from "./components/ProtectedRoute";
+import { ToastProvider } from "@/platform/context/ToastContext";
+import ProtectedRoute from "@/platform/components/ProtectedRoute";
 import LoginPage from "@/features/auth/LoginPage";
 // ApplicationsHub REMOVED - KAILASH IS the operating system
 import SpiritualKailashDashboard from "@/features/kailash-command/SpiritualKailashDashboard";
@@ -33,8 +33,8 @@ import GaneshaAnalytics from "@/features/eka-brain/GaneshaAnalytics";
 import Go4GarageFinancials from "@/features/company/Go4GarageFinancials";
 
 // Import theme
-import "./styles/theme.css";
-import "./styles/spiritual-theme.css";
+import "@/platform/styles/theme.css";
+import "@/platform/styles/spiritual-theme.css";
 
 // Legal Pages - Group 1: General Legal
 import TermsAndConditions from "@/features/legal/TermsAndConditions";
@@ -81,11 +81,11 @@ import Compliance from "@/features/legal/Compliance";
 import Transparency from "@/features/legal/Transparency";
 
 // Components
-import LegalFooter from "./components/LegalFooter";
-import CookieConsent from "./components/CookieConsent";
-import ErrorBoundary from "./components/ErrorBoundary";
-import SessionTimeout from "./components/SessionTimeout";
-import { Toaster } from "./components/UI/sonner";
+import LegalFooter from "@/platform/components/LegalFooter";
+import CookieConsent from "@/platform/components/CookieConsent";
+import ErrorBoundary from "@/platform/components/ErrorBoundary";
+import SessionTimeout from "@/platform/components/SessionTimeout";
+import { Toaster } from "@/platform/components/UI/sonner";
 import "./App.css";
 
 // Check if user is authenticated

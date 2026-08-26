@@ -1,8 +1,8 @@
 import React from 'react';
 import { FileText, Plus, Download, TrendingUp, LayoutDashboard, BarChart3 } from 'lucide-react';
-import { Card, CardContent } from '@/components/UI/card';
-import { Button } from '@/components/UI/button';
-import { Badge } from '@/components/UI/badge';
+import { Card, CardContent } from '@/platform/components/UI/card';
+import { Button } from '@/platform/components/UI/button';
+import { Badge } from '@/platform/components/UI/badge';
 import './Reports.css';
 
 const Reports = () => {

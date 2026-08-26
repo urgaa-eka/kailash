@@ -3,7 +3,7 @@ import {
   Users as UsersIcon, Plus, Edit2, Trash2, Shield, 
   Search, Filter, X, CheckCircle, AlertCircle, Loader2 
 } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/platform/stores/authStore';
 import './Users.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;

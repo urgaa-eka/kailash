@@ -505,7 +505,7 @@ def check_firebase_app_identity(corpus: Corpus, report: Report) -> None:
     project's config is internally consistent and passes it. Only the map
     catches that, which is how the kailash-38268 drift survived review.
     """
-    path = "frontend/src/lib/firebase.js"
+    path = "frontend/src/platform/lib/firebase.js"
     text = corpus.read(path)
     if text is None:
         report.add(Finding(rule="firebase-app-identity", path=path,

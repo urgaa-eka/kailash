@@ -1,5 +1,5 @@
 import React from 'react';
-import AppLayout from '@/components/AppLayout';
+import AppLayout from '@/platform/components/AppLayout';
 import { FileText, Calendar, DollarSign, AlertCircle } from 'lucide-react';
 
 const GSTWebsite = () => {

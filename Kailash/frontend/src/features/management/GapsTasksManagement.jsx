@@ -4,7 +4,7 @@ import {
   AlertTriangle, CheckCircle, Plus, Edit2, Trash2, X, 
   Target, Users, ArrowLeft, RefreshCw, Filter
 } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/platform/stores/authStore';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 

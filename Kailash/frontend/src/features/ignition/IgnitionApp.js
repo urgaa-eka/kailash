@@ -1,5 +1,5 @@
 import React from 'react';
-import AppLayout from '@/components/AppLayout';
+import AppLayout from '@/platform/components/AppLayout';
 import { Zap, MapPin, Gauge, AlertCircle } from 'lucide-react';
 
 const IgnitionApp = () => {

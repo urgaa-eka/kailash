@@ -1,8 +1,8 @@
 import React from 'react';
 import { BarChart3, TrendingUp, Activity, CheckCircle, Clock, Target } from 'lucide-react';
-import { Card, CardContent } from '@/components/UI/card';
-import { Badge } from '@/components/UI/badge';
-import { SquareKPICard, KPIGrid } from '@/components/KPICards';
+import { Card, CardContent } from '@/platform/components/UI/card';
+import { Badge } from '@/platform/components/UI/badge';
+import { SquareKPICard, KPIGrid } from '@/platform/components/KPICards';
 import './Analytics.css';
 
 const Analytics = () => {
