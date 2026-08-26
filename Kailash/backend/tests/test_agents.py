@@ -19,8 +19,9 @@ import os
 from collections.abc import Iterator
 
 import pytest
-from app.main import app
 from fastapi.testclient import TestClient
+
+from backend.main import app
 
 # Statuses the login endpoint returns when its dependencies, not its contract,
 # are the problem: `get_db()` raising, or a Mongo server-selection timeout, both

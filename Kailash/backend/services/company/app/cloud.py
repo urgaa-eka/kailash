@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 
-from backend.shared import get_logger
+from backend.platform import get_logger
 
 log = get_logger("company.cloud")
 

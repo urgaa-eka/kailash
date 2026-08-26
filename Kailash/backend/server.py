@@ -2,7 +2,8 @@
 # This file imports the astAPI app from the new backend structure
 # Configure uvicorn to not add Server header
 import uvicorn
-from app.main import app
+
+from backend.main import app
 
 
 class CustomUvicornServer(uvicorn.Server):

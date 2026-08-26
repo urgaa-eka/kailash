@@ -93,7 +93,7 @@ backend/
 └── server.py               # Uvicorn entry point
 ```
 
-## Shared library (`backend/shared/`)
+## Shared platform library (`backend/platform/`)
 
 Every module uses the same foundation:
 

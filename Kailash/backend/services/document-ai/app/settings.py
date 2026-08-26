@@ -1,4 +1,4 @@
-from backend.shared import BaseServiceSettings
+from backend.platform import BaseServiceSettings
 
 
 class Settings(BaseServiceSettings):

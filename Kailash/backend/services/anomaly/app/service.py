@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 from sklearn.ensemble import IsolationForest
 
-from backend.shared import ValidationError
+from backend.platform import ValidationError
 
 
 @dataclass

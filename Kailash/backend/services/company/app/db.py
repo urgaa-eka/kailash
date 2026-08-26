@@ -16,7 +16,7 @@ from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
 
-from backend.shared import UpstreamError, get_logger
+from backend.platform import UpstreamError, get_logger
 
 from .settings import settings
 

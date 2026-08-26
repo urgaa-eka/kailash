@@ -12,15 +12,15 @@ import sys
 import os
 from datetime import datetime
 
-# Add backend/ to path so `app.*` imports resolve (this script now lives
-# under database/, a sibling of backend/, not backend/scripts/ anymore)
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
+# Add the repo root (Kailash/, backend's parent) to path so `backend.*`
+# imports resolve; this script lives under database/, a sibling of backend/.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.core.mongodb import MongoD
-from app.core.security import get_password_hash
-from app.models.user import User
-from app.models.department import Department, SubAgent
-from app.models.activity import Activity
+from backend.platform.core.mongodb import MongoD
+from backend.platform.core.security import get_password_hash
+from backend.features.users.models import User
+from backend.features.departments.models import Department, SubAgent
+from backend.features.analytics.models import Activity
 
 # Password for the seeded admin. No default on purpose: a literal here is
 # published in this repository, and this script grants is_admin=True. Export

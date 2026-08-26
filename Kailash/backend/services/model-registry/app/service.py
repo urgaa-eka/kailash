@@ -12,7 +12,7 @@ import time
 from contextlib import contextmanager
 from typing import Any
 
-from backend.shared import NotFoundError, ValidationError, get_logger
+from backend.platform import NotFoundError, ValidationError, get_logger
 
 log = get_logger("model-registry")
 

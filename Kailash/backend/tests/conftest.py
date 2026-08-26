@@ -3,7 +3,7 @@
 `backend/__init__.py` and `backend/tests/__init__.py` both exist, so pytest walks
 up past `backend/` when it works out the rootdir to put on `sys.path` and lands
 on the repository root. Test modules are therefore imported as
-`backend.tests.*`, and a bare `from app.main import app` raises
+`backend.tests.*`, and a bare `from backend.main import app` raises
 ModuleNotFoundError.
 
 `python -m pytest` happens to hide this, because `-m` puts the working directory

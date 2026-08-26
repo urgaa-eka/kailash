@@ -13,7 +13,7 @@ from decimal import Decimal
 
 import psycopg
 
-from backend.shared import ValidationError
+from backend.platform import ValidationError
 
 from . import cloud
 from .db import account_by_code, audit, effective_tax_rate, fy_for

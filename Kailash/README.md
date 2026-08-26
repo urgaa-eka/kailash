@@ -97,7 +97,7 @@ Full design, capability matrix, and the Automobile-LLM moat strategy:
 | `company`              | Statutory ledger: double-entry SoR, GST, recon | PostgreSQL, immutable FY-partitioned journal       |
 
 Each service module follows `routes.py` → `service.py` pattern, wired through
-`backend/shared/app.py`'s `build_app()` factory. Domain routes are guarded by
+`backend/platform/app.py`'s `build_app()` factory. Domain routes are guarded by
 `require_internal_token`.
 
 ## Repository Layout
@@ -210,7 +210,8 @@ ledger: `docker compose --profile kailash-ai up -d --build company`, then
 
 ```bash
 pip install -r backend/requirements.txt
-uvicorn backend.app.main:app --reload --port 8000
+# run from Kailash/ (backend's parent), not from backend/
+uvicorn backend.main:app --reload --port 8000
 ```
 
 ### 3. Frontend
@@ -236,7 +237,7 @@ Every module built with `build_app()` exposes:
 ### Auth & tracing
 
 - **Internal token** — callers send `X-Platform-Token: <value>`; validated
-  via `backend.shared.auth.require_internal_token`. No-op in dev mode.
+  via `backend.platform.auth.require_internal_token`. No-op in dev mode.
 - **Request ID** — middleware accepts `x-request-id` from the caller or
   generates a hex UUID; echoed on response and added to log records.
 

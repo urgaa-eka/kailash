@@ -11,7 +11,7 @@ import json
 import os
 from datetime import UTC, datetime
 
-from backend.shared import get_logger
+from backend.platform import get_logger
 
 log = get_logger("company.events")
 

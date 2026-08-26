@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 import httpx
 import numpy as np
 
-from backend.shared import UpstreamError, ValidationError, get_logger
+from backend.platform import UpstreamError, ValidationError, get_logger
 
 log = get_logger("rag")
 

@@ -101,14 +101,20 @@ telemetry: `eka-brain` (the AI orchestrator/mind), `shiv`, `parvati`,
 `urja ← urjaa/URGAA`, `company ← go4garage`. A new feature is added to this set
 deliberately (a reviewed change), never created ad hoc.
 
-> **Migration status:** the existing code was moved wholesale into `Kailash/`
-> and still carries its historical internal layout (`backend/app/`,
-> `backend/services/`, `frontend/src/`, …). Relocating that legacy code into the
-> shape above is done **feature-by-feature, each move CI-green** (converting
-> imports to the `@/features/…` alias and updating the coupled Docker/CI/verify
-> references in the same change), because a big-bang move breaks the build and
-> deploys silently. New work follows the department→feature rule immediately;
-> legacy code is refactored toward it, not left as a second pattern to copy.
+**Naming across departments.** The frontend uses kebab-case folders
+(`eka-brain`, `automobile-pricing`, `knowledge-base`); Python packages cannot
+contain hyphens, so the backend mirrors those same features in snake_case
+(`eka_brain`, `automobile_pricing`, `knowledge_base`). They are the same
+feature — the mirror check treats the kebab- and snake-case of one name as equal.
+
+> **Migration status:** both departments have been relocated into the shape
+> above. The frontend lives in `frontend/src/features/` + `frontend/src/platform/`;
+> the backend lives in `backend/features/` + `backend/platform/`, with the
+> independently-built microservices under `backend/services/`. Each move was made
+> CI-green — imports converted to the `@/features/…` alias (frontend) or the
+> `backend.…` namespace (backend, so `backend/platform/` cannot shadow the stdlib
+> `platform` module), and the coupled Docker/CI/verify references updated in the
+> same change. New work follows the department→feature rule directly.
 
 ## Rule 3 — One BRD, one TRD, one PRD
 

@@ -11,8 +11,9 @@ only skips. That is what makes the un-masked `backend` CI job able to fail:
 without it, the step's exit code is independent of whether the app works.
 """
 import pytest
-from app.main import app
 from fastapi.testclient import TestClient
+
+from backend.main import app
 
 # Deliberately not a context manager. Entering the lifespan would try to reach
 # MongoDB and burn every startup timeout before giving up, and none of the

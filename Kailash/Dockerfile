@@ -14,9 +14,10 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 # package itself best-effort from the Emergent index.
 #
 # `|| true` keeps a transient index outage from failing the build, but it does
-# NOT make the package optional: app/guardians/ganesha.py imports it at module
-# level with no guard, so `import app.main` raises ModuleNotFoundError without
-# it. If that index ever goes dark, this image builds and then fails to start.
+# NOT make the package optional: backend/features/guardians/ganesha.py imports
+# it at module level with no guard, so `import backend.main` raises
+# ModuleNotFoundError without it. If that index ever goes dark, this image
+# builds and then fails to start.
 RUN grep -vi "^emergentintegrations" /app/backend/requirements.txt > /tmp/requirements.txt \
     && pip install --no-cache-dir -r /tmp/requirements.txt
 RUN pip install --no-cache-dir emergentintegrations==0.1.0 \
@@ -25,7 +26,7 @@ RUN pip install --no-cache-dir emergentintegrations==0.1.0 \
 COPY backend/ /app/backend/
 COPY database/ /app/database/
 
-# The app logs to /var/log/kailash (see app/middleware/error_handler.py);
+# The app logs to /var/log/kailash (see platform/middleware/error_handler.py);
 # create it before dropping privileges or startup dies on PermissionError.
 RUN useradd -m appuser \
     && mkdir -p /var/log/kailash \
@@ -34,8 +35,10 @@ USER appuser
 
 EXPOSE 8000
 
-# Run from backend/ as `app.main:app` — matching backend/server.py. Twenty
-# modules use absolute `from app.…` imports, which only resolve with
-# backend/ on sys.path; `backend.app.main:app` raises ModuleNotFoundError.
-WORKDIR /app/backend
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run from /app (backend's PARENT) as `backend.main:app`. Post-migration the
+# code uses absolute `backend.…` imports (platform/, features/), so /app must be
+# on sys.path — not backend/. Running from backend/ would place a top-level
+# `platform` package on sys.path and shadow the stdlib `platform` module, which
+# pydantic/uuid import at startup. `backend/__init__.py` makes it a package.
+WORKDIR /app
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
