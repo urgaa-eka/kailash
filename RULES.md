@@ -123,14 +123,22 @@ a single CI gate (`ci.yml`) that both deploy entrypoints call, driving
 one-off workflows. Keep it that way: a new deploy need is a change to the one
 pipeline, never a new workflow file.
 
+This rule is **enforced** on two axes: `scripts/verify/workflow_singletons.py`
+fails CI if `.github/workflows/` holds any file beyond `ci.yml` and the two
+deploy entrypoints (the *membership* clause), and `scripts/verify/workflow_gate.py`
+asserts the *topology* — that every production deploy is preceded by its staging
+deploy and verification, that the CI gate is upstream of every deploy, and that
+no gate can be silently defeated.
+
 ## Rule 6 — Enforcement
 
 These rules are checked, not trusted:
 
 - **`scripts/verify/`** gates run in CI (`config_drift`, `repo_state`,
-  `secret_scan`, `workflow_gate`, `build_audit`, `doc_singletons`) and resolve
-  their paths against the `Kailash/` master folder. Each rule that can be checked
-  is checked — `doc_singletons` enforces Rule 3.
+  `secret_scan`, `workflow_gate`, `workflow_singletons`, `build_audit`,
+  `doc_singletons`) and resolve their paths against the `Kailash/` master folder.
+  Each rule that can be checked is checked — `doc_singletons` enforces Rule 3,
+  and `workflow_singletons` + `workflow_gate` together enforce Rule 5.
 - **`repo_state`** refuses to deploy from a working tree with uncommitted
   changes under a deployment-critical path, because `deploy/host/deploy.sh`
   runs `git reset --hard` + `git clean -fd` on the production host.
