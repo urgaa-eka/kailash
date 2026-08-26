@@ -30,7 +30,7 @@ import GaneshaChatV2 from "./pages/GaneshaChatV2";
 import GapsTasksManagement from "./pages/GapsTasksManagement";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import GaneshaAnalytics from "./pages/GaneshaAnalytics";
-import Go4GarageFinancials from "./pages/Go4GarageFinancials";
+import Go4GarageFinancials from "@/features/company/Go4GarageFinancials";
 
 // Import theme
 import "./styles/theme.css";

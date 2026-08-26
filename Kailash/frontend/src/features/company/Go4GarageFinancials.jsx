@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   getOverview, getFy, fetchExportCsv,
   getSession, onAuthChange, signIn, signOut,
-} from '../services/go4garageApi';
-import { supabaseConfigured } from '../services/supabaseClient';
+} from './go4garageApi';
+import { supabaseConfigured } from './supabaseClient';
 import './Go4GarageFinancials.css';
 
 /* =========================================================================
