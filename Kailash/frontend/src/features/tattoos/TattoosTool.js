@@ -1,5 +1,5 @@
 import React from 'react';
-import AppLayout from '../components/AppLayout';
+import AppLayout from '@/components/AppLayout';
 import { Settings, Wrench, Activity, AlertCircle } from 'lucide-react';
 
 const TattoosTool = () => {

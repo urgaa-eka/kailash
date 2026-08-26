@@ -4,22 +4,22 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 // ApplicationsHub REMOVED - KAILASH IS the operating system
 import SpiritualKailashDashboard from "./pages/SpiritualKailashDashboard";
-import GSTWebsite from "./pages/GSTWebsite";
-import TattoosTool from "./pages/TattoosTool";
-import IgnitionApp from "./pages/IgnitionApp";
+import GSTWebsite from "@/features/gst-saas/GSTWebsite";
+import TattoosTool from "@/features/tattoos/TattoosTool";
+import IgnitionApp from "@/features/ignition/IgnitionApp";
 
 // New Pages
 import GaneshaAI from "./pages/GaneshaAI";
 import Departments from "./pages/Departments";
-import Tasks from "./pages/Tasks";
-import Analytics from "./pages/Analytics";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
+import Tasks from "@/features/tasks/Tasks";
+import Analytics from "@/features/analytics/Analytics";
+import Reports from "@/features/reports/Reports";
+import Settings from "@/features/settings/Settings";
 
 // V2 Feature Pages
 import Chat from "./pages/Chat";
 import Users from "./pages/Users";
-import Urjaa from "./pages/Urjaa";
+import Urjaa from "@/features/urja/Urjaa";
 import Guardians from "./pages/Guardians";
 import AutomobilePricing from "./pages/AutomobilePricing";
 
