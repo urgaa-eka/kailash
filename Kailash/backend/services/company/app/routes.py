@@ -13,7 +13,7 @@ from fastapi import Depends, FastAPI, Query
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field, field_validator
 
-from backend.shared import ApiResponse, ValidationError, require_internal_token
+from backend.platform import ApiResponse, ValidationError, require_internal_token
 
 from . import compliance, dashboard, go4garage, gst, ingest, posting, recon, reports
 from .db import audit, fy_for, get_conn, init_schema, seed_all

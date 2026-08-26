@@ -12,7 +12,7 @@ from decimal import Decimal
 
 import psycopg
 
-from backend.shared import NotFoundError, ValidationError
+from backend.platform import NotFoundError, ValidationError
 
 from . import events
 from .posting import as_money

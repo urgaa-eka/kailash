@@ -15,7 +15,7 @@ import os
 
 import httpx
 
-from backend.shared import UpstreamError, ValidationError, get_logger
+from backend.platform import UpstreamError, ValidationError, get_logger
 
 log = get_logger("automobile-llm")
 

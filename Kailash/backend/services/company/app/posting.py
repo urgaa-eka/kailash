@@ -10,7 +10,7 @@ from decimal import Decimal
 
 import psycopg
 
-from backend.shared import NotFoundError, ValidationError
+from backend.platform import NotFoundError, ValidationError
 
 from . import events
 from .db import audit, fy_for

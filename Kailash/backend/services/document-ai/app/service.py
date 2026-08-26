@@ -12,7 +12,7 @@ from typing import Any
 
 from pypdf import PdfReader
 
-from backend.shared import ValidationError, get_logger
+from backend.platform import ValidationError, get_logger
 
 log = get_logger("document-ai")
 

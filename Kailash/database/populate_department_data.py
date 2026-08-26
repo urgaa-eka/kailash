@@ -1,9 +1,9 @@
 """Populate sample department data (gaps, tasks, sub-agents) for demonstration."""
 import asyncio
 import sys
-sys.path.insert(0, '/app/backend')
+sys.path.insert(0, '/app')
 
-from app.core.mongodb import MongoD
+from backend.platform.core.mongodb import MongoD
 from datetime import datetime, timezone, timedelta
 import motor.motor_asyncio
 

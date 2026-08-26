@@ -11,7 +11,7 @@ import base64
 import hashlib
 import os
 
-from backend.shared import ValidationError
+from backend.platform import ValidationError
 
 SUPPORTED_LANGS = ["hi", "en", "mr", "ta", "te", "bn", "gu", "kn", "ml", "pa"]
 

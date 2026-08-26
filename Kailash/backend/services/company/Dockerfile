@@ -9,7 +9,7 @@ COPY backend/services/company/requirements.txt ./requirements.txt
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Shared platform library + service code + scaffold (schema/templates).
-COPY backend/shared /srv/backend/shared
+COPY backend/platform /srv/backend/platform
 COPY backend/services/company/app /srv/backend/services/company/app
 COPY company-segment /srv/company-segment
 RUN touch /srv/backend/__init__.py /srv/backend/services/__init__.py \

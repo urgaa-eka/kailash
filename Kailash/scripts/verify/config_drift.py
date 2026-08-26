@@ -49,7 +49,7 @@ EXPECTED_NODE_VERSION = "20"
 # This is the app's own idea of its identity, not a routing rule. `.in` is the
 # value because every declaration that already exists says so: both workflow
 # builds, `frontend/.env.production`, the backend health payload
-# (`backend/app/main.py` `"domain": "kailash-ai.in"`), the canonical link and
+# (`backend/main.py` `"domain": "kailash-ai.in"`), the canonical link and
 # og:url in `frontend/public/index.html`, and the support addresses in LICENSE
 # and `email_service.py`. Choosing `.com` would mean editing all of those for no
 # functional gain. Which host actually *serves* is separate: `kailash-ai.com` is

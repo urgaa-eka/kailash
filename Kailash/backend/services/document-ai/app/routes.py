@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, File, UploadFile
 from pydantic import BaseModel
 
-from backend.shared import ApiResponse, require_internal_token
+from backend.platform import ApiResponse, require_internal_token
 
 from .service import VALIDATION_PROFILES, extract_pdf_text, validate_fields
 

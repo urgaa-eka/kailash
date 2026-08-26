@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from backend.shared import ValidationError
+from backend.platform import ValidationError
 
 
 @dataclass

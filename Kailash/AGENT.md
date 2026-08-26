@@ -33,7 +33,8 @@ and `PYTHONPATH` matter:
 | Suite | How to run (from `Kailash/`) |
 | --- | --- |
 | Shared library — `tests/platform/` | `PYTHONPATH=. pytest -q tests/platform` |
-| A platform service — `backend/services/<name>/` | `cd backend/services/<name> && pytest -q` (imports `from app.main`) |
+| Main application — `backend/` | `python -c "import backend.main"`; `python -m pytest backend/tests -q` (run from `Kailash/`, **not** `backend/`, so `backend/platform/` cannot shadow the stdlib `platform` module) |
+| A platform service — `backend/services/<name>/` | `cd backend/services/<name> && PYTHONPATH=../../.. pytest -q` (imports `from app.main` for the service, `from backend.platform` for the library) |
 | `company` service | `cd backend/services/company && PYTHONPATH=../../.. pytest -q` (needs **PostgreSQL**) |
 | Deploy-safety gates — `tests/verify/` | `pip install -r requirements-dev.txt && PYTHONPATH=. pytest -q tests/verify -m "not docker and not network"` |
 
@@ -49,12 +50,15 @@ cd frontend && yarn install --frozen-lockfile && yarn build   # craco, not plain
 
 The backend is **two tiers sharing one library**:
 
-1. **Main application** — `backend/app/`. A hand-wired FastAPI app
-   (`backend/app/main.py`) with JWT auth + RBAC, MongoDB, a custom middleware
-   stack, and ~20 routers under `backend/app/api/` mounted at `/api`. Themed as
-   Hindu deities: `departments/` (deity "AI departments"), `guardians/` (GANESHA
-   orchestrator, SHIV security/auto-rectify, PARVATI workload), `agents/prompts/`
-   (per-product system prompts). This app does **not** use `build_app()`.
+1. **Main application** — assembled in `backend/main.py` (run from `Kailash/` as
+   `backend.main:app`). A hand-wired FastAPI app with JWT auth + RBAC, MongoDB, a
+   custom middleware stack, and ~20 routers under `backend/features/<feature>/api/`
+   mounted at `/api`. Organised department→feature: the deity "AI departments"
+   live in `backend/features/departments/deities/`, the guardians (GANESHA
+   orchestrator, SHIV security/auto-rectify, PARVATI workload) in
+   `backend/features/guardians/`, and per-product system prompts in
+   `backend/features/eka_brain/agents/prompts/`. This app does **not** use
+   `build_app()`.
 
 2. **Platform services** — `backend/services/<name>/` (document-ai, forecasting,
    anomaly, rag, vision-gateway, speech, model-registry, knowledge-graph,
@@ -62,7 +66,7 @@ The backend is **two tiers sharing one library**:
    `main.py` → `routes.py` → `service.py` → `settings.py`, where `main.py` is one
    line: `app = build_app(settings, routers=[register])`.
 
-Both depend on **`backend/shared/`** — read `backend/shared/app.py` first.
+Both depend on **`backend/platform/`** — read `backend/platform/app.py` first.
 `build_app()` wires CORS, request-id middleware, `/health` `/` `/metrics`
 `/docs`, and the `PlatformError` handler. Responses use `ApiResponse` /
 `ErrorDetail` / `HealthResponse`; typed errors (`NotFoundError`,

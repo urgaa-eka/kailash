@@ -11,7 +11,7 @@ import threading
 from collections import defaultdict, deque
 from typing import Any
 
-from backend.shared import NotFoundError, ValidationError
+from backend.platform import NotFoundError, ValidationError
 
 
 class InMemoryGraph:

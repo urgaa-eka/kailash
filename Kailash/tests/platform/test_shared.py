@@ -1,14 +1,14 @@
-"""Tests for backend.shared platform library."""
+"""Tests for backend.platform platform library."""
 from __future__ import annotations
 
 import pytest
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.testclient import TestClient
 
-from backend.shared.app import build_app
-from backend.shared.auth import require_internal_token
-from backend.shared.config import BaseServiceSettings
-from backend.shared.errors import NotFoundError, ValidationError
+from backend.platform.app import build_app
+from backend.platform.auth import require_internal_token
+from backend.platform.config import BaseServiceSettings
+from backend.platform.errors import NotFoundError, ValidationError
 
 
 def _make_app(routers=None) -> FastAPI:

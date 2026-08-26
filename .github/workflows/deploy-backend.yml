@@ -60,18 +60,20 @@ jobs:
           grep -vi '^emergentintegrations' requirements.txt > /tmp/requirements.txt
           pip install -r /tmp/requirements.txt
           # verify: allow a failed optional install surfaces at the next step,
-          # which runs `import app.main` and cannot succeed without it
+          # which runs `import backend.main` and cannot succeed without it
           pip install emergentintegrations==0.1.0 \
             --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ || true
 
       # Runs backend/tests, not ../tests/backend -- see the note in ci.yml.
       # No `|| true`: a failing step must skip the deploy job below.
+      # Run from Kailash/ (backend's parent) so absolute `backend.…` imports
+      # resolve without backend/platform/ shadowing the stdlib platform module.
       - name: Import the app
-        run: python -c "import app.main"
+        run: cd .. && python -c "import backend.main"
       - name: Run tests
         run: |
           pip install pytest pytest-asyncio
-          pytest tests -q
+          cd .. && python -m pytest backend/tests -q
 
   # Brings up the kailash-staging compose project on the VPS first (spec
   # tasks 12.3/12.6, Requirements 8.2, 8.4). Same compose file, same profile,

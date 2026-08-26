@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import Depends, FastAPI
 from pydantic import BaseModel, Field
 
-from backend.shared import ApiResponse, require_internal_token
+from backend.platform import ApiResponse, require_internal_token
 
 from .service import STORE, Doc, embed_batch
 

@@ -14,7 +14,7 @@ python -m pip install -q -r $req -t $Dist `
 if ($LASTEXITCODE -ne 0) { python -m pip install -q -r $req -t $Dist }
 
 Copy-Item -Recurse (Join-Path $Here "lambda/handlers") (Join-Path $Dist "handlers")
-Copy-Item -Recurse (Join-Path $Repo "backend/shared") (Join-Path $Dist "backend/shared")
+Copy-Item -Recurse (Join-Path $Repo "backend/platform") (Join-Path $Dist "backend/platform")
 Copy-Item -Recurse (Join-Path $Repo "backend/services/company/app") (Join-Path $Dist "backend/services/company/app")
 foreach ($f in @("backend/__init__.py", "backend/services/__init__.py", "backend/services/company/__init__.py")) {
   New-Item -ItemType File -Force (Join-Path $Dist $f) | Out-Null
