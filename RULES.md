@@ -116,6 +116,11 @@ feature — the mirror check treats the kebab- and snake-case of one name as equ
 > `platform` module), and the coupled Docker/CI/verify references updated in the
 > same change. New work follows the department→feature rule directly.
 
+This rule is **enforced**: `scripts/verify/structure_gate.py` fails CI on a
+feature folder outside the canonical registry (adding one is a deliberate edit
+to that registry — the lock), on source loose at `frontend/src/`, `backend/` or
+inside `features/`, and on a frontend↔backend mirror that drifted.
+
 ## Rule 3 — One BRD, one TRD, one PRD
 
 The project has exactly **one** of each, and they live in
@@ -169,12 +174,13 @@ no gate can be silently defeated.
 These rules are checked, not trusted:
 
 - **`scripts/verify/`** gates run in CI (`config_drift`, `repo_state`,
-  `secret_scan`, `root_singletons`, `workflow_gate`, `workflow_singletons`,
-  `build_audit`, `doc_singletons`) and resolve their paths against the `Kailash/`
-  master folder (except the root-level ones, which resolve against the git top
-  level). Each rule that can be checked is checked — `root_singletons` enforces
-  Rule 1, `doc_singletons` enforces Rule 3, and `workflow_singletons` +
-  `workflow_gate` together enforce Rule 5.
+  `secret_scan`, `root_singletons`, `structure_gate`, `workflow_gate`,
+  `workflow_singletons`, `build_audit`, `doc_singletons`) and resolve their paths
+  against the `Kailash/` master folder (except the root-level ones, which resolve
+  against the git top level). Each rule that can be checked is checked —
+  `root_singletons` enforces Rule 1, `structure_gate` enforces Rule 2,
+  `doc_singletons` enforces Rule 3, and `workflow_singletons` + `workflow_gate`
+  together enforce Rule 5.
 - **`repo_state`** refuses to deploy from a working tree with uncommitted
   changes under a deployment-critical path, because `deploy/host/deploy.sh`
   runs `git reset --hard` + `git clean -fd` on the production host.
