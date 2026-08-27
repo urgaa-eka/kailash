@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   getOverview, getFy, fetchExportCsv,
   getSession, onAuthChange, signIn, signOut,
-  getInvoices, getInvoiceSummary, getInvoiceDownloadUrl,
+  getInvoices, getInvoiceSummary, getInvoiceDownloadUrl, getIssues,
 } from './go4garageApi';
 import { supabaseConfigured } from './supabaseClient';
 import './Go4GarageFinancials.css';
@@ -211,7 +211,7 @@ function TrendChart({ trend }) {
 
 // ---- nav spine ------------------------------------------------------------
 const NAV = [
-  ['Overview', [['Snapshot', 'overview'], ['Five-year trend', 'trend']]],
+  ['Overview', [['Snapshot', 'overview'], ['Issues', 'issues'], ['Five-year trend', 'trend']]],
   ['Ledgers', [['Vendor settlement', 'vendor'], ['Sales & billing', 'sales'], ['Invoices', 'invoices'],
     ['GST cockpit', 'gst'], ['Treasury', 'treasury'], ['Direct tax', 'tax']]],
   ['Governance', [['Departments', 'departments'], ['Internal audit', 'audit'],
@@ -355,6 +355,174 @@ function InvoicesPanel() {
         <b> no ledger entry</b> has an invoice PDF that the sales ledger — and therefore audited
         revenue — does not carry; those are the exceptions to work through, not confirmed sales.
       </p>
+    </section>
+  );
+}
+
+// ---- issues board ----------------------------------------------------------
+// Every audit blocker and contradiction, rendered as figures rather than prose.
+// Reads the `issues` payload from g4g_dashboard.
+const SEV = {
+  blocker: { cls: 'bad', label: 'Blocker' },
+  material: { cls: 'warn', label: 'Material' },
+  advisory: { cls: 'ok', label: 'Advisory' },
+};
+
+// Bars are compared within an issue, so each scales against that issue's own max.
+function IssueBars({ bars, unit }) {
+  const max = Math.max(...bars.map((b) => Number(b.value) || 0)) || 1;
+  return (
+    <div className="ibars">
+      {bars.map((b, i) => {
+        const v = Number(b.value) || 0;
+        const pct = Math.max(1.5, (v / max) * 100);
+        const hi = i === bars.length - 1;
+        return (
+          <div className="ibar" key={b.label}>
+            <span className="ibar-l">{b.label}</span>
+            <span className="ibar-track">
+              <span className={`ibar-fill${hi ? ' hi' : ''}`} style={{ width: `${pct}%` }} />
+            </span>
+            <span className="ibar-v">{unit === '%' ? `${v}%` : money(v)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function IssueSplit({ split }) {
+  return (
+    <div className="isplit">
+      {split.map((s) => (
+        <div className={`isplit-c t-${s.tone}`} key={s.label}>
+          <span className="isplit-v">{intFmt(s.value)}</span>
+          <span className="isplit-l">{s.label}</span>
+          {s.sub && <span className="isplit-s">{s.sub}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function IssueGauge({ gauge }) {
+  const v = Math.max(0, Math.min(100, Number(gauge.value) || 0));
+  return (
+    <div className="igauge">
+      <div className="igauge-bar"><span style={{ width: `${v}%` }} /></div>
+      <div className="igauge-t"><b>{v}%</b> {gauge.label}</div>
+    </div>
+  );
+}
+
+// Proportion of the year with document support, drawn to scale.
+function IssueTimeline({ timeline }) {
+  const t0 = new Date(timeline.from).getTime();
+  const t1 = new Date(timeline.to).getTime();
+  const tc = new Date(timeline.covered_to).getTime();
+  const pct = Math.max(0, Math.min(100, ((tc - t0) / (t1 - t0)) * 100));
+  return (
+    <div className="itl">
+      <div className="itl-bar">
+        <span className="itl-ok" style={{ width: `${pct}%` }} />
+        <span className="itl-gap" style={{ width: `${100 - pct}%` }} />
+      </div>
+      <div className="itl-t">
+        <span>{Math.round(pct)}% documented</span>
+        <span className="itl-r">{Math.round(100 - pct)}% no support</span>
+      </div>
+    </div>
+  );
+}
+
+function IssuesPanel() {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
+  const [sev, setSev] = useState('');
+
+  useEffect(() => {
+    getIssues().then(setData).catch((e) => setErr(e.message));
+  }, []);
+
+  if (err) return (
+    <section className="card scroll" id="issues">
+      <div className="card-h"><h2>Issues</h2></div>
+      <p className="dim">{err}</p>
+    </section>
+  );
+  if (!data) return (
+    <section className="card scroll" id="issues">
+      <div className="card-h"><h2>Issues</h2></div>
+      <p className="dim">Loading…</p>
+    </section>
+  );
+
+  const s = data.summary || {};
+  const shown = (data.issues || []).filter((i) => !sev || i.severity === sev);
+
+  return (
+    <section className="card scroll" id="issues">
+      <div className="card-h"><h2>What is blocking the accounts</h2>
+        <span className="card-note">{(data.issues || []).length} findings · reviewed {data.generated}</span></div>
+
+      <div className="ikpi">
+        <button className={`ikpi-c k-bad${sev === 'blocker' ? ' on' : ''}`}
+          onClick={() => setSev(sev === 'blocker' ? '' : 'blocker')}>
+          <span className="ikpi-v">{s.blockers}</span><span className="ikpi-l">Blockers</span>
+          <span className="ikpi-s">no balance sheet until these clear</span>
+        </button>
+        <button className={`ikpi-c k-warn${sev === 'material' ? ' on' : ''}`}
+          onClick={() => setSev(sev === 'material' ? '' : 'material')}>
+          <span className="ikpi-v">{s.material}</span><span className="ikpi-l">Material</span>
+          <span className="ikpi-s">change the numbers or the disclosure</span>
+        </button>
+        <button className={`ikpi-c k-ok${sev === 'advisory' ? ' on' : ''}`}
+          onClick={() => setSev(sev === 'advisory' ? '' : 'advisory')}>
+          <span className="ikpi-v">{s.advisory}</span><span className="ikpi-l">Advisory</span>
+          <span className="ikpi-s">fix, but nothing waits on them</span>
+        </button>
+        <div className="ikpi-c k-plain">
+          <span className="ikpi-v">{s.years_audited} / {s.years_audited + s.years_open}</span>
+          <span className="ikpi-l">Years audited</span>
+          <span className="ikpi-s">FY 24-25 and FY 25-26 are open</span>
+        </div>
+      </div>
+
+      <div className="ilist">
+        {shown.map((i) => (
+          <article className={`icard s-${SEV[i.severity]?.cls}`} key={i.id}>
+            <header className="icard-h">
+              <span className="icard-id">{i.id}</span>
+              <h3>{i.title}</h3>
+              <span className="icard-tags">
+                <Pill kind={SEV[i.severity]?.cls}>{SEV[i.severity]?.label}</Pill>
+                <span className="icard-fy">FY {i.fy}</span>
+              </span>
+            </header>
+            <div className="icard-impact">{i.impact}</div>
+            {i.kind === 'bars' && <IssueBars bars={i.bars} unit={i.unit} />}
+            {i.kind === 'split' && <IssueSplit split={i.split} />}
+            {i.kind === 'gauge' && <IssueGauge gauge={i.gauge} />}
+            {i.kind === 'timeline' && <IssueTimeline timeline={i.timeline} />}
+            <p className="icard-note">{i.note}</p>
+          </article>
+        ))}
+      </div>
+
+      {(data.blocked_on || []).length > 0 && (
+        <>
+          <div className="card-h mt"><h2>What we need to unblock them</h2>
+            <span className="card-note">in dependency order</span></div>
+          <table className="mt">
+            <tbody>
+              <tr><th>Required from the company / CA</th><th>Clears</th></tr>
+              {data.blocked_on.map((b) => (
+                <tr key={b.item}><td>{b.item}</td><td className="dim">{b.unblocks}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </section>
   );
 }
@@ -736,6 +904,9 @@ export default function Go4GarageFinancials() {
             </table>
             <p className="dim mt-s">Skip <code>TOTAL</code> rows; the FY25-26 ICICI re-dated block is quarantined (D6).</p>
           </section>
+
+          <IssuesPanel />
+
 
           {/* five-year trend */}
           <section className="card scroll" id="trend">

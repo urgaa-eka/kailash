@@ -112,6 +112,11 @@ export async function getInvoiceDownloadUrl(storagePath, fileName) {
   return data.signedUrl;
 }
 
+/** Audit blockers and contradictions, rendered on the Issues board. */
+export async function getIssues() {
+  return readPayload('issues');
+}
+
 // ---- client-side CSV export (no server) -----------------------------------
 // Column order mirrors the former api.EXPORT_FIELDS so a file taken out here is
 // identical to the old server export — Zoho-mappable / store-shape.
@@ -164,6 +169,6 @@ export async function fetchExportCsv() {
 const go4garageApi = {
   getSession, onAuthChange, signIn, signOut, updatePassword,
   getOverview, getFy, fetchExportCsv,
-  getInvoices, getInvoiceSummary, getInvoiceDownloadUrl,
+  getInvoices, getInvoiceSummary, getInvoiceDownloadUrl, getIssues,
 };
 export default go4garageApi;

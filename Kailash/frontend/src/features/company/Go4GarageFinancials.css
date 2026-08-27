@@ -273,3 +273,61 @@
   border-radius: 8px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
 .g4g .inv-pager button:disabled { opacity: .45; cursor: default; }
 .g4g .inv-err { color: var(--bad); font-size: 12.5px; margin: 8px 0 0; }
+
+/* ---- issues board ---- */
+.g4g .ikpi{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:16px 0 22px}
+.g4g .ikpi-c{display:flex; flex-direction:column; gap:2px; text-align:left; padding:13px 15px;
+  border:1px solid var(--line); border-radius:12px; background:var(--paper); font:inherit;
+  cursor:pointer; border-left-width:4px}
+.g4g .ikpi-c.k-plain{cursor:default}
+.g4g .ikpi-c.k-bad{border-left-color:var(--bad)} .g4g .ikpi-c.k-warn{border-left-color:var(--warn)}
+.g4g .ikpi-c.k-ok{border-left-color:var(--ok)} .g4g .ikpi-c.k-plain{border-left-color:var(--navy)}
+.g4g .ikpi-c.on{background:var(--navy-soft); border-color:var(--navy)}
+.g4g .ikpi-v{font-size:27px; font-weight:700; line-height:1.05; color:var(--ink)}
+.g4g .ikpi-l{font-size:12px; font-weight:600; color:var(--ink)}
+.g4g .ikpi-s{font-size:11px; color:var(--dim); line-height:1.35}
+
+.g4g .ilist{display:flex; flex-direction:column; gap:12px}
+.g4g .icard{border:1px solid var(--line); border-left:4px solid var(--line); border-radius:12px;
+  background:var(--paper); padding:15px 17px}
+.g4g .icard.s-bad{border-left-color:var(--bad)} .g4g .icard.s-warn{border-left-color:var(--warn)}
+.g4g .icard.s-ok{border-left-color:var(--ok)}
+.g4g .icard-h{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:3px}
+.g4g .icard-id{font-size:10.5px; font-weight:700; letter-spacing:.06em; color:var(--dim);
+  border:1px solid var(--line); border-radius:4px; padding:1px 6px}
+.g4g .icard-h h3{font-size:15.5px; font-weight:600; margin:0; color:var(--ink); flex:1 1 220px}
+.g4g .icard-tags{display:flex; align-items:center; gap:7px}
+.g4g .icard-fy{font-size:11px; color:var(--dim)}
+.g4g .icard-impact{font-size:20px; font-weight:700; color:var(--navy); margin:2px 0 12px}
+.g4g .icard-note{font-size:12.5px; color:var(--ink-2); margin:12px 0 0; line-height:1.5; white-space:normal}
+
+.g4g .ibars{display:flex; flex-direction:column; gap:7px}
+.g4g .ibar{display:grid; grid-template-columns:minmax(120px,1.5fr) 3fr minmax(84px,auto);
+  align-items:center; gap:10px}
+.g4g .ibar-l{font-size:12px; color:var(--ink-2)}
+.g4g .ibar-track{background:var(--line-2); border-radius:99px; height:15px; overflow:hidden}
+.g4g .ibar-fill{display:block; height:100%; border-radius:99px;
+  background:linear-gradient(90deg,var(--navy),var(--navy-2))}
+.g4g .ibar-fill.hi{background:linear-gradient(90deg,var(--gold-2),var(--amber))}
+.g4g .ibar-v{font-size:12.5px; font-weight:600; text-align:right; color:var(--ink)}
+
+.g4g .isplit{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:9px}
+.g4g .isplit-c{display:flex; flex-direction:column; gap:1px; padding:11px 13px; border-radius:10px;
+  border:1px solid var(--line)}
+.g4g .isplit-c.t-ok{background:var(--ok-bg)} .g4g .isplit-c.t-warn{background:var(--warn-bg)}
+.g4g .isplit-c.t-bad{background:var(--bad-bg)}
+.g4g .isplit-v{font-size:24px; font-weight:700; line-height:1.1; color:var(--ink)}
+.g4g .isplit-l{font-size:11.5px; font-weight:600; color:var(--ink)}
+.g4g .isplit-s{font-size:11px; color:var(--ink-2)}
+
+.g4g .igauge-bar{background:var(--line-2); border-radius:99px; height:17px; overflow:hidden}
+.g4g .igauge-bar span{display:block; height:100%; border-radius:99px;
+  background:linear-gradient(90deg,var(--bad),var(--warn))}
+.g4g .igauge-t{font-size:12.5px; color:var(--ink-2); margin-top:6px}
+.g4g .igauge-t b{font-size:16px; color:var(--ink)}
+
+.g4g .itl-bar{display:flex; height:17px; border-radius:99px; overflow:hidden; background:var(--line-2)}
+.g4g .itl-ok{background:var(--ok)} .g4g .itl-gap{background:var(--bad-bg); border-left:2px solid var(--bad)}
+.g4g .itl-t{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-2); margin-top:6px}
+.g4g .itl-r{color:var(--bad); font-weight:600}
+.g4g .card-h.mt{margin-top:26px}
