@@ -237,3 +237,18 @@
   -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
 }
 .g4g .signout:hover { background: rgba(28, 21, 9, .78); }
+
+/* ---- pendency column (five-year trend) ---- */
+.g4g .pend { display: flex; flex-direction: column; gap: 3px; min-width: 190px; }
+.g4g .pend-head { display: flex; align-items: center; gap: 6px; }
+.g4g .pend-items { font-size: 11.5px; color: var(--ink-2); white-space: normal; line-height: 1.35; }
+.g4g .pend-note { font-size: 11px; color: var(--dim); white-space: normal; }
+
+/* work that can only be done on the MCA V3 / income-tax portal */
+.g4g .mca-tag { font-size: 9.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 4px; background: var(--navy-soft); color: var(--navy);
+  border: 1px solid rgba(10, 61, 98, .22); cursor: help; }
+
+/* an overdue year is the one thing on this page that must not be scrolled past */
+.g4g tr.pend-overdue td { background: var(--bad-bg); }
+.g4g tr.pend-overdue td:first-child { box-shadow: inset 3px 0 0 var(--bad); font-weight: 700; }

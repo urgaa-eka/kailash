@@ -53,9 +53,27 @@ const Text = ({ v }) => (v === null || v === undefined || v === '' ? <Await /> :
 const AUDIT_CLS = { AUDITED_SIGNED: 'ok', AUDITED_QUALIFIED: 'warn', UNAUDITED: 'warn', NONE: 'bad' };
 const SEV_CLS = { material: 'bad', major: 'warn', minor: 'ok' };
 const STATUS_CLS = { open: 'bad', mitigated: 'warn', fixed: 'ok', withdrawn: 'ok' };
+const PEND_CLS = { OVERDUE: 'bad', UPCOMING: 'warn', VERIFY: 'warn', CLEAR: 'ok' };
 const titleCase = (s) => (s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const Pill = ({ kind, children }) => <span className={`pill ${kind || ''}`}>{children}</span>;
+
+// What is still outstanding for a financial year, from overview.financial_years[].pendency.
+// `mca: true` marks work that can only be completed on the MCA V3 / income-tax portal —
+// outside our control, so it is surfaced and tracked here, never actioned from here.
+const Pendency = ({ p }) => {
+  if (!p) return <Await />;
+  return (
+    <div className="pend">
+      <span className="pend-head">
+        <Pill kind={PEND_CLS[p.state]}>{titleCase(p.state)}</Pill>
+        {p.mca && <span className="mca-tag" title="Completed on the MCA V3 / income-tax portal — not in our hands">portal</span>}
+      </span>
+      {(p.items || []).length > 0 && <span className="pend-items">{p.items.join(' · ')}</span>}
+      {p.note && <span className="pend-note">{p.note}</span>}
+    </div>
+  );
+};
 
 // ---- client-side file download (works in the deployed app, not a sandbox) --
 function downloadBlob(filename, text, mime = 'text/plain') {
@@ -581,12 +599,13 @@ export default function Go4GarageFinancials() {
             <TrendChart trend={overview.trend || []} />
             <table className="mt">
               <tbody>
-                <tr><th>FY</th><th>Audit status</th><th>Posture</th><th>Note</th></tr>
+                <tr><th>FY</th><th>Audit status</th><th>Posture</th><th>Pendency</th><th>Note</th></tr>
                 {(overview.financial_years || []).map((y) => (
-                  <tr key={y.fy}>
+                  <tr key={y.fy} className={y.pendency?.state === 'OVERDUE' ? 'pend-overdue' : ''}>
                     <td>{y.fy}</td>
                     <td><Pill kind={AUDIT_CLS[y.audit_status]}>{titleCase(y.audit_status)}</Pill></td>
                     <td>{y.posture}</td>
+                    <td><Pendency p={y.pendency} /></td>
                     <td className="dim">{y.note}</td>
                   </tr>
                 ))}
