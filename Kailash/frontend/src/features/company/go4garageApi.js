@@ -62,6 +62,56 @@ export async function getFy(fy) {
   return readPayload(`fy:${fy}`);
 }
 
+// ---- invoices -------------------------------------------------------------
+// public.g4g_invoices carries one row per sales invoice, reconciled against the
+// sales ledger. status: MATCHED | PDF_ONLY (no ledger entry) | LEDGER_ONLY (no PDF).
+// Same RLS gate as the figures — an unauthorised read returns an empty list.
+
+/** One page of invoices. `fy` / `status` / `q` are all optional filters. */
+export async function getInvoices({ fy, status, q, limit = 100, offset = 0 } = {}) {
+  let sel = supabase
+    .from('g4g_invoices')
+    .select('ref,fy,inv_date,party,amount,status,direction,file_name,storage_path,bytes', { count: 'exact' })
+    .order('inv_date', { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (fy) sel = sel.eq('fy', fy);
+  if (status) sel = sel.eq('status', status);
+  if (q) sel = sel.or(`ref.ilike.%${q}%,party.ilike.%${q}%`);
+  const { data, error, count } = await sel;
+  if (error) throw error;
+  return { rows: data || [], total: count ?? 0 };
+}
+
+/** Per-FY counts and totals for the summary strip. */
+export async function getInvoiceSummary() {
+  const { data, error } = await supabase
+    .from('g4g_invoices')
+    .select('fy,status,amount');
+  if (error) throw error;
+  const acc = {};
+  for (const r of data || []) {
+    const a = (acc[r.fy] ??= { fy: r.fy, count: 0, amount: 0, matched: 0, pdf_only: 0, ledger_only: 0 });
+    a.count += 1;
+    a.amount += Number(r.amount || 0);
+    if (r.status === 'MATCHED') a.matched += 1;
+    else if (r.status === 'PDF_ONLY') a.pdf_only += 1;
+    else a.ledger_only += 1;
+  }
+  return Object.values(acc).sort((x, y) => x.fy.localeCompare(y.fy));
+}
+
+/**
+ * Short-lived signed URL for one invoice PDF. The bucket is private, so this is
+ * the only way to hand the browser a downloadable link.
+ */
+export async function getInvoiceDownloadUrl(storagePath, fileName) {
+  const { data, error } = await supabase.storage
+    .from('invoices')
+    .createSignedUrl(storagePath, 120, { download: fileName || true });
+  if (error) throw error;
+  return data.signedUrl;
+}
+
 // ---- client-side CSV export (no server) -----------------------------------
 // Column order mirrors the former api.EXPORT_FIELDS so a file taken out here is
 // identical to the old server export — Zoho-mappable / store-shape.
@@ -114,5 +164,6 @@ export async function fetchExportCsv() {
 const go4garageApi = {
   getSession, onAuthChange, signIn, signOut, updatePassword,
   getOverview, getFy, fetchExportCsv,
+  getInvoices, getInvoiceSummary, getInvoiceDownloadUrl,
 };
 export default go4garageApi;

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   getOverview, getFy, fetchExportCsv,
   getSession, onAuthChange, signIn, signOut,
+  getInvoices, getInvoiceSummary, getInvoiceDownloadUrl,
 } from './go4garageApi';
 import { supabaseConfigured } from './supabaseClient';
 import './Go4GarageFinancials.css';
@@ -211,11 +212,152 @@ function TrendChart({ trend }) {
 // ---- nav spine ------------------------------------------------------------
 const NAV = [
   ['Overview', [['Snapshot', 'overview'], ['Five-year trend', 'trend']]],
-  ['Ledgers', [['Vendor settlement', 'vendor'], ['Sales & billing', 'sales'],
+  ['Ledgers', [['Vendor settlement', 'vendor'], ['Sales & billing', 'sales'], ['Invoices', 'invoices'],
     ['GST cockpit', 'gst'], ['Treasury', 'treasury'], ['Direct tax', 'tax']]],
   ['Governance', [['Departments', 'departments'], ['Internal audit', 'audit'],
     ['Open decisions', 'decisions']]],
 ];
+
+// ---- invoices --------------------------------------------------------------
+// Every sales invoice PDF, reconciled against the sales ledger. The PDFs sit in
+// a private bucket, so a download is a short-lived signed URL minted on click.
+const INV_STATUS_CLS = { MATCHED: 'ok', PDF_ONLY: 'bad', LEDGER_ONLY: 'warn' };
+const INV_STATUS_LABEL = {
+  MATCHED: 'Matched',
+  PDF_ONLY: 'No ledger entry',
+  LEDGER_ONLY: 'No PDF',
+};
+const PAGE = 100;
+
+function InvoicesPanel() {
+  const [summary, setSummary] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [fyF, setFyF] = useState('');
+  const [statusF, setStatusF] = useState('');
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(true);
+  const [err, setErr] = useState(null);
+  const [pending, setPending] = useState(null);
+
+  useEffect(() => { getInvoiceSummary().then(setSummary).catch(() => setSummary([])); }, []);
+
+  useEffect(() => {
+    let dead = false;
+    setBusy(true);
+    getInvoices({ fy: fyF || undefined, status: statusF || undefined, q: q.trim() || undefined,
+      limit: PAGE, offset: page * PAGE })
+      .then((r) => { if (!dead) { setRows(r.rows); setTotal(r.total); setErr(null); } })
+      .catch((e) => { if (!dead) setErr(e.message); })
+      .finally(() => { if (!dead) setBusy(false); });
+    return () => { dead = true; };
+  }, [fyF, statusF, q, page]);
+
+  // Filters reset paging — otherwise page 7 of a 3-page result shows nothing.
+  const setFilter = (fn) => (v) => { fn(v); setPage(0); };
+
+  const download = async (r) => {
+    if (!r.storage_path) return;
+    setPending(r.ref);
+    try {
+      const url = await getInvoiceDownloadUrl(r.storage_path, r.file_name);
+      window.open(url, '_blank', 'noopener');
+    } catch (e) {
+      setErr(`Could not fetch ${r.ref}: ${e.message}`);
+    } finally {
+      setPending(null);
+    }
+  };
+
+  const pages = Math.ceil(total / PAGE) || 1;
+
+  return (
+    <section className="card scroll" id="invoices">
+      <div className="card-h"><h2>Sales invoices — reconciled to the ledger</h2>
+        <span className="card-note">Dept 1 · {total.toLocaleString('en-IN')} shown</span></div>
+
+      {summary && summary.length > 0 && (
+        <table className="mt">
+          <tbody>
+            <tr><th>FY</th><th className="num">Invoices</th><th className="num">Amount</th>
+              <th className="num">Matched</th><th className="num">No ledger</th><th className="num">No PDF</th></tr>
+            {summary.map((s) => (
+              <tr key={s.fy}>
+                <td>{s.fy}</td>
+                <td className="num"><Int v={s.count} /></td>
+                <td className="num"><Money v={s.amount} /></td>
+                <td className="num">{s.matched}</td>
+                <td className="num">{s.pdf_only > 0 ? <Pill kind="bad">{s.pdf_only}</Pill> : '—'}</td>
+                <td className="num">{s.ledger_only > 0 ? <Pill kind="warn">{s.ledger_only}</Pill> : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div className="inv-filters">
+        <input className="inv-search" type="search" placeholder="Search reference or party…"
+          value={q} onChange={(e) => setFilter(setQ)(e.target.value)} />
+        <select value={fyF} onChange={(e) => setFilter(setFyF)(e.target.value)}>
+          <option value="">All years</option>
+          {(summary || []).map((s) => <option key={s.fy} value={s.fy}>{s.fy}</option>)}
+        </select>
+        <select value={statusF} onChange={(e) => setFilter(setStatusF)(e.target.value)}>
+          <option value="">All statuses</option>
+          <option value="MATCHED">Matched</option>
+          <option value="PDF_ONLY">No ledger entry</option>
+          <option value="LEDGER_ONLY">No PDF</option>
+        </select>
+      </div>
+
+      {err && <p className="inv-err">{err}</p>}
+
+      <table className="mt">
+        <tbody>
+          <tr><th>Reference</th><th>Date</th><th>Party</th><th className="num">Amount</th>
+            <th>Status</th><th>PDF</th></tr>
+          {busy && rows.length === 0 && (
+            <tr><td colSpan={6} className="dim">Loading…</td></tr>
+          )}
+          {!busy && rows.length === 0 && (
+            <tr><td colSpan={6} className="dim">No invoices match these filters.</td></tr>
+          )}
+          {rows.map((r) => (
+            <tr key={r.ref} className={r.status === 'PDF_ONLY' ? 'pend-overdue' : ''}>
+              <td>{r.ref}</td>
+              <td>{r.inv_date}</td>
+              <td className="dim">{r.party}</td>
+              <td className="num"><Money v={r.amount} /></td>
+              <td><Pill kind={INV_STATUS_CLS[r.status]}>{INV_STATUS_LABEL[r.status]}</Pill></td>
+              <td>
+                {r.storage_path ? (
+                  <button className="inv-dl" onClick={() => download(r)} disabled={pending === r.ref}>
+                    {pending === r.ref ? '…' : 'Download'}
+                  </button>
+                ) : <span className="await">no file</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {pages > 1 && (
+        <div className="inv-pager">
+          <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Previous</button>
+          <span className="dim">Page {page + 1} of {pages}</span>
+          <button onClick={() => setPage((p) => Math.min(pages - 1, p + 1))} disabled={page >= pages - 1}>Next</button>
+        </div>
+      )}
+
+      <p className="dim mt-s">
+        Reconciled on the G4G reference against <b>Go4Garage_Sales_Ledger_FINAL</b>. A row flagged
+        <b> no ledger entry</b> has an invoice PDF that the sales ledger — and therefore audited
+        revenue — does not carry; those are the exceptions to work through, not confirmed sales.
+      </p>
+    </section>
+  );
+}
 
 // ---- page -----------------------------------------------------------------
 // Supabase Auth gate — the confidential figures load only after sign-in (RLS).
@@ -544,6 +686,9 @@ export default function Go4GarageFinancials() {
               <p className="dim mt-s">2% deduction → 26Q → challans → 26AS → ITR. No ITR filed for AY2024-25 / AY2025-26.</p>
             </section>
           </div>
+
+          <InvoicesPanel />
+
 
           {/* GST cockpit */}
           <section className="card scroll" id="gst">

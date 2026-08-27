@@ -252,3 +252,24 @@
 /* an overdue year is the one thing on this page that must not be scrolled past */
 .g4g tr.pend-overdue td { background: var(--bad-bg); }
 .g4g tr.pend-overdue td:first-child { box-shadow: inset 3px 0 0 var(--bad); font-weight: 700; }
+
+/* ---- invoices panel ---- */
+.g4g .inv-filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 4px; }
+.g4g .inv-filters input, .g4g .inv-filters select {
+  font: inherit; font-size: 12.5px; padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
+.g4g .inv-filters input:focus, .g4g .inv-filters select:focus {
+  outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px var(--navy-soft); }
+.g4g .inv-search { flex: 1 1 240px; min-width: 180px; }
+
+.g4g .inv-dl { font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+  padding: 4px 12px; border-radius: 99px; border: 1px solid var(--line);
+  background: var(--navy-soft); color: var(--navy); }
+.g4g .inv-dl:hover:not(:disabled) { background: var(--navy); color: var(--paper); border-color: var(--navy); }
+.g4g .inv-dl:disabled { opacity: .5; cursor: default; }
+
+.g4g .inv-pager { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.g4g .inv-pager button { font: inherit; font-size: 12px; cursor: pointer; padding: 5px 12px;
+  border-radius: 8px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
+.g4g .inv-pager button:disabled { opacity: .45; cursor: default; }
+.g4g .inv-err { color: var(--bad); font-size: 12.5px; margin: 8px 0 0; }
